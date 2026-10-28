@@ -4,6 +4,30 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 
+const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+
+/**
+ * Scrolls to a pinned, scroll-driven section and keeps going through its pin so
+ * the story plays by itself. Any wheel/touch input replaces Lenis' animation,
+ * so the visitor takes over the moment they scroll.
+ */
+function autoplay(lenis: Lenis, section: HTMLElement) {
+  lenis.scrollTo(section, {
+    duration: 1.2,
+    onComplete: () => {
+      const spacer = section.parentElement;
+      if (!spacer?.classList.contains("pin-spacer")) return;
+      const pinLength = spacer.offsetHeight - section.offsetHeight;
+      const top = spacer.getBoundingClientRect().top + window.scrollY;
+      // Stop just after the story completes, while the section is still pinned.
+      lenis.scrollTo(top + pinLength * 0.94, {
+        duration: Math.min(10, Math.max(6, pinLength / 230)),
+        easing: easeInOutSine,
+      });
+    },
+  });
+}
+
 /**
  * Lenis smooth scroll driven by GSAP's ticker so ScrollTrigger scrubs stay in
  * lockstep with the eased scroll position. Skipped entirely for reduced motion.
@@ -35,8 +59,9 @@ export function SmoothScroll() {
       const target = document.querySelector<HTMLElement>(id);
       if (!target) return;
       event.preventDefault();
-      if (lenis) lenis.scrollTo(target, { offset: 0 });
-      else target.scrollIntoView();
+      if (!lenis) target.scrollIntoView();
+      else if (link.dataset.autoplay !== undefined) autoplay(lenis, target);
+      else lenis.scrollTo(target, { offset: 0 });
       history.replaceState(null, "", id);
     };
     document.addEventListener("click", onClick);

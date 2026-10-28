@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import {
+  ArrowDown,
   Check,
   EnvelopeSimple,
   Paperclip,
@@ -173,6 +174,17 @@ export function Story() {
             state={state}
             className="h-[min(620px,calc(100svh-230px))] w-[290px] sm:w-[300px] lg:h-[min(640px,calc(100svh-110px))]"
           />
+          {/* Until the first messages appear, tell the visitor the story moves with the scroll. */}
+          <div
+            aria-hidden={n > 1}
+            className={cn(
+              "pointer-events-none absolute top-1/2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-fg px-4 py-2.5 text-[13.5px] font-medium whitespace-nowrap text-canvas shadow-[0_12px_30px_-10px_rgb(11_21_38/0.45)] transition-all duration-500",
+              n <= 1 ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
+            )}
+          >
+            <ArrowDown weight="bold" className="size-4 animate-bounce" />
+            Scrolleá para avanzar
+          </div>
           <div
             className={cn(
               "absolute bottom-6 left-1/2 z-20 w-[290px] -translate-x-1/2 transition-all duration-700 ease-out-expo lg:hidden",

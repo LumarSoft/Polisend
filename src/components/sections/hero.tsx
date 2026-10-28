@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ArrowDown, BellRinging, MoonStars } from "@phosphor-icons/react";
+import { BellRinging, MoonStars, Play } from "@phosphor-icons/react";
 import { Phone } from "@/components/chat/phone";
 import { HERO_SCENARIOS } from "@/components/chat/scripts";
 import { CtaButton, Eyebrow } from "@/components/ui/primitives";
@@ -124,10 +124,13 @@ export function Hero() {
               <CtaButton />
               <a
                 href="#historia"
-                className="group inline-flex items-center gap-2 text-[15px] font-medium text-fg/80 transition-colors hover:text-brand"
+                data-autoplay
+                className="group inline-flex items-center gap-2.5 text-[15px] font-medium text-fg/80 transition-colors hover:text-brand"
               >
+                <span className="grid size-8 place-items-center rounded-full border border-fg/15 transition-colors duration-300 group-hover:border-brand group-hover:bg-brand group-hover:text-on-brand">
+                  <Play weight="fill" className="size-3 translate-x-px" />
+                </span>
                 Mirá un siniestro de punta a punta
-                <ArrowDown className="size-4 transition-transform duration-500 group-hover:translate-y-1" />
               </a>
             </div>
           </div>
