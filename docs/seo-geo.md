@@ -40,6 +40,7 @@ La mayor fortaleza es el contenido: casi 2.800 palabras indexables, específicas
 | `llms.txt` | No había | `/llms.txt`: resumen en Markdown del producto, funciones, precio, integraciones y preguntas frecuentes |
 | Preguntas frecuentes | 8, todas operativas | 11. Se sumaron "¿Qué es Polisend?", "¿Cómo funciona la denuncia de siniestros por WhatsApp?" y "¿Necesito WhatsApp Business?", que responden en forma directa lo que preguntan las personas y los motores de IA |
 | Identidad de marca | Footer genérico | Frase-entidad: "Polisend es el bot de WhatsApp con IA y el panel de gestión para productores asesores de seguros de Argentina. Un producto de Lumarsoft, hecho en Rosario." |
+| Lectores de vista previa y Bing | **Error 500** para WhatsApp, Facebook, Bing, Twitter/X y Slack: Next arma sus metadatos en el servidor y la imagen para compartir leía fuentes desde `node_modules`, que no existen en el servidor de Vercel | Fuentes en `assets/fonts` con rutas fijas: todos reciben 200 con la vista previa (corregido el 28/10) |
 | Íconos / PWA | Solo favicon SVG | Más `apple-icon` PNG 180 px, `manifest.webmanifest` y alt descriptivo en la imagen para compartir |
 | Velocidad (LCP) | 4,1 s simulado: el texto de la portada esperaba al JavaScript para mostrarse | El texto se pinta en el primer cuadro con animación CSS. LCP real: **2,0 s** en móvil con limitación real; 0,8 s en desktop |
 | JavaScript en móvil | El canvas de partículas corría aunque estaba oculto | Solo corre en desktop |

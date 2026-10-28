@@ -10,14 +10,16 @@ export const alt =
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const fontsDir = join(process.cwd(), "node_modules/@fontsource");
-
-// Read at module scope (like the Next docs example) so the image is prerendered at build time.
+// Fonts live in the repo (assets/fonts) and are read with literal paths, as
+// the Next docs do: Next also imports this module at request time to build the
+// page metadata for link-preview bots (WhatsApp, Facebook, Bing…), and a path
+// through node_modules symlinks doesn't exist in the deployed function.
+// Module scope keeps the image itself prerendered at build time.
 const [logo, medium, bold, black] = await Promise.all([
-  readFile(join(fontsDir, "bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff")),
-  readFile(join(fontsDir, "inter-tight/files/inter-tight-latin-500-normal.woff")),
-  readFile(join(fontsDir, "inter-tight/files/inter-tight-latin-700-normal.woff")),
-  readFile(join(fontsDir, "inter-tight/files/inter-tight-latin-800-normal.woff")),
+  readFile(join(process.cwd(), "assets/fonts/bricolage-grotesque-latin-700-normal.woff")),
+  readFile(join(process.cwd(), "assets/fonts/inter-tight-latin-500-normal.woff")),
+  readFile(join(process.cwd(), "assets/fonts/inter-tight-latin-700-normal.woff")),
+  readFile(join(process.cwd(), "assets/fonts/inter-tight-latin-800-normal.woff")),
 ]);
 
 const BLUE = "#1f4fe0";
