@@ -3,10 +3,23 @@
  * NEXT_PUBLIC_WHATSAPP_NUMBER (international format, digits only, e.g.
  * 5493412776893); defaults to the Polisend sales line.
  */
+/**
+ * Public origin, no trailing slash. Canonical, sitemap, OG and JSON-LD URLs use
+ * it, so it must be a domain that actually serves the site (link previews fetch
+ * the og:image from here). Order: explicit NEXT_PUBLIC_SITE_URL, then Vercel's
+ * production domain (it switches to the custom domain once one is added), then
+ * the current production deployment.
+ */
+function siteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const url = explicit || (vercel ? `https://${vercel}` : "https://polisend.vercel.app");
+  return url.replace(/\/$/, "");
+}
+
 export const SITE = {
   name: "Polisend",
-  /** Public origin, no trailing slash. Canonical, sitemap and OG URLs use it. */
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "https://polisend.com").replace(/\/$/, ""),
+  url: siteUrl(),
   title: "Bot de WhatsApp para productores de seguros | Polisend",
   description:
     "Bot de WhatsApp con IA para productores de seguros: atiende 24/7 denuncias de siniestro con fotos, cuotas, pólizas y cotizaciones, con un panel para tu equipo.",

@@ -20,7 +20,7 @@ La mayor fortaleza es el contenido: casi 2.800 palabras indexables, específicas
 
 **Las tres prioridades:**
 
-1. **Configurar el dominio real** (`NEXT_PUBLIC_SITE_URL`) y dar de alta el sitio en Google Search Console y Bing Webmaster Tools. Sin esto, nada de lo anterior se aprovecha. Bing importa porque es el índice que usa ChatGPT para buscar en la web.
+1. **Dar de alta el sitio en Google Search Console y Bing Webmaster Tools** (hoy `polisend.vercel.app`; idealmente con un dominio propio, que el sitio toma solo al conectarlo en Vercel). Sin esto, nada de lo anterior se aprovecha. Bing importa porque es el índice que usa ChatGPT para buscar en la web.
 2. **Crear presencia fuera del sitio**: perfil de LinkedIn, Google Business Profile, directorios de software y menciones en medios y asociaciones de productores. Los motores de IA recomiendan marcas que ven citadas en varias fuentes, no solo en su propia web.
 3. **Sumar páginas por intención de búsqueda** (denuncia de siniestros por WhatsApp, productores de Triunfo, precios, caso de éxito). Una sola landing compite por una sola familia de búsquedas.
 
@@ -93,7 +93,7 @@ Estimaciones cualitativas para Argentina. "Dificultad" refleja quién ocupa hoy 
 |---|---|---|---|
 | Home | El título no tenía la palabra clave | Alta | ✅ Corregido |
 | Home | Meta descripción de más de 160 caracteres | Media | ✅ Corregido |
-| Home | Sin canonical ni `og:url` | Alta | ✅ Corregido (depende del dominio real) |
+| Home | Sin canonical ni `og:url` | Alta | ✅ Corregido (usa el dominio de producción de Vercel) |
 | Home | H1 sin palabra clave | Alta | ✅ Corregido sin cambiar el diseño |
 | Home | Secciones sin H2 | Media | ✅ Corregido |
 | Home | Sin datos estructurados | Alta | ✅ Corregido |
@@ -110,7 +110,7 @@ Estimaciones cualitativas para Argentina. "Dificultad" refleja quién ocupa hoy 
 
 | Chequeo | Estado | Detalle |
 |---|---|---|
-| Dominio configurado | ⚠️ Pendiente | `NEXT_PUBLIC_SITE_URL` usa `https://polisend.com` por defecto. **Confirmar dominio real** antes de publicar: canonical, sitemap, OG y JSON-LD dependen de él |
+| Dominio configurado | ✅ Pasa | Toma automáticamente el dominio de producción de Vercel (hoy `polisend.vercel.app`, y el dominio propio cuando se conecte). `NEXT_PUBLIC_SITE_URL` lo fuerza si hace falta. Antes apuntaba a `polisend.com`, que no existe, y por eso los links compartidos salían sin imagen |
 | HTTPS | ⚠️ Pendiente | Depende del hosting (Vercel lo da automático) |
 | robots.txt | ✅ Pasa | Permite todo, apunta al sitemap |
 | sitemap.xml | ✅ Pasa | Actualizar `SITE.lastUpdated` en `src/lib/site.ts` cuando cambie el contenido |
@@ -180,8 +180,8 @@ No hay un competidor directo con un producto igual y SEO fuerte. El espacio lo o
 
 | Acción | Impacto | Esfuerzo | Depende de |
 |---|---|---|---|
-| Definir dominio y configurar `NEXT_PUBLIC_SITE_URL` | Alto | 15 min | Comprar o elegir el dominio |
-| Publicar en Vercel (HTTPS) | Alto | 30 min | Dominio |
+| Conectar un dominio propio en Vercel (el sitio lo toma solo) | Alto | 15 min | Comprar el dominio |
+| Publicar en Vercel (HTTPS) | Alto | — | ✅ Hecho: polisend.vercel.app |
 | Alta en Google Search Console + enviar sitemap + token en `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Alto | 30 min | Publicación |
 | Alta en Bing Webmaster Tools (importar desde Search Console) | Alto (ChatGPT) | 15 min | Search Console |
 | Validar JSON-LD en Rich Results Test y Schema Validator | Medio | 15 min | Publicación |

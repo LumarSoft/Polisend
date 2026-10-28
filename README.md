@@ -22,7 +22,7 @@ Copiá `.env.example` a `.env.local`:
 | Variable | Para qué |
 |---|---|
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | Número de ventas al que llevan todos los botones "Quiero Polisend" (formato internacional, solo dígitos). Si falta, usa la línea de ventas `5493412776893` (341 277-6893). |
-| `NEXT_PUBLIC_SITE_URL` | Dominio público del sitio, sin barra final (canonical, sitemap, robots, Open Graph, datos estructurados y `llms.txt`). **Configurarlo antes de publicar.** |
+| `NEXT_PUBLIC_SITE_URL` | Opcional. Dominio público del sitio, sin barra final (canonical, sitemap, robots, vista previa al compartir, datos estructurados y `llms.txt`). Si está vacío, en Vercel se usa el dominio de producción del proyecto (hoy `polisend.vercel.app`, o el dominio propio cuando se conecte). |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Opcional. Token de verificación de Google Search Console (meta tag). |
 
 El precio (USD 60/mes por cada 1.000 mensajes), el número de ventas y las compañías integradas están en `src/lib/site.ts`.
