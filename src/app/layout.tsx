@@ -28,7 +28,7 @@ const instrument = Instrument_Serif({
   variable: "--font-instrument",
   subsets: ["latin"],
   weight: "400",
-  style: ["normal", "italic"],
+  style: "italic",
   display: "swap",
 });
 
@@ -44,38 +44,54 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-const description =
-  "El bot de WhatsApp con IA y el panel para productores de seguros. Denuncias de siniestro con fotos, cuotas, documentación y cotizaciones al instante, las 24 horas. Integrado con Triunfo y Sancor.";
+const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: {
-    default: "Polisend — Tu WhatsApp atiende solo. Y sabe con quién habla.",
-    template: "%s · Polisend",
-  },
-  description,
-  applicationName: "Polisend",
+  title: { default: SITE.title, template: "%s | Polisend" },
+  description: SITE.description,
+  applicationName: SITE.name,
   keywords: [
-    "bot de WhatsApp para seguros",
-    "productor de seguros",
-    "productores asesores de seguros",
+    "bot de WhatsApp para productores de seguros",
+    "chatbot para productores de seguros",
+    "software para productores asesores de seguros",
     "denuncia de siniestro por WhatsApp",
-    "cotizador de seguros",
+    "cotizador de seguros por WhatsApp",
+    "WhatsApp para productoras de seguros",
+    "productores asesores de seguros",
     "Triunfo Seguros",
     "Sancor Seguros",
   ],
+  alternates: { canonical: "/" },
+  authors: [{ name: SITE.company }],
+  creator: SITE.company,
+  publisher: SITE.company,
+  category: "technology",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
+    url: "/",
     locale: "es_AR",
-    siteName: "Polisend",
-    title: "Polisend — Tu WhatsApp atiende solo.",
-    description,
+    siteName: SITE.name,
+    title: SITE.title,
+    description: SITE.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Polisend — Tu WhatsApp atiende solo.",
-    description,
+    title: SITE.title,
+    description: SITE.description,
   },
+  ...(googleVerification ? { verification: { google: googleVerification } } : {}),
 };
 
 export const viewport: Viewport = {

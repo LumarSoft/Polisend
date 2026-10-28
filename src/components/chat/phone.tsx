@@ -37,7 +37,7 @@ export function rich(text: string): ReactNode[] {
 
 function Time({ time, read }: { time: string; read?: boolean }) {
   return (
-    <span className="ml-2 inline-flex translate-y-1 items-center gap-0.5 float-right font-mono text-[9.5px] leading-none opacity-60">
+    <span className="ml-2 inline-flex translate-y-1 items-center gap-0.5 float-right font-mono text-[9.5px] leading-none opacity-80">
       {time}
       {read && <Checks className="size-3 text-violet" />}
     </span>
@@ -152,7 +152,7 @@ function Message({ msg }: { msg: ChatMessage }) {
               <p className="font-mono text-[10px] text-mute">{msg.meta}</p>
             </div>
           </div>
-          <div className="px-1 pt-1 text-right font-mono text-[9.5px] text-fg/50">
+          <div className="px-1 pt-1 text-right font-mono text-[9.5px] text-fg/60">
             {msg.time}
           </div>
         </div>
@@ -180,7 +180,7 @@ function Message({ msg }: { msg: ChatMessage }) {
           </ul>
           <p className="px-3 pt-1 pb-2 text-[10px] leading-snug text-mute">
             {msg.note}
-            <span className="float-right font-mono text-fg/50">
+            <span className="float-right font-mono text-fg/60">
               {msg.time}
             </span>
           </p>

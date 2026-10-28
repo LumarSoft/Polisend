@@ -1,7 +1,19 @@
 import { Plus } from "@phosphor-icons/react/ssr";
 import { Eyebrow, SplitReveal } from "@/components/ui/primitives";
 
-const FAQ = [
+export const FAQ = [
+  {
+    q: "¿Qué es Polisend?",
+    a: "Polisend es un bot de WhatsApp con inteligencia artificial y un panel de gestión para productores asesores de seguros. Atiende a tus asegurados las 24 horas: identifica a cada cliente por DNI o patente, toma denuncias de siniestro con fotos, informa cuotas y deuda, envía la documentación de la póliza y cotiza auto y moto en tiempo real. Lo desarrolla Lumarsoft, en Rosario.",
+  },
+  {
+    q: "¿Cómo funciona la denuncia de siniestros por WhatsApp?",
+    a: "El asegurado escribe al WhatsApp de tu productora, se identifica con su DNI o la patente y elige la póliza. El bot le pide la fecha, el relato y las fotos (tarjeta verde, registro, datos del tercero y daños) y deja la denuncia cargada en tu panel, con todo adjunto y aviso por mail.",
+  },
+  {
+    q: "¿Necesito WhatsApp Business?",
+    a: "Polisend funciona sobre la API oficial de WhatsApp Business de Meta. En la puesta en marcha conectamos el número que vas a usar para atender a tus asegurados; no tenés que instalar nada.",
+  },
   {
     q: "¿Tengo que cambiar mi forma de trabajar?",
     a: "No. Tus asegurados siguen escribiendo al WhatsApp de siempre. Polisend resuelve lo repetitivo y te deja en el panel, ordenado, lo que necesita una persona.",
@@ -41,7 +53,7 @@ export function Faq() {
     <section id="faq" className="relative border-t border-fg/6 py-20 sm:py-32">
       <div className="mx-auto grid grid-cols-1 max-w-[1400px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10">
         <div className="lg:sticky lg:top-28 lg:self-start">
-          <Eyebrow>Preguntas</Eyebrow>
+          <Eyebrow>Preguntas frecuentes</Eyebrow>
           <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,4.6vw,4.4rem)] leading-[0.95] font-bold tracking-[-0.04em]">
             Lo que te estás <span className="font-serif font-normal tracking-[-0.02em] text-fg/70 italic">preguntando.</span>
           </SplitReveal>
@@ -50,7 +62,7 @@ export function Faq() {
           {FAQ.map((f) => (
             <details key={f.q} data-reveal className="group py-1 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-left font-display text-[clamp(1.1rem,1.6vw,1.4rem)] font-semibold tracking-[-0.02em] text-fg transition-colors hover:text-brand">
-                {f.q}
+                <h3>{f.q}</h3>
                 <span className="grid size-9 shrink-0 place-items-center rounded-full border border-fg/12 transition-all duration-500 group-open:rotate-45 group-open:border-brand group-open:bg-brand group-open:text-on-brand">
                   <Plus className="size-4" />
                 </span>

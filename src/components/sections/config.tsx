@@ -59,7 +59,7 @@ export function Config() {
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="min-w-0">
-            <Eyebrow>Configuración</Eyebrow>
+            <Eyebrow>Configuración del asistente</Eyebrow>
             <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,5.4vw,5rem)] leading-[0.93] font-bold tracking-[-0.04em]">
               Con tu nombre.{" "}
               <span className="font-serif font-normal tracking-[-0.02em] text-fg/70 italic">Con tu tono.</span>
@@ -74,7 +74,7 @@ export function Config() {
                   <IconBubble icon={Icon} tone="soft" size={34} />
                   <span>
                     <span className="block text-[15px] font-semibold">{t}</span>
-                    <span className="block text-[13.5px] text-fg/55">{d}</span>
+                    <span className="block text-[13.5px] text-fg/65">{d}</span>
                   </span>
                 </li>
               ))}
@@ -89,7 +89,7 @@ export function Config() {
                     key={t}
                     className={cn(
                       "shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-semibold",
-                      t === "Asistente" ? "bg-brand text-on-brand" : "text-fg/50",
+                      t === "Asistente" ? "bg-brand text-on-brand" : "text-fg/60",
                     )}
                   >
                     {t}

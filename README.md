@@ -22,7 +22,8 @@ Copiá `.env.example` a `.env.local`:
 | Variable | Para qué |
 |---|---|
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | Número de ventas al que llevan todos los botones "Quiero Polisend" (formato internacional, solo dígitos). Si falta, usa la línea de ventas `5493412776893` (341 277-6893). |
-| `NEXT_PUBLIC_SITE_URL` | URL pública del sitio (para metadatos y la imagen de Open Graph). |
+| `NEXT_PUBLIC_SITE_URL` | Dominio público del sitio, sin barra final (canonical, sitemap, robots, Open Graph, datos estructurados y `llms.txt`). **Configurarlo antes de publicar.** |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Opcional. Token de verificación de Google Search Console (meta tag). |
 
 El precio (USD 60/mes por cada 1.000 mensajes), el número de ventas y las compañías integradas están en `src/lib/site.ts`.
 
@@ -39,6 +40,10 @@ src/
 │   └── ui/primitives.tsx   botón CTA a WhatsApp, títulos con revelado, revelados al hacer scroll
 └── lib/                    config del sitio, GSAP, hooks
 ```
+
+## SEO y GEO
+
+Rutas generadas: `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, `/llms.txt` (resumen en Markdown para asistentes de IA), `/opengraph-image` y `/apple-icon`. Los datos estructurados (JSON-LD: Organization, WebSite, SoftwareApplication con precio y FAQPage) están en `src/components/seo/json-ld.tsx`; las funciones del producto que usan JSON-LD y `llms.txt` están en `src/lib/product.ts`. Auditoría y plan de acción: [`docs/seo-geo.md`](docs/seo-geo.md).
 
 ## Contenido
 

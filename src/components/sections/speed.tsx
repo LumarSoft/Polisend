@@ -179,7 +179,7 @@ export function Speed() {
       <div className="absolute top-0 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgb(124_92_252/0.08),transparent_65%)]" />
       <div className="relative mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="max-w-[900px]">
-          <Eyebrow>Velocidad</Eyebrow>
+          <Eyebrow>Tiempo de respuesta</Eyebrow>
           <SplitReveal className="mt-5 font-display text-[clamp(2.6rem,6.4vw,6rem)] leading-[0.92] font-bold tracking-[-0.04em]">
             Responde en segundos.{" "}
             <span className="font-serif font-normal tracking-[-0.02em] text-fg/70 italic">Y no inventa nada.</span>
@@ -244,7 +244,7 @@ export function Speed() {
                   <IconBubble icon={Icon} tone="soft" size={38} />
                   <span>
                     <span className="block text-[15.5px] font-semibold text-fg">{t}</span>
-                    <span className="mt-0.5 block text-[14px] leading-snug text-fg/55">{d}</span>
+                    <span className="mt-0.5 block text-[14px] leading-snug text-fg/65">{d}</span>
                   </span>
                 </li>
               ))}

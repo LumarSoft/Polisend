@@ -22,7 +22,7 @@ export function Pricing() {
       <div className="absolute inset-x-0 top-1/3 -z-10 mx-auto h-[520px] max-w-[1100px] rounded-full bg-[radial-gradient(ellipse,rgb(31_79_224/0.12),transparent_65%)] blur-2xl" />
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-[860px] text-center">
-          <Eyebrow>Precio</Eyebrow>
+          <Eyebrow>Precio de Polisend</Eyebrow>
           <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,5.6vw,5.2rem)] leading-[0.93] font-bold tracking-[-0.04em]">
             Menos de lo que cuesta{" "}
             <span className="font-serif font-normal tracking-[-0.02em] text-brand italic">no contestar.</span>

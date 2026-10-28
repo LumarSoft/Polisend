@@ -1,3 +1,4 @@
+import { JsonLd } from "@/components/seo/json-ld";
 import { Reveals } from "@/components/ui/primitives";
 import { Nav } from "@/components/sections/nav";
 import { Hero } from "@/components/sections/hero";
@@ -18,6 +19,7 @@ import { FinalCta, Footer } from "@/components/sections/final-cta";
 export default function Home() {
   return (
     <>
+      <JsonLd />
       <Nav />
       <main>
         <Hero />

@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 import { MARK_PATH } from "@/components/brand/logo";
 import { SITE } from "@/lib/site";
 
-export const alt = "Polisend — Tu WhatsApp atiende solo. Y sabe con quién habla.";
+export const alt = "Polisend: bot de WhatsApp con IA para productores de seguros";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

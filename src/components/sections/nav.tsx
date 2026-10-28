@@ -39,8 +39,8 @@ export function Nav() {
       ref={ref}
       className="group/nav fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-500 [&.is-scrolled]:border-b [&.is-scrolled]:border-fg/6 [&.is-scrolled]:bg-canvas/75 [&.is-scrolled]:backdrop-blur-xl"
     >
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-6 px-5 sm:px-8 lg:h-[72px] lg:px-10">
-        <a href="#inicio" aria-label="Polisend, volver al inicio" className="text-[22px] text-fg">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-5 sm:gap-6 sm:px-8 lg:h-[72px] lg:px-10">
+        <a href="#inicio" aria-label="Polisend, volver al inicio" className="shrink-0 text-[20px] text-fg sm:text-[22px]">
           <Logo />
         </a>
         <nav aria-label="Secciones" className="hidden items-center gap-1 lg:flex">
@@ -54,10 +54,19 @@ export function Nav() {
             </a>
           ))}
         </nav>
-        <CtaButton size="sm">
-          <span className="sm:hidden">Quiero</span>
-          <span className="hidden sm:inline">Quiero Polisend</span>
-        </CtaButton>
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Placeholder until the client panel login exists. */}
+          <button
+            type="button"
+            className="h-10 rounded-full px-3 text-[13.5px] font-semibold whitespace-nowrap text-fg/80 transition-colors hover:bg-fg/6 hover:text-fg sm:border sm:border-fg/12 sm:px-4.5"
+          >
+            Iniciar sesión
+          </button>
+          <CtaButton size="sm">
+            <span className="sm:hidden">Quiero</span>
+            <span className="hidden sm:inline">Quiero Polisend</span>
+          </CtaButton>
+        </div>
       </div>
       <div className="nav-progress absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-brand" />
     </header>

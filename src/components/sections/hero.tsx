@@ -4,9 +4,9 @@ import { useRef } from "react";
 import { BellRinging, MoonStars, Play } from "@phosphor-icons/react";
 import { Phone } from "@/components/chat/phone";
 import { HERO_SCENARIOS } from "@/components/chat/scripts";
-import { CtaButton, Eyebrow } from "@/components/ui/primitives";
+import { CtaButton } from "@/components/ui/primitives";
 import { MessageField } from "./message-field";
-import { gsap, MOTION_OK, SplitText, useGSAP } from "@/lib/gsap";
+import { gsap, MOTION_OK, useGSAP } from "@/lib/gsap";
 import { useChatPlayer, useInView } from "@/lib/hooks";
 import { SITE } from "@/lib/site";
 
@@ -26,27 +26,12 @@ export function Hero() {
     () => {
       const mm = gsap.matchMedia();
       mm.add(MOTION_OK, () => {
-        const split = SplitText.create(".hero-line", {
-          type: "words,chars",
-          mask: "words",
-        });
+        // Headline, copy and facts enter with CSS from the first paint (fast
+        // LCP); GSAP only brings in the decorative phone and floating cards.
         const tl = gsap.timeline({ defaults: { ease: "expo.out" }, delay: 0.15 });
         tl.set("[data-hero]", { autoAlpha: 1 })
-          .from(".hero-eyebrow", { y: 20, autoAlpha: 0, duration: 0.8 })
-          .from(
-            split.chars,
-            { yPercent: 120, rotate: 8, duration: 1.2, stagger: 0.022 },
-            0.1,
-          )
-          .from(".hero-serif", { y: 30, autoAlpha: 0, filter: "blur(10px)", duration: 1.2 }, 0.7)
-          .from(".hero-copy > *", { y: 24, autoAlpha: 0, stagger: 0.08, duration: 1 }, 0.85)
-          .from(
-            ".hero-phone",
-            { y: 160, rotate: 7, autoAlpha: 0, duration: 1.6, ease: "expo.out" },
-            0.35,
-          )
-          .from(".hero-float", { scale: 0.6, autoAlpha: 0, stagger: 0.15, duration: 1, ease: "back.out(1.7)" }, 1.1)
-          .from(".hero-fact", { y: 30, autoAlpha: 0, stagger: 0.1, duration: 1 }, 1.05);
+          .from(".hero-phone", { y: 160, rotate: 7, autoAlpha: 0, duration: 1.6 }, 0.2)
+          .from(".hero-float", { scale: 0.6, autoAlpha: 0, stagger: 0.15, duration: 1, ease: "back.out(1.7)" }, 0.9);
 
         // Scroll-out: the phone drifts up, the headline sinks and dims.
         gsap.to(".hero-phone-wrap", {
@@ -72,10 +57,7 @@ export function Hero() {
           gsap.to(".hero-phone", { rotateY: nx * 8, rotateX: -ny * 6, duration: 1.4, ease: "power3.out" });
         };
         window.addEventListener("pointermove", onMove);
-        return () => {
-          window.removeEventListener("pointermove", onMove);
-          split.revert();
-        };
+        return () => window.removeEventListener("pointermove", onMove);
       });
     },
     { scope: root },
@@ -97,23 +79,21 @@ export function Hero() {
         className="mx-auto grid grid-cols-1 max-w-[1400px] items-center gap-14 px-5 sm:px-8 lg:grid-cols-[1.18fr_0.82fr] lg:gap-6 lg:px-10"
       >
         <div className="hero-text relative z-10">
-          <div data-hero className="hero-eyebrow mb-7">
-            <Eyebrow className="text-fg/60">Para productores asesores de seguros</Eyebrow>
-          </div>
-          <h1
-            data-hero
-            className="font-display text-[clamp(3.3rem,7.6vw,8.6rem)] leading-[0.86] font-bold tracking-[-0.045em] text-fg"
-          >
-            <span className="hero-line block">Tu WhatsApp</span>
-            <span className="hero-line block">
-              atiende <span className="text-brand">solo.</span>
+          <h1 className="font-display text-[clamp(3.3rem,7.6vw,8.6rem)] leading-[0.86] font-bold tracking-[-0.045em] text-fg">
+            <span className="mb-7 block animate-[rise_0.8s_var(--ease-out-expo)_both] font-sans text-[15px] leading-normal font-medium tracking-[-0.01em] text-fg/70">
+              Bot de WhatsApp con IA para productores asesores de seguros
             </span>
-            <span className="hero-serif mt-4 block font-serif text-[0.5em] leading-[1] font-normal tracking-[-0.015em] text-fg/75 italic">
+            <span className="sr-only">. </span>
+            <span className="block animate-[rise_0.9s_var(--ease-out-expo)_both] [animation-delay:60ms]">Tu WhatsApp</span>{" "}
+            <span className="block animate-[rise_0.9s_var(--ease-out-expo)_both] [animation-delay:140ms]">
+              atiende <span className="text-brand">solo.</span>
+            </span>{" "}
+            <span className="mt-4 block animate-[rise_1s_var(--ease-out-expo)_both] font-serif text-[0.5em] leading-[1] font-normal tracking-[-0.015em] text-fg/75 italic [animation-delay:300ms]">
               y sabe con quién habla.
             </span>
           </h1>
 
-          <div data-hero className="hero-copy mt-8 max-w-[560px]">
+          <div className="mt-8 max-w-[560px] animate-[rise_0.9s_var(--ease-out-expo)_both] [animation-delay:380ms]">
             <p className="text-[17px] leading-relaxed text-fg/70 sm:text-[18.5px]">
               Polisend identifica a cada asegurado por <b className="font-semibold text-fg">DNI o patente</b> y
               resuelve en el chat lo que hoy te llena el día:{" "}
@@ -135,9 +115,9 @@ export function Hero() {
             </div>
           </div>
 
-          <dl className="mt-12 grid max-w-[640px] grid-cols-3 gap-px overflow-hidden rounded-2xl border border-fg/8 bg-fg/8">
+          <dl className="mt-12 grid max-w-[640px] animate-[rise_0.9s_var(--ease-out-expo)_both] grid-cols-3 gap-px overflow-hidden rounded-2xl border border-fg/8 bg-fg/8 [animation-delay:520ms]">
             {FACTS.map((f) => (
-              <div key={f.k} data-hero className="hero-fact bg-canvas-2 px-3 py-3.5 sm:px-5 sm:py-4">
+              <div key={f.k} className="bg-canvas-2 px-3 py-3.5 sm:px-5 sm:py-4">
                 <dt className="text-[11.5px] text-mute sm:text-[10.5px] sm:tracking-[0.14em] font-medium">{f.k}</dt>
                 <dd className="mt-1 font-display text-[15px] leading-tight font-semibold tracking-tight text-fg sm:text-[21px]">{f.v}</dd>
                 <dd className="hidden text-[12.5px] text-mute sm:block">{f.s}</dd>

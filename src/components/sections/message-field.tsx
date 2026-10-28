@@ -31,6 +31,8 @@ export function MessageField({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // The field is desktop-only (hidden below lg); don't spend frames on it.
+    if (!window.matchMedia("(min-width: 1024px)").matches) return;
 
     let w = 0;
     let h = 0;

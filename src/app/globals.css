@@ -17,10 +17,10 @@
   --color-brand-2: #1840b8;
   --color-on-brand: #ffffff;
   --color-mint: #12b76a;
-  --color-coral: #e5484d;
+  --color-coral: #d6303a;
   --color-amber: #f5a524;
   --color-violet: #7c5cfc;
-  --color-mute: #66728a;
+  --color-mute: #56617a;
   --color-mute-2: #9aa4b6;
 
   --font-display: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
@@ -86,6 +86,14 @@
   }
 }
 
+/* Starts semi-visible on purpose: text at opacity 0 isn't "painted" for LCP,
+   and on slow phones the animation can start late. */
+@keyframes rise {
+  from {
+    opacity: 0.2;
+    transform: translateY(28px);
+  }
+}
 @keyframes growx {
   from {
     transform: scaleX(0);

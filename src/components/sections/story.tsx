@@ -100,7 +100,7 @@ export function Story() {
       <div className="relative mx-auto grid grid-cols-1 h-full max-w-[1400px] grid-rows-[auto_1fr] items-center gap-4 px-5 pt-20 pb-4 sm:px-8 lg:grid-cols-[1fr_auto_0.55fr] lg:grid-rows-1 lg:gap-10 lg:px-10 lg:py-0">
         {/* narrative */}
         <div className="st-intro relative z-10">
-          <Eyebrow className="hidden sm:inline-flex">Un siniestro, de punta a punta</Eyebrow>
+          <Eyebrow as="h2" className="sr-only sm:not-sr-only">Denuncia de siniestro por WhatsApp, de punta a punta</Eyebrow>
 
           <div className="flex items-end gap-4 sm:mt-6 lg:block">
             <div
@@ -118,9 +118,9 @@ export function Story() {
           </div>
 
           <div key={chapter.title} className="mt-3 max-w-[460px] animate-pop lg:mt-8">
-            <h3 className="font-display text-[clamp(1.4rem,2.6vw,2.4rem)] leading-tight font-semibold tracking-[-0.03em]">
+            <p className="font-display text-[clamp(1.4rem,2.6vw,2.4rem)] leading-tight font-semibold tracking-[-0.03em]">
               {chapter.title}
-            </h3>
+            </p>
             <p className="mt-2 hidden text-[16px] leading-relaxed text-fg/65 sm:block lg:text-[17px]">
               {chapter.body}
             </p>
@@ -198,13 +198,25 @@ export function Story() {
         {/* panel side */}
         <div className="relative hidden lg:block">
           <p className="mb-3 text-[12.5px] text-mute font-medium">Mientras tanto, en tu panel</p>
-          <div
-            className={cn(
-              "transition-all duration-700 ease-out-expo",
-              done ? "translate-y-0 opacity-100 blur-0" : "translate-y-8 opacity-25 blur-[2px]",
-            )}
-          >
-            <PanelCard />
+          <div className="relative">
+            {/* Empty slot until the claim lands, so the card's arrival reads as an event. */}
+            <div
+              className={cn(
+                "absolute inset-0 grid place-items-center rounded-2xl border-2 border-dashed border-fg/15 text-[14px] text-fg/60 transition-opacity duration-500",
+                done ? "opacity-0" : "opacity-100",
+              )}
+            >
+              Esperando la denuncia…
+            </div>
+            <div
+              aria-hidden={!done}
+              className={cn(
+                "transition-all duration-700 ease-out-expo",
+                done ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0",
+              )}
+            >
+              <PanelCard />
+            </div>
           </div>
           <div
             className={cn(
@@ -225,7 +237,7 @@ function PanelCard() {
   return (
     <div className="overflow-hidden rounded-2xl border border-fg/8 bg-canvas-2 text-fg shadow-[0_30px_80px_-20px_rgb(11_21_38/0.2)]">
       <div className="flex items-center justify-between border-b border-fg/8 px-4 py-2.5">
-        <span className="text-[12px] text-fg/50 font-medium">Siniestros · nuevo</span>
+        <span className="text-[12px] text-fg/60 font-medium">Siniestros · nuevo</span>
         <span className="rounded-full bg-amber/25 px-2 py-0.5 text-[10.5px] font-semibold text-[#8a5a00]">Pendiente</span>
       </div>
       <div className="px-4 py-3">
@@ -239,7 +251,7 @@ function PanelCard() {
             <span key={i} className="aspect-square rounded-md" style={{ background: c }} />
           ))}
         </div>
-        <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-fg/55">
+        <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-fg/65">
           <Paperclip className="size-3.5" /> 4 adjuntos · tarjeta, registro, tercero y daño
         </p>
       </div>

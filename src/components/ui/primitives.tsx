@@ -53,7 +53,7 @@ export function CtaButton({
         variant === "primary"
           ? "bg-brand text-on-brand shadow-[0_0_0_0_rgb(31_79_224/0.5)] hover:shadow-[0_0_40px_-4px_rgb(31_79_224/0.7)]"
           : "bg-canvas text-fg hover:bg-canvas-4",
-        size === "sm" && "h-10 pr-1.5 pl-4.5 text-[13.5px]",
+        size === "sm" && "h-10 px-4 text-[13.5px] sm:pr-1.5 sm:pl-4.5",
         size === "md" && "h-13 pr-2 pl-6 text-[15px]",
         size === "lg" && "h-16 pr-2.5 pl-8 text-[18px]",
         className,
@@ -64,7 +64,7 @@ export function CtaButton({
         className={cn(
           "grid place-items-center rounded-full transition-transform duration-500 ease-out-expo group-hover:rotate-45",
           variant === "primary" ? "bg-canvas text-brand" : "bg-brand text-on-brand",
-          size === "sm" ? "size-7" : size === "md" ? "size-9" : "size-11",
+          size === "sm" ? "hidden size-7 sm:grid" : size === "md" ? "size-9" : "size-11",
         )}
       >
         <ArrowUpRight weight="bold" className="size-4" />
@@ -74,16 +74,18 @@ export function CtaButton({
 }
 
 export function Eyebrow({
+  as: Tag = "p",
   children,
   className,
 }: {
+  as?: ElementType;
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <p className={cn("text-[15px] font-medium tracking-[-0.01em] text-brand", className)}>
+    <Tag className={cn("text-[15px] font-medium tracking-[-0.01em] text-brand", className)}>
       {children}
-    </p>
+    </Tag>
   );
 }
 

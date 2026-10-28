@@ -38,7 +38,7 @@ function Node({ n, className }: { n: (typeof NODES)[number]; className?: string 
         {Icon && <Icon weight="fill" className="size-5" style={{ color: n.color }} />}
         {n.name}
       </p>
-      <p className="mt-0.5 text-[13px] text-fg/55">{n.items}</p>
+      <p className="mt-0.5 text-[13px] text-fg/65">{n.items}</p>
     </div>
   );
 }
@@ -79,7 +79,7 @@ export function Integrations() {
     <section ref={root} id="integraciones" className="relative overflow-hidden py-20 sm:py-32">
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-[920px] text-center">
-          <Eyebrow>Integraciones</Eyebrow>
+          <Eyebrow>Integración con Triunfo y Sancor</Eyebrow>
           <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,5.8vw,5.4rem)] leading-[0.93] font-bold tracking-[-0.04em]">
             Conectado a tu compañía.{" "}
             <span className="font-serif font-normal tracking-[-0.02em] text-brand italic">Al día, solo.</span>
@@ -116,10 +116,10 @@ export function Integrations() {
               </span>
               <div>
                 <p className="font-display text-[20px] font-semibold tracking-tight">La cartera se sincroniza sola</p>
-                <p className="text-[14px] text-fg/55">Dos veces por día, todos los días. Sin exportar, sin planillas.</p>
+                <p className="text-[14px] text-fg/65">Dos veces por día, todos los días. Sin exportar, sin planillas.</p>
               </div>
             </div>
-            <span className="rounded-full border border-mint/30 bg-mint/10 px-3 py-1.5 font-mono text-[11px] text-mint">
+            <span className="rounded-full border border-mint/30 bg-mint/10 px-3 py-1.5 font-mono text-[11px] text-[#067647]">
               ✓ Última sincronización 06:00
             </span>
           </div>

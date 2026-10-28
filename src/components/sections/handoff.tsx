@@ -25,10 +25,10 @@ function Inbox() {
         <span className="font-display text-[15px] font-semibold tracking-tight">Inbox</span>
         <span className="ml-2 flex gap-1 text-[12px] font-medium">
           <span className="rounded-full bg-fg px-2 py-0.5 text-canvas">Todas</span>
-          <span className="rounded-full px-2 py-0.5 text-fg/50">Pendientes · 1</span>
-          <span className="rounded-full px-2 py-0.5 text-fg/50">Tomadas</span>
+          <span className="rounded-full px-2 py-0.5 text-fg/60">Pendientes · 1</span>
+          <span className="rounded-full px-2 py-0.5 text-fg/60">Tomadas</span>
         </span>
-        <MagnifyingGlass className="ml-auto size-4 text-fg/40" />
+        <MagnifyingGlass className="ml-auto size-4 text-fg/65" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr]">
         <ul className="hidden border-r border-fg/8 sm:block">
@@ -38,7 +38,7 @@ function Inbox() {
                 <span className="text-[13px] font-semibold">{c.n}</span>
                 <span className={cn("rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold", c.tone)}>{c.s}</span>
               </div>
-              <p className="truncate text-[11.5px] text-fg/55">{c.m}</p>
+              <p className="truncate text-[11.5px] text-fg/65">{c.m}</p>
             </li>
           ))}
         </ul>
@@ -58,7 +58,7 @@ function Inbox() {
           <div className="flex flex-1 flex-col justify-end gap-1.5 bg-[#eef2f7] px-3 py-3 text-[12px]">
             <p className="max-w-[80%] self-start rounded-xl rounded-tl-sm bg-white px-2.5 py-1.5">Quiero hablar con alguien 🙏</p>
             <p className="max-w-[80%] self-end rounded-xl rounded-tr-sm bg-[#dbe5ff] px-2.5 py-1.5">
-              ¡Dale! Le aviso a alguien del equipo y te escribe por acá. <span className="text-[9px] text-fg/40">· bot</span>
+              ¡Dale! Le aviso a alguien del equipo y te escribe por acá. <span className="text-[9px] text-fg/65">· bot</span>
             </p>
             <p className="ho-event mx-auto my-1 rounded-full bg-fg/8 px-2.5 py-0.5 text-[11.5px] text-fg/60 font-medium">
               Martina tomó la conversación · bot en pausa
@@ -68,7 +68,7 @@ function Inbox() {
             </p>
           </div>
           <div className="flex items-center gap-2 border-t border-fg/8 px-3 py-2.5">
-            <span className="flex-1 rounded-full bg-fg/6 px-3 py-1.5 text-[12px] text-fg/40">Escribí un mensaje…</span>
+            <span className="flex-1 rounded-full bg-fg/6 px-3 py-1.5 text-[12px] text-fg/65">Escribí un mensaje…</span>
             <span className="grid size-7 place-items-center rounded-full bg-fg text-canvas">
               <PaperPlaneRight className="size-3.5" />
             </span>
@@ -137,9 +137,9 @@ export function Handoff() {
       </div>
 
       <div className="ho-quiet-wrap invisible absolute inset-0 grid place-items-center px-5 motion-reduce:visible motion-reduce:relative motion-reduce:pb-10">
-        <p className="ho-quiet text-center font-display text-[clamp(3.4rem,11vw,10rem)] leading-[0.9] font-bold tracking-[-0.045em]">
+        <h2 className="ho-quiet text-center font-display text-[clamp(3.4rem,11vw,10rem)] leading-[0.9] font-bold tracking-[-0.045em]">
           el bot se <span className="text-brand">calla.</span>
-        </p>
+        </h2>
       </div>
 
       <div className="ho-panel absolute inset-x-0 bottom-0 motion-reduce:relative mx-auto grid grid-cols-1 max-w-[1100px] items-end gap-6 px-5 pb-8 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-10 lg:pb-14">

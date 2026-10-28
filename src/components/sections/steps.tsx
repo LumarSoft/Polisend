@@ -50,7 +50,7 @@ export function Steps() {
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <Eyebrow>Cómo empezás</Eyebrow>
+            <Eyebrow>Cómo empezar con Polisend</Eyebrow>
             <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,5.4vw,5rem)] leading-[0.93] font-bold tracking-[-0.04em]">
               Tres pasos. <span className="font-serif font-normal tracking-[-0.02em] text-fg/70 italic">Cero instalaciones.</span>
             </SplitReveal>

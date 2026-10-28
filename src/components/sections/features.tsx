@@ -48,7 +48,7 @@ function Card({
       )}
     >
       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 [background:radial-gradient(420px_circle_at_var(--mx)_var(--my),rgb(31_79_224/0.09),transparent_60%)]" />
-      <div className="relative flex items-center gap-3 text-[14px] font-medium text-fg/55">
+      <div className="relative flex items-center gap-3 text-[14px] font-medium text-fg/65">
         <IconBubble icon={icon} size={38} />
         {kicker}
       </div>
@@ -98,13 +98,13 @@ function ClaimVisual() {
         )}
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[12px] text-fg/50 font-medium">Panel · Siniestro #1043</p>
+          <p className="text-[12px] text-fg/60 font-medium">Panel · Siniestro #1043</p>
           <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors duration-500", states[stage].c)}>
             {states[stage].k}
           </span>
         </div>
         <p className="mt-2 text-[16px] font-semibold tracking-tight">Lucía G. · Peugeot 208</p>
-        <p className="text-[12.5px] text-fg/55">Choque trasero · hoy 07:35 · con tercero</p>
+        <p className="text-[12.5px] text-fg/65">Choque trasero · hoy 07:35 · con tercero</p>
         <div className="mt-4 flex items-center gap-1">
           {states.map((st, i) => (
             <div key={st.k} className="flex flex-1 items-center gap-1">
@@ -117,7 +117,7 @@ function ClaimVisual() {
             </div>
           ))}
         </div>
-        <div className="mt-1.5 flex justify-between text-[10.5px] text-fg/45">
+        <div className="mt-1.5 flex justify-between text-[10.5px] text-fg/58">
           {states.map((st) => (
             <span key={st.k}>{st.k}</span>
           ))}
@@ -326,7 +326,7 @@ export function Features() {
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
-            <Eyebrow>El bot</Eyebrow>
+            <Eyebrow>Bot de WhatsApp para productores de seguros</Eyebrow>
             <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,5.6vw,5.2rem)] leading-[0.93] font-bold tracking-[-0.04em]">
               Todo lo que hoy te llega por WhatsApp,{" "}
               <span className="font-serif font-normal tracking-[-0.02em] text-brand italic">resuelto en el chat.</span>

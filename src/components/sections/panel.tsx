@@ -46,7 +46,7 @@ function Widget({ title, sub, children, className }: { title: string; sub?: stri
   return (
     <div className={cn("rounded-2xl border border-fg/8 bg-white p-4", className)}>
       <p className="text-[13px] font-semibold tracking-tight text-fg">{title}</p>
-      {sub && <p className="text-[11px] text-fg/45">{sub}</p>}
+      {sub && <p className="text-[11px] text-fg/58">{sub}</p>}
       <div className="mt-3">{children}</div>
     </div>
   );
@@ -108,7 +108,7 @@ function HomeView() {
           { k: "Siniestros abiertos", v: <CountUp to={12} />, i: ShieldWarning },
         ].map(({ k, v, i: Icon }) => (
           <div key={k} className="rounded-2xl border border-fg/8 bg-white p-4">
-            <div className="flex items-center justify-between text-[11.5px] text-fg/55">
+            <div className="flex items-center justify-between text-[11.5px] text-fg/65">
               {k} <Icon className="size-4 text-fg/35" />
             </div>
             <p className="mt-2 font-display text-[clamp(1.2rem,2vw,1.7rem)] font-semibold tracking-tight text-fg">{v}</p>
@@ -125,7 +125,7 @@ function HomeView() {
                   className={cn("w-full origin-bottom animate-[growy_1.1s_var(--ease-out-expo)_both] rounded-t-lg", i === 1 ? "bg-brand-2" : "bg-fg/80")}
                   style={{ height: `${(r.v / max) * 92}px`, animationDelay: `${i * 80}ms` }}
                 />
-                <span className="text-[10.5px] text-fg/50">{r.m}</span>
+                <span className="text-[10.5px] text-fg/60">{r.m}</span>
               </div>
             ))}
           </div>
@@ -191,7 +191,7 @@ function InboxView() {
               <span className="text-[12.5px] font-semibold text-fg">{c.n}</span>
               <span className={cn("rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold", c.tone)}>{c.s}</span>
             </div>
-            <p className="truncate text-[11.5px] text-fg/50">{c.m}</p>
+            <p className="truncate text-[11.5px] text-fg/60">{c.m}</p>
           </li>
         ))}
       </ul>
@@ -200,14 +200,14 @@ function InboxView() {
           <span className="grid size-7 place-items-center rounded-full bg-fg text-[11px] font-bold text-canvas">J</span>
           <div className="leading-tight">
             <p className="text-[12.5px] font-semibold text-fg">Jorge P.</p>
-            <p className="text-[10.5px] text-fg/45">Cliente · 2 pólizas</p>
+            <p className="text-[10.5px] text-fg/58">Cliente · 2 pólizas</p>
           </div>
           <span className="ml-auto rounded-full bg-brand px-3 py-1.5 text-[11px] font-semibold text-on-brand">Tomar conversación</span>
         </div>
         <div className="flex flex-1 flex-col justify-end gap-1.5 bg-[#eef2f7] p-3 text-[12px]">
           <p className="max-w-[75%] self-start rounded-xl rounded-tl-sm bg-white px-2.5 py-1.5 text-fg">Hola, ¿mi póliza cubre granizo?</p>
           <p className="max-w-[75%] self-end rounded-xl rounded-tr-sm bg-[#dbe5ff] px-2.5 py-1.5 text-fg">
-            Depende de la cobertura que tengas. Te paso con alguien del equipo que lo revisa con tu póliza. <span className="text-[9px] text-fg/40">· bot</span>
+            Depende de la cobertura que tengas. Te paso con alguien del equipo que lo revisa con tu póliza. <span className="text-[9px] text-fg/65">· bot</span>
           </p>
           <p className="max-w-[75%] self-start rounded-xl rounded-tl-sm bg-white px-2.5 py-1.5 text-fg">Quiero hablar con alguien</p>
           <p className="mx-auto my-1 rounded-full bg-coral/12 px-2.5 py-0.5 text-[11.5px] text-coral font-medium">Pidió un asesor · esperando</p>
@@ -229,9 +229,9 @@ function NewsView() {
     <div className="rounded-2xl border border-fg/8 bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b border-fg/8 px-4 py-3 text-[11px]">
         {["Todas", "Siniestros", "Asesor"].map((f, i) => (
-          <span key={f} className={cn("rounded-full px-2.5 py-1 font-semibold", i === 0 ? "bg-fg text-canvas" : "text-fg/50")}>{f}</span>
+          <span key={f} className={cn("rounded-full px-2.5 py-1 font-semibold", i === 0 ? "bg-fg text-canvas" : "text-fg/60")}>{f}</span>
         ))}
-        <span className="ml-auto text-fg/45">Marcar todas como leídas</span>
+        <span className="ml-auto text-fg/58">Marcar todas como leídas</span>
       </div>
       <ul>
         {items.map(({ i: Icon, t, d, w, unread, c }, idx) => (
@@ -241,9 +241,9 @@ function NewsView() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-[12.5px] font-semibold text-fg">{t}</p>
-              <p className="truncate text-[11.5px] text-fg/50">{d}</p>
+              <p className="truncate text-[11.5px] text-fg/60">{d}</p>
             </div>
-            <span className="ml-auto shrink-0 text-[10.5px] text-fg/40">{w}</span>
+            <span className="ml-auto shrink-0 text-[10.5px] text-fg/65">{w}</span>
             {unread && <span className="size-2 shrink-0 rounded-full bg-coral" />}
           </li>
         ))}
@@ -262,7 +262,7 @@ function LeadsView() {
   ];
   return (
     <div className="overflow-hidden rounded-2xl border border-fg/8 bg-white">
-      <div className="grid grid-cols-[1.2fr_1.3fr_0.8fr_0.8fr] gap-2 border-b border-fg/8 px-4 py-2.5 text-[10.5px] font-semibold tracking-wide text-fg/45 uppercase">
+      <div className="grid grid-cols-[1.2fr_1.3fr_0.8fr_0.8fr] gap-2 border-b border-fg/8 px-4 py-2.5 text-[10.5px] font-semibold tracking-wide text-fg/58 uppercase">
         <span>Contacto</span>
         <span>Producto</span>
         <span>Origen</span>
@@ -272,7 +272,7 @@ function LeadsView() {
         <div key={r.n} className="grid animate-pop grid-cols-[1.2fr_1.3fr_0.8fr_0.8fr] items-center gap-2 border-b border-fg/6 px-4 py-3 text-[12px] last:border-0" style={{ animationDelay: `${i * 70}ms` }}>
           <span className="truncate font-semibold text-fg">{r.n}</span>
           <span className="truncate text-fg/65">{r.p}</span>
-          <span className="text-fg/55">{r.o}</span>
+          <span className="text-fg/65">{r.o}</span>
           <span className={cn("w-fit rounded-full px-2 py-0.5 text-[10.5px] font-semibold", r.c)}>{r.s}</span>
         </div>
       ))}
@@ -297,7 +297,7 @@ function DebtView() {
           { k: "Cuotas rechazadas", v: <CountUp to={9} /> },
         ].map((s) => (
           <div key={s.k} className="rounded-2xl border border-fg/8 bg-white p-4">
-            <p className="text-[11.5px] text-fg/55">{s.k}</p>
+            <p className="text-[11.5px] text-fg/65">{s.k}</p>
             <p className="mt-1.5 font-display text-[clamp(1.1rem,1.8vw,1.5rem)] font-semibold tracking-tight text-fg">{s.v}</p>
           </div>
         ))}
@@ -368,8 +368,8 @@ export function Panel() {
       <div className="relative mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
-            <span className="inline-flex items-center gap-2 text-[13px] font-medium text-fg/50">
-              El panel
+            <span className="inline-flex items-center gap-2 text-[13px] font-medium text-fg/60">
+              Panel de gestión para tu productora
             </span>
             <SplitReveal className="mt-5 font-display text-[clamp(2.5rem,6vw,5.6rem)] leading-[0.92] font-bold tracking-[-0.04em]">
               Y vos, lo ves todo{" "}
@@ -411,7 +411,7 @@ export function Panel() {
                 <span className="size-2.5 rounded-full bg-[#febc2e]" />
                 <span className="size-2.5 rounded-full bg-[#28c840]" />
               </span>
-              <span className="mx-auto rounded-full bg-fg/5 px-4 py-1 font-mono text-[11px] text-fg/50">
+              <span className="mx-auto rounded-full bg-fg/5 px-4 py-1 font-mono text-[11px] text-fg/60">
                 app.polisend.com/panel/{TABS[active].id}
               </span>
             </div>

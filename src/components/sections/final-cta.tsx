@@ -35,10 +35,10 @@ export function FinalCta() {
     <section ref={root} className="relative overflow-hidden py-24 sm:py-40">
       <div className="fc-glow absolute top-1/2 left-1/2 -z-10 size-[110vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgb(31_79_224/0.2),transparent_60%)]" />
       <div className="mx-auto max-w-[1300px] px-5 text-center sm:px-8">
-        <p data-split className="fc-title font-display text-[clamp(2.6rem,7.6vw,7.4rem)] leading-[0.9] font-bold tracking-[-0.042em] text-balance">
+        <h2 data-split className="fc-title font-display text-[clamp(2.6rem,7.6vw,7.4rem)] leading-[0.9] font-bold tracking-[-0.042em] text-balance">
           ¿Cuántos mensajes contestaste hoy{" "}
           <span className="font-serif font-normal tracking-[-0.02em] text-brand italic">que podían contestarse solos?</span>
-        </p>
+        </h2>
         <div data-reveal className="mt-12 flex flex-col items-center gap-4">
           <CtaButton size="lg">Quiero Polisend</CtaButton>
           <p className="text-[14px] text-mute">Te respondemos por WhatsApp. Obvio.</p>
@@ -54,8 +54,8 @@ export function Footer() {
       <div className="mx-auto flex max-w-[1400px] flex-col gap-10 px-5 py-14 sm:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
         <div>
           <Logo className="text-[34px] text-fg" />
-          <p className="mt-4 max-w-[360px] text-[14.5px] leading-relaxed text-fg/55">
-            El bot de WhatsApp y el panel para productores de seguros. Tus asegurados atendidos, a cualquier hora.
+          <p className="mt-4 max-w-[360px] text-[14.5px] leading-relaxed text-fg/65">
+            Polisend es el bot de WhatsApp con IA y el panel de gestión para productores asesores de seguros de Argentina. Un producto de Lumarsoft, hecho en Rosario.
           </p>
         </div>
         <nav aria-label="Pie de página" className="grid grid-cols-2 gap-x-12 gap-y-2 text-[14px] text-fg/60 sm:grid-cols-3">
