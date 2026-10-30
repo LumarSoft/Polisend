@@ -5,7 +5,7 @@
 Este repo tiene la landing pública de Polisend (`/`, `/privacidad`, `/terminos`) y el panel que usan todas las
 organizaciones (`/admin`). Habla con la API multi-tenant `api_john` (NestJS + Prisma + MySQL); el bot de WhatsApp es
 `BOT_JPMG`; la web y el portal de asegurados de JPMG siguen en `front_John`. El plan y su estado están en
-`PLAN-SAAS.md`, en la carpeta `john/` de arriba. Estructura y variables: `README.md`.
+`docs/PLAN-SAAS.md`, en la carpeta `john/` de arriba. Estructura y variables: `README.md`.
 
 **Todo cambio del panel va acá, nunca a `front_John`.** Ningún nombre de cliente en el código: un pedido termina en
 una función para todos, una configuración por organización o un desarrollo a medida fuera del producto.
