@@ -56,6 +56,7 @@ import { useImprovementsUnseenCount } from '../hooks/use-improvements'
 import { useNewProposalsCount } from '../hooks/use-proposals'
 import { useTaskStats } from '../hooks/use-tasks'
 import { AppearanceDialog } from './appearance-dialog'
+import { SidebarUsage } from './sidebar-usage'
 
 interface NavItem {
   label: string
@@ -197,6 +198,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        {/* The owner has no numbers of its own: its billing is the platform's, in Facturación. */}
+        <SidebarUsage enabled={!!profile && !isOwner} />
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
