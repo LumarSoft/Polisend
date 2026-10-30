@@ -1,4 +1,5 @@
-export type NovedadType = 'siniestro' | 'handoff' | 'baja_poliza' | 'lead' | 'solicitud'
+/** `plan`: a number moved up a plan, or passed the largest one (refId = the number). */
+export type NovedadType = 'siniestro' | 'handoff' | 'baja_poliza' | 'lead' | 'solicitud' | 'plan'
 
 export interface NovedadClient {
   id: number

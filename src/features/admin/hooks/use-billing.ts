@@ -1,51 +1,82 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { billingService } from '@/services/billing.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type { CreateTokenPlanRequest, UpdateTokenPlanRequest } from '@/types/api/billing'
+import type { CreatePlanRequest, UpdatePlanRequest } from '@/types/api/billing'
 import { useAuth } from '../context/auth-context'
 
 /** How often the consumption bars follow Meta's deliveries. */
 const LIVE_REFRESH_MS = 10_000
 
 /** Every number's plan and month, refreshed while the screen is open. */
-export function useBillingOverview(period?: string) {
+export function useBillingOverview(period?: string, enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.billing(period),
     queryFn: () => billingService.overview(token as string, period),
-    enabled: !!token,
+    enabled: !!token && enabled,
     placeholderData: keepPreviousData,
     refetchInterval: LIVE_REFRESH_MS,
   })
 }
 
-export function useTokenPlans(enabled = true) {
+/** The SuperAdmin puts a number on a plan; the month and the numbers refresh after it. */
+export function useAssignPlan() {
+  const { token } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ numberId, planId }: { numberId: number; planId: number }) =>
+      billingService.assignPlan(token as string, numberId, planId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.phoneNumbers })
+    },
+  })
+}
+
+/** The owner's month across the platform: billed, Meta, OpenAI and profit. */
+export function useOwnerBilling(period?: string, enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
-    queryKey: QUERY_KEYS.admin.billingPlans,
+    queryKey: QUERY_KEYS.owner.billing(period),
+    queryFn: () => billingService.ownerBilling(token as string, period),
+    enabled: !!token && enabled,
+    placeholderData: keepPreviousData,
+    refetchInterval: LIVE_REFRESH_MS,
+  })
+}
+
+/** The platform's catalog (owner). */
+export function useOwnerPlans(enabled = true) {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.owner.plans,
     queryFn: () => billingService.plans(token as string),
     enabled: !!token && enabled,
   })
 }
 
-/** Catalog changes; the overview and the catalog refresh after each. */
-export function useBillingActions() {
+/** Catalog changes (owner); every billing screen refreshes after each. */
+export function usePlanActions() {
   const { token } = useAuth()
   const queryClient = useQueryClient()
   const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.plans })
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.billingAll })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.phoneNumbers })
   }
 
   const createPlan = useMutation({
-    mutationFn: (data: CreateTokenPlanRequest) => billingService.createPlan(token as string, data),
+    mutationFn: (data: CreatePlanRequest) => billingService.createPlan(token as string, data),
     onSuccess: refresh,
   })
 
   const updatePlan = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateTokenPlanRequest }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdatePlanRequest }) =>
       billingService.updatePlan(token as string, id, data),
     onSuccess: refresh,
   })
