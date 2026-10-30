@@ -20,6 +20,8 @@ export interface MonthUsage {
   percent: number
   /** A number is at 80% of its plan or more. */
   nearLimit: boolean
+  /** Numbers whose assistant is paused at their plan's limit. */
+  paused: number
   numbers: NumberUsage[]
 }
 
@@ -55,6 +57,7 @@ export function summarizeMonth(overview: BillingOverview): MonthUsage | null {
     remaining: Math.max(0, included - used),
     percent: percentOf(used, included),
     nearLimit: numbers.some(n => n.percent >= NEAR_LIMIT_PERCENT),
+    paused: overview.numbers.filter(n => n.isActive && n.limit?.paused).length,
     numbers,
   }
 }

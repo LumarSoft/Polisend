@@ -42,6 +42,7 @@ import type {
 } from '@/types/api/billing'
 import { useAssignPlan, useBillingOverview, useOwnerBilling, useOwnerPlans, usePlanActions } from '../hooks/use-billing'
 import { useRole } from '../hooks/use-role'
+import { PlanLimitActions } from './plan-limit-actions'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 const usd = (n: number) => `USD ${n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
@@ -184,31 +185,32 @@ function NumberCard({ row, plans, canAssign }: { row: BillingNumber; plans: Plan
 
       <ConsumptionBar row={row} />
 
+      <PlanLimitActions row={row} />
+
       <div className="flex flex-col gap-1.5 border-t border-line-2 pt-3 text-[12.5px] text-muted-foreground">
         {row.movedUpAt && (
           <span className="flex items-start gap-1.5">
             <ArrowUpRight className="mt-0.5 size-3.5 shrink-0 text-ember-2" />
-            Pasó los mensajes de su plan y subió a {row.plan.name} el {day(row.movedUpAt)}. Queda en este plan.
+            Pasó a {row.plan.name} el {day(row.movedUpAt)}.
           </span>
         )}
-        <span className="flex items-start gap-1.5">
-          <TrendingUp className="mt-0.5 size-3.5 shrink-0 text-ember-2" />
-          {row.nextPlan ? (
-            <span>
-              Si pasa los {int(row.includedMessages)} mensajes, sube a{' '}
-              <span className="font-medium text-ink">{row.nextPlan.name}</span> ({int(row.nextPlan.messages)} mensajes,{' '}
-              {usd(row.nextPlan.priceUsd)}).
-            </span>
-          ) : (
-            <span>Todavía no hay planes.</span>
-          )}
-        </span>
-        <span className="flex items-baseline justify-between gap-3 pt-1">
-          <span>Este mes</span>
-          <span className="text-[13.5px] font-semibold text-ink">
-            {price(row.billedUsd)}
-            {row.prorated && <span className="ml-1 text-[11.5px] font-normal text-muted-foreground">prorrateado</span>}
+        {!row.limit?.paused && (
+          <span className="flex items-start gap-1.5">
+            <TrendingUp className="mt-0.5 size-3.5 shrink-0 text-ember-2" />
+            {row.nextPlan ? (
+              <span>
+                Al llegar a los {int(row.includedMessages)} mensajes, el asistente se pausa y se puede pasar a{' '}
+                <span className="font-medium text-ink">{row.nextPlan.name}</span> ({int(row.nextPlan.messages)}{' '}
+                mensajes, {usd(row.nextPlan.priceUsd)}).
+              </span>
+            ) : (
+              <span>Todavía no hay planes.</span>
+            )}
           </span>
+        )}
+        <span className="flex items-baseline justify-between gap-3 pt-1">
+          <span>Precio del plan</span>
+          <span className="text-[13.5px] font-semibold text-ink">{price(row.billedUsd)} por mes</span>
         </span>
       </div>
     </Card>
@@ -228,7 +230,7 @@ function ConsumptionTab({ canAssign }: { canAssign: boolean }) {
         {data?.totalBilledUsd !== undefined && (
           <Card className="flex items-center gap-4 border-line-2 px-4 py-3">
             <span className="text-[13px] text-muted-foreground">
-              Total del mes · {int(numbers.length)} {numbers.length === 1 ? 'número' : 'números'}
+              Total a pagar · {int(numbers.length)} {numbers.length === 1 ? 'número' : 'números'}
             </span>
             <span className="font-display text-[20px] text-ink">{usd(data.totalBilledUsd)}</span>
           </Card>
@@ -256,7 +258,7 @@ function ConsumptionTab({ canAssign }: { canAssign: boolean }) {
       )}
       {largest && data && (
         <p className="mt-4 text-[12px] text-muted-foreground">
-          Pasado el plan {largest.name}, cada {int(data.blockMessages)} mensajes suman{' '}
+          Pasado el plan {largest.name}, se pueden sumar de a {int(data.blockMessages)} mensajes por{' '}
           {usd(Math.round(((data.blockMessages * largest.priceUsd) / largest.messages) * 100) / 100)} al mes.
         </p>
       )}
@@ -272,8 +274,8 @@ function OfferTab() {
   return (
     <>
       <p className="mb-4 max-w-xl text-[13px] text-muted-foreground">
-        Los planes y sus precios los define Polisend. Elegís el plan de cada número en Consumo; si un número envía más
-        mensajes de los que incluye su plan, sube solo al plan siguiente y te avisamos.
+        Los planes y sus precios los define Polisend. Elegís el plan de cada número en Consumo. Cuando un número llega
+        a los mensajes de su plan, su asistente se pausa y te avisamos para que elijas si pasa al plan siguiente.
       </p>
       <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
         <Table>
@@ -474,8 +476,9 @@ function OwnerPlansTab() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[13px] text-muted-foreground">
           El catálogo de toda la plataforma: lo que ven y pagan todas las organizaciones, y lo que muestra la landing.
-          Cada SuperAdmin elige el plan de sus números; si un número lo supera, sube solo al plan siguiente. Pasado el
-          plan más grande, cada {int(data?.blockMessages ?? 1000)} mensajes se cobran al precio por mensaje de ese plan.
+          Cada SuperAdmin elige el plan de sus números. Al llegar al límite, el asistente del número se pausa hasta que
+          la organización lo pase al plan siguiente o empiece el mes. Pasado el plan más grande, se suman bloques de{' '}
+          {int(data?.blockMessages ?? 1000)} mensajes al precio por mensaje de ese plan.
         </p>
         <Button type="button" size="sm" onClick={() => setCreating(true)} className="h-9 text-[12.5px]">
           <Plus className="size-4" />
@@ -665,6 +668,7 @@ function OrganizationRows({ org }: { org: OwnerBillingOrganization }) {
                 {n.plan.trial ? 'Prueba' : n.plan.name}
                 {n.upgraded && ' · subió de plan'}
                 {n.prorated && ' · prorrateado'}
+                {n.paused && ' · asistente en pausa'}
                 {n.metaBillableMessages > 0 && ` · ${int(n.metaBillableMessages)} cobrados por Meta`}
               </div>
             </TableCell>
@@ -718,7 +722,7 @@ function OwnerDashboardTab() {
             <Kpi
               label="OpenAI (aparte)"
               value={usd(totals.openaiCostUsd)}
-              hint={`${int(totals.upgradedNumbers)} ${totals.upgradedNumbers === 1 ? 'número subió' : 'números subieron'} de plan`}
+              hint={`${int(totals.upgradedNumbers)} ${totals.upgradedNumbers === 1 ? 'número subió' : 'números subieron'} de plan · ${int(totals.pausedNumbers ?? 0)} en pausa`}
             />
           </>
         )}
@@ -789,7 +793,7 @@ export function FacturacionView() {
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
           {isOwner
             ? 'Lo que se factura a cada organización y lo que cobra Meta de verdad, y el catálogo de planes que ven todos.'
-            : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Si un número supera su plan, sube solo al siguiente. Se factura a mes vencido.'}
+            : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
         </p>
       </div>
 

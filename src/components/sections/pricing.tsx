@@ -61,7 +61,7 @@ export function Pricing({ catalog }: { catalog: PlanCatalog }) {
               ))}
             </ul>
             <p className="relative mt-6 max-w-[380px] font-serif text-[24px] leading-[1.1] italic">
-              Si un número supera su plan, pasa al siguiente.
+              Nunca te subimos de plan sin preguntarte.
             </p>
             {largest && catalog.blockPriceUsd !== null && (
               <p className="relative mt-3 text-[14px] text-on-brand/75">

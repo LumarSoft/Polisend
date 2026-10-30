@@ -12,7 +12,12 @@ export function SidebarUsage({ enabled }: { enabled: boolean }) {
   const usage = useMonthUsage(enabled)
   if (!usage) return null
 
-  const tone = usage.percent >= NEAR_LIMIT_PERCENT || usage.nearLimit ? 'bg-amber' : 'bg-ember'
+  const tone =
+    usage.paused > 0
+      ? 'bg-red-500 dark:bg-red-400'
+      : usage.percent >= NEAR_LIMIT_PERCENT || usage.nearLimit
+        ? 'bg-amber'
+        : 'bg-ember'
   const several = usage.numbers.length > 1
 
   return (
@@ -33,8 +38,16 @@ export function SidebarUsage({ enabled }: { enabled: boolean }) {
             <div className={`h-full rounded-full transition-all ${tone}`} style={{ width: `${usage.percent}%` }} />
           </div>
           <p className="mt-1.5 text-[11px] leading-none text-muted-foreground">
-            {usage.remaining > 0 ? `Quedan ${int(usage.remaining)}` : 'Plan completo: sigue en el siguiente'}
-            {several ? ` · ${usage.numbers.length} números` : ''}
+            {usage.paused > 0 ? (
+              <span className="font-medium text-red-600 dark:text-red-400">
+                {usage.paused === 1 ? 'Asistente en pausa' : `${usage.paused} números en pausa`} · elegí qué hacer
+              </span>
+            ) : (
+              <>
+                {usage.remaining > 0 ? `Quedan ${int(usage.remaining)}` : 'Plan completo'}
+                {several ? ` · ${usage.numbers.length} números` : ''}
+              </>
+            )}
           </p>
         </Link>
       </TooltipTrigger>
@@ -51,7 +64,7 @@ export function SidebarUsage({ enabled }: { enabled: boolean }) {
             ))}
           </ul>
         ) : (
-          <span>Si se pasa del plan, el número sube solo al siguiente. Detalle en Facturación.</span>
+          <span>Al llegar al límite del plan, el asistente se pausa hasta que elijas. Detalle en Facturación.</span>
         )}
       </TooltipContent>
     </Tooltip>

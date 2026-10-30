@@ -15,6 +15,15 @@ export const billingService = {
     return apiRequest<BillingOverview>(`/admin/billing${periodQuery(period)}`, { token })
   },
 
+  /** At the plan's limit: continue on the next plan, or keep the assistant paused until next month. */
+  resolveLimit(token: string, numberId: number, choice: 'continue' | 'pause'): Promise<{ ok: boolean; paused: boolean }> {
+    return apiRequest<{ ok: boolean; paused: boolean }>(`/admin/billing/numbers/${numberId}/limit`, {
+      method: 'POST',
+      token,
+      body: { choice },
+    })
+  },
+
   assignPlan(token: string, numberId: number, planId: number): Promise<{ ok: boolean }> {
     return apiRequest<{ ok: boolean }>(`/admin/billing/numbers/${numberId}/plan`, {
       method: 'PATCH',

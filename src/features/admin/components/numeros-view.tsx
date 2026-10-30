@@ -456,6 +456,15 @@ export function NumerosView() {
                           {n.assistant.botName ?? 'Asistente propio'}
                         </Badge>
                       )}
+                      {n.usage.planPaused && (
+                        <Badge
+                          className="gap-1 bg-amber/15 text-ink-3"
+                          title="Llegó al límite de su plan este mes: se elige en Inicio o en Facturación si sigue en el plan siguiente"
+                        >
+                          <PowerOff className="size-3" />
+                          En pausa por el plan
+                        </Badge>
+                      )}
                       {n.botEnabled === false && (
                         <Badge
                           className="gap-1 bg-destructive/10 text-destructive"

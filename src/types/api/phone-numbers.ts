@@ -23,6 +23,8 @@ export interface PhoneNumberUsage {
   upgraded?: boolean
   prorated?: boolean
   billedUsd?: number
+  /** Its assistant is paused this month for reaching the plan. */
+  planPaused?: boolean
   /** SuperAdmin and owner: messages sent and the OpenAI calls and tokens. */
   metaMessages?: number
   metaConversations?: number

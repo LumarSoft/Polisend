@@ -33,6 +33,19 @@ export interface BilledPlan {
   extraBlocks: number
 }
 
+/** Where a number stands against its plan's limit this month. */
+export interface PlanLimit {
+  /** The month's messages reached what the plan includes. */
+  reached: boolean
+  /** Its assistant is paused this month until someone continues on `nextPlan`. */
+  paused: boolean
+  /** Someone chose to keep it paused until next month. */
+  confirmed: boolean
+  pausedAt: string | null
+  /** The first day it answers again on its own ("YYYY-MM-01"). */
+  resumesOn: string | null
+}
+
 /** A number's running month in Facturación. */
 export interface BillingNumber {
   id: number
@@ -53,8 +66,11 @@ export interface BillingNumber {
   percentUsed: number
   /** Where the number goes past this plan: the next of the catalog, or the next block. */
   nextPlan: { name: string; messages: number; priceUsd: number } | null
+  /** The whole plan for the organization; prorated in the first month for the owner only. */
   billedUsd: number
   prorated: boolean
+  /** Missing from an API older than the plan limit pause. */
+  limit?: PlanLimit
   /** When the month's counters last moved (ISO), null before the first message. */
   updatedAt: string | null
 }
@@ -108,6 +124,8 @@ export interface OwnerBillingNumber extends OwnerBillingTotals {
   assignedPlan: BilledPlan | null
   upgraded: boolean
   prorated: boolean
+  /** Its assistant is paused this month for reaching the plan. */
+  paused: boolean
 }
 
 export interface OwnerBillingOrganization {
@@ -121,5 +139,10 @@ export interface OwnerBillingOrganization {
 export interface OwnerBilling {
   period: string
   organizations: OwnerBillingOrganization[]
-  totals: OwnerBillingTotals & { organizations: number; activeNumbers: number; upgradedNumbers: number }
+  totals: OwnerBillingTotals & {
+    organizations: number
+    activeNumbers: number
+    upgradedNumbers: number
+    pausedNumbers: number
+  }
 }

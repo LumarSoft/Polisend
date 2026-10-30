@@ -35,6 +35,22 @@ export function useAssignPlan() {
   })
 }
 
+/** The office's answer at a number's plan limit; the month, the numbers and the notices refresh after it. */
+export function useResolveLimit() {
+  const { token } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ numberId, choice }: { numberId: number; choice: 'continue' | 'pause' }) =>
+      billingService.resolveLimit(token as string, numberId, choice),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.phoneNumbers })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'novedades'] })
+    },
+  })
+}
+
 /** The owner's month across the platform: billed, Meta, OpenAI and profit. */
 export function useOwnerBilling(period?: string, enabled = true) {
   const { token } = useAuth()

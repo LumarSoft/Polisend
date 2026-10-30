@@ -39,7 +39,7 @@ export const TERMS: LegalDocument = {
       list: [
         "Cada número tiene un plan de mensajes por mes, del catálogo publicado en este sitio. Cuenta cada mensaje que envía el asistente, el equipo desde el panel o un aviso automático; no cuentan los mensajes que escriben los clientes ni los que se mandan desde la app del celular.",
         "Los planes incluyen el costo de WhatsApp de esos mensajes. Las campañas de marketing por plantilla no están incluidas y se cotizan aparte.",
-        "Si un número envía más mensajes de los que incluye su plan, pasa al plan siguiente desde ese mes, y la productora recibe un aviso. Puede volver a elegir otro plan desde el panel.",
+        "Cuando un número llega a los mensajes que incluye su plan, su asistente deja de responder automáticamente y la productora recibe un aviso. Puede elegir pasarlo al plan siguiente, que se cobra desde ese mes, o dejarlo en pausa hasta el mes siguiente. Los mensajes se siguen recibiendo y la oficina puede contestarlos desde el panel.",
         "El primer mes de un número de una cuenta nueva puede incluir un plan de prueba gratuito, si está publicado.",
         "Se factura a mes vencido, en dólares estadounidenses, dentro de los primeros días del mes siguiente. Un número activo paga su plan aunque no envíe mensajes.",
         "Podemos cambiar los planes y sus precios avisando con al menos 30 días de anticipación.",

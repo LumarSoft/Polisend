@@ -34,7 +34,7 @@ export function pricingSentence(catalog: PlanCatalog): string {
   return [
     `Planes por número de WhatsApp, según los mensajes que envía por mes: ${paid}.`,
     trial ? `El primer mes de una cuenta nueva, ${int(trial.messages)} mensajes gratis.` : "",
-    "Si un número supera su plan, pasa al siguiente.",
+    "Nunca se pasa a un plan más caro sin preguntar: al llegar al límite, el asistente se pausa hasta que la productora elija.",
     largest && catalog.blockPriceUsd
       ? `Pasado el plan ${largest.name}, cada ${int(catalog.blockMessages)} mensajes suman ${usd(catalog.blockPriceUsd)}.`
       : "",
