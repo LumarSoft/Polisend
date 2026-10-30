@@ -1,0 +1,38 @@
+/** Ids the browser needs to launch Embedded Signup. Never includes the app secret. */
+export interface EmbeddedSignupConfig {
+  appId: string | null
+  configId: string | null
+  graphVersion: string
+  /** False when META_APP_ID or META_ES_CONFIG_ID are missing on the API. */
+  ready: boolean
+}
+
+export interface OnboardWhatsappRequest {
+  code: string
+  wabaId: string
+  /** May be omitted by Meta's Coexistence finish event; the API resolves it. */
+  phoneNumberId?: string
+  number?: string
+  isCoexistence?: boolean
+  pin?: string
+  responsibleProducerCodeId?: number
+  servedCodeIds?: number[]
+}
+
+export interface OnboardWhatsappResponse {
+  phoneNumberId: number
+  /** True when an existing number was revived: its usage, chats and codes were kept. */
+  reconnected: boolean
+  wabaAccountId: number
+  metaPhoneNumberId: string
+  wabaId: string
+  subscribed: boolean
+  /** False when Meta rejected /register — expected on Coexistence. */
+  pinSet: boolean
+  historySyncRequested: boolean
+  contactsSyncRequested: boolean
+  /** True only when Graph confirms Business app + Cloud API on the number. */
+  coexistenceVerified: boolean | null
+  isOnBizApp: boolean | null
+  platformType: string | null
+}

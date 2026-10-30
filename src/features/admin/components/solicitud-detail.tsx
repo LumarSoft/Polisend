@@ -1,0 +1,386 @@
+'use client'
+
+import { useState } from 'react'
+import { FileText, Loader2, MessageCircle, ClipboardList } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { WhatsAppIcon } from '@/components/ui/brand-icons'
+import type {
+  CotizacionCoverageView,
+  LeadDetail,
+  SolicitudDetail,
+  SolicitudKind,
+  SolicitudStatus,
+} from '@/types/api/solicitudes'
+import { adjuntoUrl, type Adjunto } from '@/services/siniestros.service'
+import { useSolicitud } from '../hooks/use-solicitudes'
+import { useSolicitudActions } from '../hooks/use-solicitud-actions'
+import { usePanelBrand } from '../hooks/use-panel-brand'
+import { buildSolicitudWhatsappUrl, productLabel, STATUS_LABELS, STATUS_ORDER, timeAgo } from '../lib/solicitudes-ui'
+import { StatusPill } from './solicitud-status-pill'
+import { SolicitudChat } from './solicitud-chat'
+
+interface SolicitudDetailViewProps {
+  target: { kind: SolicitudKind; id: number } | null
+  onClose: () => void
+}
+
+type DetailTab = 'datos' | 'chat'
+
+const TABS: { value: DetailTab; label: string; icon: typeof ClipboardList }[] = [
+  { value: 'datos', label: 'Datos', icon: ClipboardList },
+  { value: 'chat', label: 'Chat', icon: MessageCircle },
+]
+
+/**
+ * The full solicitud detail: header (product + status) and two tabs — the data
+ * grid with status selector and internal notes, and the WhatsApp chat the
+ * request came from. Rendered inside the dialog modal.
+ */
+export function SolicitudDetailView({ target, onClose }: Readonly<SolicitudDetailViewProps>) {
+  const { data, isLoading } = useSolicitud(target?.kind ?? null, target?.id ?? null)
+  const [tab, setTab] = useState<DetailTab>('datos')
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="flex items-start gap-3 border-b border-line-2 px-5 py-4 pr-12">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-[17px] tracking-tight text-ink">
+            {data ? productLabel(detailProductType(data)) : 'Solicitud de cotización'}
+          </h2>
+          <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+            {data
+              ? `${data.kind === 'lead' ? 'Lead / asesor' : 'Cotización online'} · ${timeAgo(data.createdAt)}`
+              : '…'}
+          </p>
+        </div>
+        {data && <StatusPill status={data.status} className="mt-0.5" />}
+      </header>
+
+      <div role="tablist" className="grid shrink-0 grid-cols-2 gap-1 border-b border-line-2 bg-secondary/40 px-5 py-2">
+        {TABS.map(t => (
+          <button
+            key={t.value}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.value}
+            onClick={() => setTab(t.value)}
+            className={cn(
+              'flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors',
+              tab === t.value ? 'bg-card text-ink shadow-sm dark:bg-canvas-3' : 'text-muted-foreground hover:text-ink',
+            )}
+          >
+            <t.icon className="size-3.5" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {isLoading || !data || !target ? (
+        <div className="flex flex-col gap-4 p-5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-5 w-56" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : tab === 'chat' ? (
+        <SolicitudChat data={data} active />
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* Keyed by id so the editor remounts with fresh state per solicitud,
+              initializing from the loaded data without a syncing effect. */}
+          <SolicitudEditor key={`${target.kind}-${target.id}`} data={data} target={target} onClose={onClose} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  if (value === null || value === undefined || value === '') return null
+  return (
+    <div className="flex flex-col gap-1 rounded-xl border border-line-2 bg-paper px-3.5 py-2.5">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">{label}</span>
+      <span className="text-[13.5px] text-ink">{value}</span>
+    </div>
+  )
+}
+
+function SolicitudEditor({
+  data,
+  target,
+  onClose,
+}: Readonly<{ data: SolicitudDetail; target: { kind: SolicitudKind; id: number }; onClose: () => void }>) {
+  const { update } = useSolicitudActions()
+  const brand = usePanelBrand()
+  const [status, setStatus] = useState<SolicitudStatus>(data.status)
+  const [notes, setNotes] = useState(data.notes ?? '')
+
+  const handleSave = () => {
+    update.mutate(
+      { kind: target.kind, id: target.id, data: { status, notes } },
+      {
+        onSuccess: () => {
+          toast.success('Solicitud actualizada')
+          onClose()
+        },
+        onError: () => toast.error('No se pudo guardar. Intentá de nuevo.'),
+      },
+    )
+  }
+
+  const contactName = data.kind === 'lead' ? data.contactName : fullName(data)
+  const contactPhone = data.kind === 'lead' ? data.phone : data.applicantPhone
+  const whatsappUrl = buildSolicitudWhatsappUrl(contactPhone, contactName, detailProductType(data), brand.signature)
+
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-5">
+      <section>
+        <h3 className="mb-2.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-faint">Datos de contacto</h3>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <Row label="Contacto" value={contactName} />
+          <Row label="Teléfono" value={contactPhone} />
+          <Row label="Email" value={data.kind === 'lead' ? data.email : data.applicantEmail} />
+          {data.kind === 'lead' && <Row label="Canal" value={data.channel === 'WHATSAPP' ? 'WhatsApp' : 'Web'} />}
+        </div>
+        {whatsappUrl && (
+          <Button asChild className="mt-3 h-10 w-full gap-2 bg-[#25D366] text-white hover:bg-[#1ebe5b] sm:w-auto">
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+              <WhatsAppIcon className="size-4" />
+              Hablar por WhatsApp
+            </a>
+          </Button>
+        )}
+      </section>
+
+      <section>
+        <h3 className="mb-2.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-faint">
+          Detalle de la cobertura
+        </h3>
+        {data.kind === 'lead' ? (
+          <LeadExtra data={data} />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <Row label="Cobertura elegida" value={data.selectedCoverage} />
+              <Row label="N° presupuesto" value={data.quote.quoteNumber} />
+              <Row label="Vehículo" value={`${data.quote.vehicleType} ${data.quote.manufactureYear}`} />
+              <Row label="CP" value={data.quote.postalCode} />
+              <Row label="Documento" value={`${data.applicantDocType} ${data.applicantDocNumber}`} />
+              <Row label="Dirección" value={data.applicantAddress} />
+              <Row label="Pago" value={data.paymentMethod} />
+            </div>
+            <CoveragesList coverages={data.coverages} selected={data.selectedCoverage} />
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-faint">Estado</h3>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_ORDER.map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatus(s)}
+              className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                status === s
+                  ? 'border-ember bg-ember-soft text-ember-2'
+                  : 'border-line-2 text-ink-3 hover:bg-secondary/50'
+              }`}
+            >
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <label htmlFor="solicitud-notes" className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-faint">
+          Notas internas
+        </label>
+        <textarea
+          id="solicitud-notes"
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          rows={4}
+          maxLength={2000}
+          placeholder="Anotá el seguimiento de esta solicitud…"
+          className="w-full rounded-xl border border-line-2 bg-paper px-3.5 py-3 text-[13.5px] text-ink outline-none transition-[border-color,box-shadow] focus:border-ember focus:shadow-[0_0_0_3px_var(--color-ember-soft)]"
+        />
+      </section>
+
+      <div className="flex justify-end">
+        <Button type="button" onClick={handleSave} disabled={update.isPending} className="h-10 px-6">
+          {update.isPending ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Guardando…
+            </>
+          ) : (
+            'Guardar cambios'
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+const ars = (n: number) => n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
+
+/** All quoted coverages with their prices — the same figures shown to the client. */
+function CoveragesList({ coverages, selected }: { coverages: CotizacionCoverageView[]; selected: string }) {
+  if (!coverages || coverages.length === 0) return null
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
+        Coberturas cotizadas (mismos precios que vio el cliente)
+      </span>
+      <div className="flex flex-col gap-2">
+        {coverages.map(c => {
+          const isSel = c.code === selected
+          const prices = c.paymentOptions.map(p => p.premium).filter(p => p > 0)
+          const best = prices.length ? Math.min(...prices) : null
+          return (
+            <div
+              key={c.code}
+              className={`rounded-xl border px-3.5 py-2.5 ${isSel ? 'border-ember bg-ember-soft' : 'border-line-2 bg-paper'}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13.5px] font-medium text-ink">
+                  Cobertura {c.code}
+                  {isSel ? ' · elegida' : ''}
+                </span>
+                {best !== null && (
+                  <span className="text-[14px] font-semibold text-ink">
+                    {ars(best)}
+                    <span className="text-[11px] font-normal text-muted-foreground"> /mes</span>
+                  </span>
+                )}
+              </div>
+              {c.paymentOptions.length > 1 && (
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px] text-muted-foreground">
+                  {c.paymentOptions.map((p, i) => (
+                    <span key={`${p.name}-${i}`}>
+                      {p.name}: {ars(p.premium)}
+                      {p.installments > 1 ? ` (${p.installments}×${ars(p.installmentValue)})` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function fullName(d: { applicantFirstName: string; applicantLastName: string | null }): string {
+  return `${d.applicantFirstName} ${d.applicantLastName ?? ''}`.trim()
+}
+
+function detailProductType(d: SolicitudDetail): string {
+  return d.kind === 'lead' ? d.productType : d.quote.vehicleType.toLowerCase()
+}
+
+// Readable labels for the fields the WhatsApp bot stores on a quoted-coverage lead.
+const PAYLOAD_LABELS: Record<string, string> = {
+  cobertura: 'Cobertura elegida',
+  vehiculo: 'Vehículo',
+  anio: 'Año',
+  codigoPostal: 'Código postal',
+  precio: 'Precio desde',
+  gnc: 'GNC',
+  ceroKm: '0 km',
+  dni: 'DNI',
+}
+
+// Documents the customer sends over WhatsApp to take out the coverage.
+const DOC_LABELS: Record<string, string> = {
+  dni_frente: 'DNI (frente)',
+  dni_dorso: 'DNI (dorso)',
+  tarjeta: 'Tarjeta verde o azul',
+  // Requests taken before the tarjeta could be either color.
+  tarjeta_azul: 'Tarjeta azul',
+  certificado_no_rodamiento: 'Certificado de no rodamiento',
+  foto_vehiculo: 'Foto del vehículo',
+  tarjeta_gnc: 'Tarjeta de GNC',
+  documento: 'Documento',
+}
+
+type LeadAdjunto = Adjunto & { tipo?: string }
+
+function leadAdjuntos(payload: Record<string, unknown> | null): LeadAdjunto[] {
+  const list = payload?.adjuntos
+  return Array.isArray(list)
+    ? list.filter((a): a is LeadAdjunto => !!a && typeof (a as { url?: unknown }).url === 'string')
+    : []
+}
+
+function LeadDocument({ adjunto }: { adjunto: LeadAdjunto }) {
+  const url = adjuntoUrl(adjunto)
+  const label = (adjunto.tipo && DOC_LABELS[adjunto.tipo]) || adjunto.originalName
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex flex-col gap-1.5 rounded-xl border border-line-2 bg-paper p-2 transition-colors hover:border-ember-ring hover:bg-ember-soft"
+    >
+      {adjunto.mimeType?.startsWith('image/') ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={label} className="aspect-[4/3] w-full rounded-lg object-cover" />
+      ) : (
+        <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+          <FileText className="size-5" />
+        </div>
+      )}
+      <span className="truncate px-1 text-[12px] font-medium text-ink-3 group-hover:text-ember-2">{label}</span>
+    </a>
+  )
+}
+
+function LeadExtra({ data }: { data: LeadDetail }) {
+  const documents = leadAdjuntos(data.payload)
+  const entries = Object.entries(data.payload ?? {}).filter(([k, v]) => k !== 'adjuntos' && v !== null && v !== '')
+  return (
+    <div className="flex flex-col gap-2.5">
+      {data.selectedPlan && (
+        <Row
+          label="Plan elegido"
+          value={`${data.selectedPlan.name} · ${data.selectedPlan.monthlyPrice.toLocaleString('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            maximumFractionDigits: 0,
+          })} / mes`}
+        />
+      )}
+      {entries.length > 0 ? (
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {entries.map(([k, v]) => (
+            <Row key={k} label={PAYLOAD_LABELS[k] ?? k} value={String(v)} />
+          ))}
+        </div>
+      ) : (
+        !data.selectedPlan && (
+          <p className="text-[13px] text-muted-foreground">
+            Sin datos adicionales — el cliente pidió que lo contacten.
+          </p>
+        )
+      )}
+      {documents.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
+            Documentación enviada por WhatsApp
+          </span>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {documents.map((a, i) => (
+              <LeadDocument key={`${a.url}-${i}`} adjunto={a} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

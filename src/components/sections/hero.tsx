@@ -8,15 +8,24 @@ import { CtaButton } from "@/components/ui/primitives";
 import { MessageField } from "./message-field";
 import { gsap, MOTION_OK, useGSAP } from "@/lib/gsap";
 import { useChatPlayer, useInView } from "@/lib/hooks";
-import { SITE } from "@/lib/site";
+import { int, paidPlans, trialPlan, usd, type PlanCatalog } from "@/lib/plan-format";
 
-const FACTS = [
-  { k: "Responde", v: "En segundos", s: "24 h · 7 días · feriados" },
-  { k: "Integrado con", v: "Triunfo y Sancor", s: "Cartera, documentos y cotizador" },
-  { k: "Precio", v: `USD ${SITE.priceUsd}/mes`, s: `Cada ${SITE.messagesPerPlan.toLocaleString("es-AR")} mensajes` },
-];
+function factsFor(catalog: PlanCatalog) {
+  const from = paidPlans(catalog)[0];
+  const trial = trialPlan(catalog);
+  return [
+    { k: "Responde", v: "En segundos", s: "24 h · 7 días · feriados" },
+    { k: "Integrado con", v: "Triunfo y Sancor", s: "Cartera, documentos y cotizador" },
+    {
+      k: "Precio",
+      v: from ? `Desde ${usd(from.priceUsd)}/mes` : "A tu medida",
+      s: trial ? `${int(trial.messages)} mensajes gratis el primer mes` : from ? `${int(from.messages)} mensajes por mes` : "",
+    },
+  ];
+}
 
-export function Hero() {
+export function Hero({ catalog }: { catalog: PlanCatalog }) {
+  const facts = factsFor(catalog);
   const root = useRef<HTMLElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
   const [viewRef, inView] = useInView<HTMLDivElement>("-10% 0px");
@@ -116,7 +125,7 @@ export function Hero() {
           </div>
 
           <dl className="mt-12 grid max-w-[640px] animate-[rise_0.9s_var(--ease-out-expo)_both] grid-cols-3 gap-px overflow-hidden rounded-2xl border border-fg/8 bg-fg/8 [animation-delay:520ms]">
-            {FACTS.map((f) => (
+            {facts.map((f) => (
               <div key={f.k} className="bg-canvas-2 px-3 py-3.5 sm:px-5 sm:py-4">
                 <dt className="text-[11.5px] text-mute sm:text-[10.5px] sm:tracking-[0.14em] font-medium">{f.k}</dt>
                 <dd className="mt-1 font-display text-[15px] leading-tight font-semibold tracking-tight text-fg sm:text-[21px]">{f.v}</dd>

@@ -28,13 +28,13 @@ export const SITE = {
   region: "Santa Fe",
   country: "AR",
   /** Bump when the page content changes meaningfully (sitemap lastModified). */
-  lastUpdated: "2026-10-27",
+  lastUpdated: "2026-10-30",
   whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "5493412776893",
   phoneDisplay: "+54 9 341 277-6893",
   whatsappMessage:
     "¡Hola! Quiero Polisend para mi productora de seguros. ¿Me cuentan cómo arrancamos?",
-  priceUsd: 60,
-  messagesPerPlan: 1000,
+  /** Where people write about their data and these terms (NEXT_PUBLIC_LEGAL_EMAIL). */
+  legalEmail: process.env.NEXT_PUBLIC_LEGAL_EMAIL || null,
   insurers: ["Triunfo Seguros", "Sancor Seguros"],
 } as const;
 

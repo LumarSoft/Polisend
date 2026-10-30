@@ -1,0 +1,75 @@
+import { apiRequest } from '@/lib/api-client'
+import type { InboxConversation, InboxMessage, UpdateInboxContactRequest } from '@/types/api/inbox'
+
+export const inboxService = {
+  listConversations(
+    token: string,
+    status?: string,
+    search?: string,
+    scope?: { producerCodeId?: number; phoneNumberId?: number },
+  ): Promise<InboxConversation[]> {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (search?.trim()) params.set('search', search.trim())
+    if (scope?.producerCodeId) params.set('producerCodeId', String(scope.producerCodeId))
+    if (scope?.phoneNumberId) params.set('phoneNumberId', String(scope.phoneNumberId))
+    const qs = params.toString()
+    return apiRequest<InboxConversation[]>(`/admin/inbox${qs ? `?${qs}` : ''}`, { token })
+  },
+
+  deleteConversations(token: string, conversationId?: number): Promise<{ deletedCount: number }> {
+    return apiRequest<{ deletedCount: number }>(
+      `/admin/inbox${conversationId !== undefined ? `/${conversationId}` : ''}`,
+      {
+        method: 'DELETE',
+        token,
+      },
+    )
+  },
+
+  getMessages(conversationId: number, token: string): Promise<InboxMessage[]> {
+    return apiRequest<InboxMessage[]>(`/admin/inbox/${conversationId}/messages`, { token })
+  },
+
+  updateContact(conversationId: number, data: UpdateInboxContactRequest, token: string): Promise<InboxConversation> {
+    return apiRequest<InboxConversation>(`/admin/inbox/${conversationId}/contact`, {
+      method: 'PATCH',
+      token,
+      body: data,
+    })
+  },
+
+  takeover(conversationId: number, token: string): Promise<InboxConversation> {
+    return apiRequest<InboxConversation>(`/admin/inbox/${conversationId}/takeover`, {
+      method: 'POST',
+      token,
+    })
+  },
+
+  release(conversationId: number, token: string): Promise<{ ok: boolean }> {
+    return apiRequest<{ ok: boolean }>(`/admin/inbox/${conversationId}/release`, {
+      method: 'POST',
+      token,
+    })
+  },
+
+  sendMessage(conversationId: number, text: string, token: string): Promise<InboxMessage> {
+    return apiRequest<InboxMessage>(`/admin/inbox/${conversationId}/message`, {
+      method: 'POST',
+      token,
+      body: { text },
+    })
+  },
+
+  /** A photo (JPEG/PNG) or PDF for the customer, with an optional caption. */
+  sendMedia(conversationId: number, file: File, caption: string, token: string): Promise<InboxMessage> {
+    const form = new FormData()
+    form.append('file', file)
+    if (caption.trim()) form.append('caption', caption.trim())
+    return apiRequest<InboxMessage>(`/admin/inbox/${conversationId}/media`, {
+      method: 'POST',
+      token,
+      body: form,
+    })
+  },
+}

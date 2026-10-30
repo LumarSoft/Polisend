@@ -1,4 +1,5 @@
-import { FAQ } from "@/components/sections/faq";
+import { faqFor } from "@/components/sections/faq";
+import { paidPlans, type PlanCatalog } from "@/lib/plan-format";
 import { FEATURES } from "@/lib/product";
 import { SITE } from "@/lib/site";
 
@@ -6,7 +7,8 @@ import { SITE } from "@/lib/site";
  * schema.org graph for the landing: who publishes it, what the product is,
  * what it costs and the FAQ. Only facts that the page itself states.
  */
-export function JsonLd() {
+export function JsonLd({ catalog }: { catalog: PlanCatalog }) {
+  const paid = paidPlans(catalog);
   const org = `${SITE.url}/#organization`;
   const graph = {
     "@context": "https://schema.org",
@@ -61,29 +63,33 @@ export function JsonLd() {
         featureList: FEATURES,
         publisher: { "@id": org },
         offers: {
-          "@type": "Offer",
+          "@type": "AggregateOffer",
           url: `${SITE.url}/#precio`,
-          price: SITE.priceUsd,
           priceCurrency: "USD",
+          lowPrice: paid[0]?.priceUsd ?? 0,
+          highPrice: paid.at(-1)?.priceUsd ?? 0,
+          offerCount: catalog.plans.length,
           availability: "https://schema.org/InStock",
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: SITE.priceUsd,
+          offers: catalog.plans.map((plan) => ({
+            "@type": "Offer",
+            name: plan.name,
+            price: plan.priceUsd,
             priceCurrency: "USD",
-            unitText: `por mes, cada ${SITE.messagesPerPlan.toLocaleString("es-AR")} mensajes`,
-            referenceQuantity: {
-              "@type": "QuantitativeValue",
-              value: SITE.messagesPerPlan,
-              unitText: "mensajes",
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: plan.priceUsd,
+              priceCurrency: "USD",
+              unitText: plan.isTrial ? "el primer mes" : "por mes",
+              referenceQuantity: { "@type": "QuantitativeValue", value: plan.messages, unitText: "mensajes" },
             },
-          },
+          })),
         },
       },
       {
         "@type": "FAQPage",
         "@id": `${SITE.url}/#faq`,
         inLanguage: "es-AR",
-        mainEntity: FAQ.map((f) => ({
+        mainEntity: faqFor(catalog).map((f) => ({
           "@type": "Question",
           name: f.q,
           acceptedAnswer: { "@type": "Answer", text: f.a },

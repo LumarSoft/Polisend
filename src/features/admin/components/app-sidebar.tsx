@@ -1,0 +1,252 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  BanknoteX,
+  Bell,
+  ListTodo,
+  Building2,
+  ChevronsUpDown,
+  ClipboardList,
+  FileWarning,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  Palette,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  UserCog,
+  Users,
+  Wallet,
+  type LucideIcon,
+  CreditCard,
+} from 'lucide-react'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useAuth } from '../context/auth-context'
+import { usePanelBrand } from '../hooks/use-panel-brand'
+import { OrgMark } from './org-mark'
+import { useProfile } from '../hooks/use-profile'
+import { useNovedadesStats } from '../hooks/use-novedades-stats'
+import { useInboxConversations } from '../hooks/use-inbox-conversations'
+import { useInboxMessageSound } from '../hooks/use-inbox-message-sound'
+import { useNewSolicitudesCount } from '../hooks/use-solicitudes'
+import { useImprovementsUnseenCount } from '../hooks/use-improvements'
+import { useNewProposalsCount } from '../hooks/use-proposals'
+import { useTaskStats } from '../hooks/use-tasks'
+import { AppearanceDialog } from './appearance-dialog'
+
+interface NavItem {
+  label: string
+  href: string
+  icon: LucideIcon
+  // Only visible to SUPERADMIN (org-wide management). OWNER sees these too.
+  superAdminOnly?: boolean
+  // Only visible to the platform OWNER (Lumar): provision organizations.
+  ownerOnly?: boolean
+  // Visible to everyone, the OWNER included (it edits what the others read).
+  everyone?: boolean
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Inicio', href: '/admin', icon: LayoutDashboard },
+  { label: 'Asuntos pendientes', href: '/admin/novedades', icon: Bell },
+  { label: 'Tareas', href: '/admin/tareas', icon: ListTodo },
+  { label: 'Solicitudes', href: '/admin/solicitudes', icon: ClipboardList },
+  { label: 'Whatsapp', href: '/admin/inbox', icon: MessageSquare },
+  { label: 'Siniestros', href: '/admin/siniestros', icon: FileWarning },
+  { label: 'Asegurados', href: '/admin/asegurados', icon: ShieldCheck },
+  { label: 'Cobranzas', href: '/admin/cobranzas', icon: Wallet },
+  { label: 'Rechazos', href: '/admin/rechazos', icon: BanknoteX },
+  { label: 'Usuarios', href: '/admin/usuarios', icon: Users, superAdminOnly: true },
+  // Admins see each number's tokens; managing numbers stays with the SuperAdmin.
+  { label: 'Números', href: '/admin/numeros', icon: Phone },
+  // Each admin's numbers, their token plan and the month's consumption; the SuperAdmin also edits the catalog.
+  { label: 'Facturación', href: '/admin/facturacion', icon: CreditCard },
+  { label: 'Organizaciones', href: '/admin/organizaciones', icon: Building2, ownerOnly: true },
+  { label: 'Mejoras', href: '/admin/mejoras', icon: Sparkles, everyone: true },
+  { label: 'Configuración', href: '/admin/configuracion', icon: UserCog },
+]
+
+const activeClasses =
+  'data-[active=true]:bg-ember-soft data-[active=true]:text-ember-2 data-[active=true]:font-semibold ' +
+  'data-[active=true]:hover:bg-ember-soft data-[active=true]:hover:text-ember-2'
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/admin') return pathname === '/admin'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+export function AppSidebar() {
+  const pathname = usePathname()
+  const { logout } = useAuth()
+  const { data: profile } = useProfile()
+  const { data: novedadesStats } = useNovedadesStats()
+  const { data: taskStats } = useTaskStats()
+  // "Pending" conversations = a client asked for a human agent → needs attention.
+  const { data: inboxConversations } = useInboxConversations()
+  useInboxMessageSound(inboxConversations)
+  const inboxPending = inboxConversations?.filter(c => c.status === 'pending').length ?? 0
+  const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount()
+  const isOwner = profile?.role === 'OWNER'
+  // "Mejoras" badge: unseen improvements for the office, new proposals for the OWNER.
+  const { data: improvementsUnseen } = useImprovementsUnseenCount(!!profile && !isOwner)
+  const { data: newProposals } = useNewProposalsCount(isOwner)
+  const [appearanceOpen, setAppearanceOpen] = useState(false)
+
+  // Count of items needing the advisor's attention, per sidebar section.
+  const alertCount = (href: string): number => {
+    if (href === '/admin/novedades') return novedadesStats?.actionableTotal ?? 0
+    if (href === '/admin/tareas') return taskStats?.open ?? 0
+    if (href === '/admin/solicitudes') return solicitudesNuevas
+    if (href === '/admin/inbox') return inboxPending
+    if (href === '/admin/mejoras') return (isOwner ? newProposals?.count : improvementsUnseen?.count) ?? 0
+    return 0
+  }
+
+  const brand = usePanelBrand()
+  const initials = profile?.email.slice(0, 2).toUpperCase() ?? brand.initials
+  const isSuperAdmin = profile?.role === 'SUPERADMIN'
+  const roleLabel = isOwner ? 'Owner · Lumar' : isSuperAdmin ? 'SuperAdmin' : 'Administrador'
+  // The OWNER's interface is "Organizaciones" plus the "Mejoras" editor. Everyone
+  // else sees their items (SuperAdmin-only hidden for admins).
+  const navItems = isOwner
+    ? NAV_ITEMS.filter(item => item.ownerOnly || item.everyone)
+    : NAV_ITEMS.filter(item => !item.ownerOnly && (!item.superAdminOnly || isSuperAdmin))
+
+  const handleLogout = () => {
+    logout()
+  }
+
+  return (
+    <Sidebar collapsible="icon" variant="inset">
+      <SidebarHeader>
+        <div className="flex items-center gap-2.5 px-1 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <OrgMark brand={brand} size={32} className="rounded-lg shadow-sm" />
+          <div className="grid flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-display text-[13.5px] text-sidebar-foreground">{brand.name}</span>
+            <span className="truncate text-[11px] text-muted-foreground">
+              {brand.mark === 'platform' ? 'Panel de la plataforma' : 'Panel · Polisend'}
+            </span>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10.5px] tracking-[0.14em] uppercase">Navegación</SidebarGroupLabel>
+          <SidebarMenu className="gap-1">
+            {navItems.map(item => {
+              const unread = alertCount(item.href)
+              return (
+                <SidebarMenuItem key={item.href} className="relative">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(pathname, item.href)}
+                    tooltip={item.label}
+                    className={`h-9 gap-2.5 rounded-lg transition-colors ${activeClasses}`}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                      {unread > 0 && (
+                        // Pulsing count badge (expanded): the ping ring draws the eye
+                        // from any section so a pending item isn't missed.
+                        <span className="relative ml-auto flex items-center justify-center group-data-[collapsible=icon]:hidden">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ember-2 opacity-60" />
+                          <span className="relative flex h-5 min-w-5 items-center justify-center rounded-full bg-ember-2 px-1.5 text-[10.5px] font-semibold text-on-ember">
+                            {unread}
+                          </span>
+                        </span>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                  {unread > 0 && (
+                    // Pulsing dot for the collapsed (icon-only) sidebar.
+                    <span className="pointer-events-none absolute right-1 top-1 hidden size-2 group-data-[collapsible=icon]:flex">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ember-2 opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-ember-2" />
+                    </span>
+                  )}
+                </SidebarMenuItem>
+              )
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="rounded-lg data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar className="size-8 rounded-lg">
+                    <AvatarFallback className="rounded-lg bg-ember-soft text-[12px] font-semibold text-ember-2">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left leading-tight">
+                    <span className="truncate text-[13px] font-medium text-sidebar-foreground">
+                      {profile?.email ?? 'Cargando…'}
+                    </span>
+                    <span className="truncate text-[11px] text-muted-foreground">{roleLabel}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="end"
+                sideOffset={10}
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-60"
+              >
+                <DropdownMenuLabel className="font-normal">
+                  <div className="grid leading-tight">
+                    <span className="truncate text-[13px] font-medium">{profile?.email}</span>
+                    <span className="truncate text-[11px] text-muted-foreground">{roleLabel}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setAppearanceOpen(true)}>
+                  <Palette />
+                  Apariencia
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                  <LogOut />
+                  Cerrar sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <AppearanceDialog open={appearanceOpen} onOpenChange={setAppearanceOpen} />
+      </SidebarFooter>
+    </Sidebar>
+  )
+}

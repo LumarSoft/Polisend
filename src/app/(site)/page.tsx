@@ -15,14 +15,17 @@ import { Steps } from "@/components/sections/steps";
 import { Pricing } from "@/components/sections/pricing";
 import { Faq } from "@/components/sections/faq";
 import { FinalCta, Footer } from "@/components/sections/final-cta";
+import { getPlans } from "@/lib/plans";
 
-export default function Home() {
+export default async function Home() {
+  // The owner's plans (cached for an hour; the default catalog if the API is not set or fails).
+  const catalog = await getPlans();
   return (
     <>
-      <JsonLd />
+      <JsonLd catalog={catalog} />
       <Nav />
       <main>
-        <Hero />
+        <Hero catalog={catalog} />
         <Marquee />
         <Problem />
         <Story />
@@ -33,8 +36,8 @@ export default function Home() {
         <Integrations />
         <Config />
         <Steps />
-        <Pricing />
-        <Faq />
+        <Pricing catalog={catalog} />
+        <Faq catalog={catalog} />
         <FinalCta />
       </main>
       <Footer />
