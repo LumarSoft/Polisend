@@ -80,10 +80,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Cobranzas', href: '/admin/cobranzas', icon: Wallet },
   { label: 'Rechazos', href: '/admin/rechazos', icon: BanknoteX },
   { label: 'Usuarios', href: '/admin/usuarios', icon: Users, superAdminOnly: true },
-  // Admins see each number's tokens; managing numbers stays with the SuperAdmin.
+  // Admins see each number's messages; managing numbers stays with the SuperAdmin.
   { label: 'Números', href: '/admin/numeros', icon: Phone },
-  // Each admin's numbers, their token plan and the month's consumption; the SuperAdmin also edits the catalog.
-  { label: 'Facturación', href: '/admin/facturacion', icon: CreditCard },
+  // Each number's plan and month; the SuperAdmin assigns plans, the OWNER edits the catalog and sees the platform's month.
+  { label: 'Facturación', href: '/admin/facturacion', icon: CreditCard, everyone: true },
   { label: 'Organizaciones', href: '/admin/organizaciones', icon: Building2, ownerOnly: true },
   { label: 'Mejoras', href: '/admin/mejoras', icon: Sparkles, everyone: true },
   { label: 'Configuración', href: '/admin/configuracion', icon: UserCog },

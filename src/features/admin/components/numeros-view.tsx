@@ -273,8 +273,8 @@ export function NumerosView() {
     )
   }
 
-  // The client is billed in tokens: the API sends no amounts in USD to tenants.
-  const totalTokens = (numbers ?? []).reduce((sum, n) => sum + n.usage.tokens, 0)
+  // Each number's messages of the month; plans and amounts are in Facturación.
+  const totalMessages = (numbers ?? []).reduce((sum, n) => sum + n.usage.messages, 0)
   const disconnected = (numbers ?? []).filter(n => n.disconnectedAt)
   const columns = isSuperAdmin ? 5 : 4
 
@@ -288,8 +288,8 @@ export function NumerosView() {
           </h1>
           <p className="mt-1.5 text-[14px] text-muted-foreground">
             {isSuperAdmin
-              ? 'Números de WhatsApp, código responsable y consumo del mes: tokens y uso de la IA.'
-              : 'Los números de WhatsApp a tu cargo y los tokens que consumieron en el mes.'}
+              ? 'Números de WhatsApp, código responsable y consumo del mes: mensajes y uso de la IA.'
+              : 'Los números de WhatsApp a tu cargo y los mensajes que enviaron en el mes.'}
           </p>
         </div>
         {isSuperAdmin && (
@@ -347,7 +347,8 @@ export function NumerosView() {
           />
         </div>
         <p className="text-[13px] text-muted-foreground">
-          1 token = 1 mensaje enviado por el asistente o desde el panel. Se factura a mes vencido.
+          Cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Los planes están en
+          Facturación.
         </p>
       </div>
       {isError && (
@@ -363,9 +364,9 @@ export function NumerosView() {
       )}
       <Card className="mb-4 flex items-center justify-between border-line-2 p-4">
         <span className="text-[13px] text-muted-foreground">
-          Tokens del mes · {period} ({isSuperAdmin ? 'todos los números' : 'tus números'})
+          Mensajes del mes · {period} ({isSuperAdmin ? 'todos los números' : 'tus números'})
         </span>
-        <span className="font-display text-[20px] text-ink">{numbers && !isError ? int(totalTokens) : '—'}</span>
+        <span className="font-display text-[20px] text-ink">{numbers && !isError ? int(totalMessages) : '—'}</span>
       </Card>
 
       <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
@@ -379,11 +380,11 @@ export function NumerosView() {
                 Responsable
               </TableHead>
               <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Tokens del mes
+                Mensajes del mes
               </TableHead>
               {isSuperAdmin && (
                 <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Uso de IA (OpenAI)
+                  Uso de IA
                 </TableHead>
               )}
               <TableHead className="w-24 pr-5" />
@@ -473,18 +474,16 @@ export function NumerosView() {
                     : '—'}
                 </TableCell>
                 <TableCell className="text-[13px]">
-                  <span className="font-medium text-ink">{int(n.usage.tokens)}</span>
-                  <div className="text-[11px] text-muted-foreground">mensajes enviados</div>
+                  <span className="font-medium text-ink">{int(n.usage.messages)}</span>
+                  <div className="text-[11px] text-muted-foreground">
+                    {n.usage.plan ? `plan ${n.usage.plan.trial ? 'Prueba' : n.usage.plan.name}` : 'mensajes enviados'}
+                    {n.usage.upgraded && ' · subió de plan'}
+                  </div>
                 </TableCell>
                 {isSuperAdmin && (
                   <TableCell className="text-[13px]">
-                    <span className="text-ink">
-                      {int((n.usage.inputTokens ?? 0) + (n.usage.outputTokens ?? 0))} tokens de OpenAI
-                    </span>
-                    <div className="text-[11px] text-muted-foreground">
-                      {int(n.usage.openaiCalls ?? 0)} llamadas · {int(n.usage.inputTokens ?? 0)} de entrada ·{' '}
-                      {int(n.usage.outputTokens ?? 0)} de salida
-                    </div>
+                    <span className="text-ink">{int(n.usage.openaiCalls ?? 0)} consultas a la IA</span>
+                    <div className="text-[11px] text-muted-foreground">respuestas que no resolvieron los menús</div>
                   </TableCell>
                 )}
                 <TableCell className="pr-5">

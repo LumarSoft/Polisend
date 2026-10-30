@@ -87,6 +87,7 @@ export function NovedadesView() {
   const handleOpen = (matter: NovedadItem) => {
     if (!matter.readAt) markRead.mutate(matter.id, { onError: () => toast.error('No se pudo marcar como leído') })
     if (matter.type === 'siniestro') setSelectedSiniestroId(matter.refId)
+    else if (matter.type === 'plan') router.push('/admin/facturacion')
     else if (matter.type === 'handoff' || matter.type === 'baja_poliza')
       router.push(inboxConversationHref(matter.refId))
     else router.push(`/admin/solicitudes?kind=${matter.type === 'lead' ? 'lead' : 'cotizacion'}&id=${matter.refId}`)
@@ -287,7 +288,11 @@ export function NovedadesView() {
                     ))}
                   </select>
                   <Button size="sm" variant="outline" onClick={() => handleOpen(matter)}>
-                    {matter.type === 'handoff' || matter.type === 'baja_poliza' ? 'Ver chat' : 'Ver detalle'}
+                    {matter.type === 'handoff' || matter.type === 'baja_poliza'
+                      ? 'Ver chat'
+                      : matter.type === 'plan'
+                        ? 'Ver facturación'
+                        : 'Ver detalle'}
                   </Button>
                 </div>
               </li>
