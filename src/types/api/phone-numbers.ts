@@ -40,6 +40,18 @@ export interface PhoneNumberUsage {
   marginUsd?: number
 }
 
+/** The Meta business portfolio that owns a number's WhatsApp account, as Meta reported it. */
+export interface MetaPortfolio {
+  /** The WhatsApp account's name in Meta. */
+  wabaName: string | null
+  businessId: string | null
+  /** The portfolio's name: whose it is. */
+  businessName: string | null
+  /** Meta's business_verification_status: verified, not_verified, pending… */
+  verification: string | null
+  checkedAt: string
+}
+
 export interface AdminPhoneNumber {
   id: number
   phoneNumberId: string
@@ -55,6 +67,8 @@ export interface AdminPhoneNumber {
   disconnectReason: string | null
   /** The reason in plain words, for the office. */
   disconnectReasonLabel: string | null
+  /** Null until Meta was read (it is read at onboarding and once a day). */
+  portfolio?: MetaPortfolio | null
   responsibleCode: PhoneNumberCodeRef | null
   servedCodes: PhoneNumberCodeRef[]
   usage: PhoneNumberUsage

@@ -1,5 +1,6 @@
 import type { AdminRole } from './auth'
 import type { BilledPlan } from './billing'
+import type { MetaPortfolio } from './phone-numbers'
 
 export interface OrganizationCode {
   id: number
@@ -47,6 +48,7 @@ export interface OrganizationNumber {
   isActive: boolean
   responsibleCode: { id: number; code: string; holderName: string | null } | null
   servedCodes: Array<{ id: number; code: string }>
+  portfolio?: MetaPortfolio | null
   budget: { monthlyBudgetUsd: number | null; exceededAt: string | null }
   usage: PhoneNumberUsage
 }

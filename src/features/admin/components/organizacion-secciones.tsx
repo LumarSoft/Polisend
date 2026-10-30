@@ -18,6 +18,7 @@ import type {
   OrganizationUser,
 } from '@/types/api/organizations'
 import { useOrganizationMutations } from '../hooks/use-organizations'
+import { MetaPortfolioLine } from './meta-portfolio-line'
 
 // ── helpers ────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ export function NumbersSection({ numbers }: { numbers: OrganizationNumber[] }) {
                         </Badge>
                       )}
                     </div>
+                    <MetaPortfolioLine portfolio={n.portfolio} />
                     <span className="text-[11px] text-muted-foreground">{n.phoneNumberId}</span>
                   </TableCell>
                   <TableCell className="text-[12px]">

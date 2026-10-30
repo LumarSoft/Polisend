@@ -35,6 +35,7 @@ import { useProducerCodes } from '../hooks/use-producer-codes'
 import { useOwnProducerCodes } from '../hooks/use-own-producer-codes'
 import { usePhoneNumbers, usePhoneNumberMutations } from '../hooks/use-phone-numbers'
 import { NumberAssistantSheet } from './number-assistant-sheet'
+import { MetaPortfolioLine } from './meta-portfolio-line'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 
@@ -423,6 +424,7 @@ export function NumerosView() {
                   <div className="flex flex-col">
                     <span className="text-[14px] font-medium text-ink">{n.number}</span>
                     <span className="font-mono text-[11px] text-muted-foreground">{n.phoneNumberId}</span>
+                    <MetaPortfolioLine portfolio={n.portfolio} />
                     <div className="mt-1 flex flex-wrap gap-1">
                       {n.disconnectedAt && (
                         <Badge variant="destructive" title={n.disconnectReasonLabel ?? undefined}>
