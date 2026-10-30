@@ -1,0 +1,56 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { solicitudesService } from '@/services/solicitudes.service'
+import { QUERY_KEYS } from '@/lib/query-keys'
+import type { SolicitudesQuery, SolicitudKind } from '@/types/api/solicitudes'
+import { useAuth } from '../context/auth-context'
+
+export function useSolicitudes(params: SolicitudesQuery) {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.solicitudes(params),
+    queryFn: () => solicitudesService.list(params, token as string),
+    enabled: !!token,
+    placeholderData: keepPreviousData,
+    // A solicitud the bot just created shows up without reloading: the list is
+    // re-read on every visit (the global 5-min staleTime would hide it) and
+    // every 20 s while open, in step with the sidebar counter.
+    staleTime: 0,
+    refetchInterval: 20_000,
+  })
+}
+
+/** Count of NEW (uncontacted) solicitudes, polled for the sidebar alert. */
+export function useNewSolicitudesCount() {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.solicitudes({ status: 'NEW', pageSize: 1 }),
+    queryFn: () => solicitudesService.list({ status: 'NEW', pageSize: 1 }, token as string),
+    enabled: !!token,
+    refetchInterval: 20_000,
+    select: page => page.total,
+  })
+}
+
+export function useSolicitud(kind: SolicitudKind | null, id: number | null) {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.solicitud(kind ?? '', id ?? 0),
+    queryFn: () => solicitudesService.get(kind as SolicitudKind, id as number, token as string),
+    enabled: !!token && !!kind && !!id,
+  })
+}
+
+/** The WhatsApp chat behind a solicitud, polled while the "Chat" tab is open. */
+export function useSolicitudMessages(kind: SolicitudKind, id: number, enabled: boolean) {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.solicitudMessages(kind, id),
+    queryFn: () => solicitudesService.messages(kind, id, token as string),
+    enabled: !!token && enabled,
+    refetchInterval: 5_000,
+  })
+}

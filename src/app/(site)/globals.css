@@ -1,4 +1,15 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+
+/* Only the landing's files: the panel (src/app/admin, src/features, shadcn's src/components/ui) has its own stylesheet. */
+@source "./";
+@source "../../components/brand";
+@source "../../components/chat";
+@source "../../components/legal";
+@source "../../components/providers";
+@source "../../components/sections";
+@source "../../components/seo";
+@source "../../components/ui/primitives.tsx";
+@source "../../lib";
 
 @theme {
   /* light surfaces, from page to raised */

@@ -1,0 +1,32 @@
+import type { AdminRole } from './auth'
+
+export interface CreateUserRequest {
+  email: string
+  name?: string
+  password: string
+  role?: AdminRole
+  producerCodeIds?: number[]
+}
+
+export interface UpdateUserRequest {
+  email?: string
+  name?: string
+  password?: string
+  role?: AdminRole
+  producerCodeIds?: number[]
+}
+
+/** A new branch's Triunfo code (POST /users/producer-codes). */
+export interface CreateProducerCodeRequest {
+  code: string
+  holderName?: string
+}
+
+/** A producer code option for the user-assignment UI (GET /users/producer-codes). */
+export interface ProducerCodeOption {
+  id: number
+  code: string
+  holderName: string | null
+  isMaster: boolean
+  isActive: boolean
+}

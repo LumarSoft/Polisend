@@ -1,0 +1,34 @@
+import { apiDownload, apiRequest } from '@/lib/api-client'
+import type {
+  AdminClientDetail,
+  AdminClientsPage,
+  AdminClientsQuery,
+  AdminClientsStats,
+  AdminPolizaDocumento,
+} from '@/types/api/clients'
+
+function buildListQuery(params: AdminClientsQuery): string {
+  const search = new URLSearchParams()
+  if (params.search?.trim()) search.set('search', params.search.trim())
+  if (params.riskType) search.set('riskType', params.riskType)
+  if (params.status) search.set('status', params.status)
+  if (params.sort) search.set('sort', params.sort)
+  if (params.producerCodeId) search.set('producerCodeId', String(params.producerCodeId))
+  if (params.phoneNumberId) search.set('phoneNumberId', String(params.phoneNumberId))
+  if (params.page) search.set('page', String(params.page))
+  if (params.pageSize) search.set('pageSize', String(params.pageSize))
+  const qs = search.toString()
+  return qs ? `?${qs}` : ''
+}
+
+export const adminClientsService = {
+  list: (params: AdminClientsQuery, token: string) =>
+    apiRequest<AdminClientsPage>(`/admin/clients${buildListQuery(params)}`, { token }),
+  stats: (token: string) => apiRequest<AdminClientsStats>('/admin/clients/stats', { token }),
+  get: (id: number, token: string) => apiRequest<AdminClientDetail>(`/admin/clients/${id}`, { token }),
+  // Documents Triunfo has for one policy, fetched live by the API.
+  documentos: (clientId: number, polizaId: number, token: string) =>
+    apiRequest<AdminPolizaDocumento[]>(`/admin/clients/${clientId}/polizas/${polizaId}/documentos`, { token }),
+  downloadDocumento: (clientId: number, polizaId: number, code: string, token: string) =>
+    apiDownload(`/admin/clients/${clientId}/polizas/${polizaId}/documentos/${code}`, token),
+}

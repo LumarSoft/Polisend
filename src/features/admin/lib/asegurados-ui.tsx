@@ -1,0 +1,236 @@
+import { Car, Home, LifeBuoy, Shield, Store } from 'lucide-react'
+import type { AdminPolizaSummary, EstadoVigencia, RiskType } from '@/types/api/clients'
+
+export const RISK_LABELS: Record<RiskType, string> = {
+  auto: 'Automotor',
+  home: 'Hogar',
+  // Triunfo's articles grouped as 'life' are personal accidents and sepelio, none is a life policy.
+  life: 'AP y sepelio',
+  commercial: 'Comercial',
+  other: 'Otro',
+}
+
+/** A policy's name: its product ("Acc. personales", "Sepelio"…) when the API knows it, else its risk type. */
+export function policyName(poliza: { riskType: RiskType; product?: string | null }): string {
+  return poliza.product || RISK_LABELS[poliza.riskType]
+}
+
+export function RiskIcon({ type, className }: { type: RiskType; className?: string }) {
+  const props = { className: className ?? 'size-4' }
+  switch (type) {
+    case 'auto':
+      return <Car {...props} />
+    case 'home':
+      return <Home {...props} />
+    case 'life':
+      return <LifeBuoy {...props} />
+    case 'commercial':
+      return <Store {...props} />
+    default:
+      return <Shield {...props} />
+  }
+}
+
+export type PolizaEstado = 'vigente' | 'expiring' | 'vencida' | 'anulada' | 'proxima'
+
+type PolizaVigencia = {
+  validityStatus: EstadoVigencia
+  validFrom: string | null
+  validTo: string | null
+}
+
+export interface PolizaStatus {
+  label: string
+  estado: PolizaEstado
+  daysLeft: number | null
+}
+
+const EXPIRING_WINDOW_DAYS = 30
+
+/** Badge for a policy, from the API's validityStatus plus the days left when in force. */
+export function polizaStatus(poliza: PolizaVigencia): PolizaStatus {
+  if (poliza.validityStatus === 'anulada') return { label: 'Anulada', estado: 'anulada', daysLeft: null }
+  if (poliza.validityStatus === 'proxima') {
+    return { label: `Desde ${formatDate(poliza.validFrom)}`, estado: 'proxima', daysLeft: null }
+  }
+  const now = new Date()
+  const expiry = poliza.validTo ? new Date(poliza.validTo) : null
+  if (poliza.validityStatus === 'vencida' || !expiry || expiry < now) {
+    return { label: 'Vencida', estado: 'vencida', daysLeft: null }
+  }
+  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / 86_400_000)
+  if (daysLeft <= EXPIRING_WINDOW_DAYS) return { label: `Vence en ${daysLeft}d`, estado: 'expiring', daysLeft }
+  return { label: 'Vigente', estado: 'vigente', daysLeft }
+}
+
+export function nearestExpiry(vigenciaHastaList: (string | null)[]): { date: Date; daysLeft: number } | null {
+  const now = new Date()
+  const future = vigenciaHastaList
+    .filter((d): d is string => !!d && new Date(d) >= now)
+    .map(d => new Date(d))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (!future.length) return null
+  const date = future[0]
+  return { date, daysLeft: Math.ceil((date.getTime() - now.getTime()) / 86_400_000) }
+}
+
+export type ClientStatusKey = 'vigente' | 'expiring' | 'vencida' | 'none'
+
+export interface ClientStatusStyle {
+  key: ClientStatusKey
+  label: string
+  dot: string
+}
+
+const CLIENT_STATUS_STYLES: Record<ClientStatusKey, ClientStatusStyle> = {
+  vigente: { key: 'vigente', label: 'Al día', dot: 'bg-emerald-500' },
+  expiring: { key: 'expiring', label: 'Por vencer', dot: 'bg-amber-2' },
+  vencida: { key: 'vencida', label: 'Sin vigentes', dot: 'bg-destructive' },
+  none: { key: 'none', label: 'Sin pólizas', dot: 'bg-faint-2' },
+}
+
+/** Overall health of a client, derived from the best status across all their policies. */
+export function clientStatus(polizas: PolizaVigencia[]): ClientStatusStyle {
+  if (polizas.length === 0) return CLIENT_STATUS_STYLES.none
+  let best: ClientStatusKey = 'vencida'
+  for (const p of polizas) {
+    const estado = polizaStatus(p).estado
+    if (estado === 'vigente') return CLIENT_STATUS_STYLES.vigente
+    if (estado === 'expiring') best = 'expiring'
+  }
+  return CLIENT_STATUS_STYLES[best]
+}
+
+/** Distinct risk types in the order they should be shown, plus per-client counts. */
+export function ramoSummary(polizas: AdminPolizaSummary[]): {
+  ramos: RiskType[]
+  dominio: string | null
+  vigentes: number
+} {
+  const ramos: RiskType[] = []
+  for (const p of polizas) {
+    if (!ramos.includes(p.riskType)) ramos.push(p.riskType)
+  }
+  const dominio = polizas.find(p => p.vehicle?.licensePlate)?.vehicle?.licensePlate ?? null
+  const vigentes = polizas.filter(p => p.validityStatus === 'vigente').length
+  return { ramos, dominio, vigentes }
+}
+
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+export function relativeDays(daysLeft: number): string {
+  if (daysLeft <= 0) return 'hoy'
+  if (daysLeft === 1) return 'mañana'
+  if (daysLeft < 30) return `en ${daysLeft} días`
+  const months = Math.round(daysLeft / 30)
+  return months <= 1 ? 'en 1 mes' : `en ${months} meses`
+}
+
+export function formatCurrency(amount: string | null | undefined): string {
+  if (!amount) return '—'
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(parseFloat(amount))
+}
+
+export function initials(firstName: string, lastName: string): string {
+  return `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase()
+}
+
+/** Whole days a due date is past today. Returns null if not yet due / no date. */
+export function daysOverdue(dueDate: string | null | undefined): number | null {
+  if (!dueDate) return null
+  const diff = Date.now() - new Date(dueDate).getTime()
+  if (diff <= 0) return null
+  return Math.floor(diff / 86_400_000)
+}
+
+/** Human label for how long a cuota has been overdue. */
+export function overdueLabel(dueDate: string | null | undefined): string | null {
+  const days = daysOverdue(dueDate)
+  if (days === null) return null
+  if (days === 0) return 'vence hoy'
+  return `hace ${days} ${days === 1 ? 'día' : 'días'}`
+}
+
+interface CobranzaReminderInput {
+  firstName: string
+  /** The organization the office writes for; empty = the message is not signed. */
+  signature: string
+  totalDebt: string
+  overdueCount: number
+  rejectedCount: number
+  pendingCount: number
+}
+
+/** Pre-filled WhatsApp link with a friendly payment reminder for a debtor. */
+export function buildCobranzaWhatsappUrl(phone: string, input: CobranzaReminderInput): string {
+  const digits = phone.replace(/\D/g, '')
+  const parts: string[] = []
+  if (input.overdueCount > 0)
+    parts.push(`${input.overdueCount} ${input.overdueCount === 1 ? 'cuota vencida' : 'cuotas vencidas'}`)
+  if (input.rejectedCount > 0)
+    parts.push(`${input.rejectedCount} ${input.rejectedCount === 1 ? 'cuota rechazada' : 'cuotas rechazadas'}`)
+  if (input.pendingCount > 0)
+    parts.push(`${input.pendingCount} ${input.pendingCount === 1 ? 'cuota pendiente' : 'cuotas pendientes'}`)
+  const detalle = parts.length ? ` (${parts.join(', ')})` : ''
+  const message =
+    `Hola ${input.firstName}, te escribimos${input.signature ? ` de ${input.signature}` : ''}. ` +
+    `Queríamos recordarte que figura un saldo pendiente de ${formatCurrency(input.totalDebt)}${detalle}. ` +
+    `¿Coordinamos el pago? ¡Gracias!`
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
+}
+
+export type PagoEstadoKey = 'al_dia' | 'pendiente' | 'vencida' | 'rechazado' | 'sin_cuotas'
+
+export interface PagoEstadoStyle {
+  key: PagoEstadoKey
+  label: string
+  badge: string
+  dot: string
+}
+
+export function cuotaPaymentStatus(stats: {
+  pending: number
+  overdue: number
+  rejected: number
+  paid: number
+}): PagoEstadoStyle {
+  const total = stats.pending + stats.overdue + stats.rejected + stats.paid
+  if (total === 0)
+    return { key: 'sin_cuotas', label: 'Sin cuotas', badge: 'bg-secondary text-muted-foreground', dot: 'bg-faint-2' }
+  if (stats.rejected > 0)
+    return {
+      key: 'rechazado',
+      label: 'Rechazado',
+      badge: 'bg-destructive/10 text-destructive border border-destructive/25',
+      dot: 'bg-destructive',
+    }
+  if (stats.overdue > 0)
+    return {
+      key: 'vencida',
+      label: 'Vencida',
+      badge: 'bg-destructive/10 text-destructive border border-destructive/25',
+      dot: 'bg-destructive',
+    }
+  if (stats.pending > 0)
+    return {
+      key: 'pendiente',
+      label: 'Pendiente',
+      badge: 'bg-amber/10 text-amber-700 border border-amber/30 dark:text-amber',
+      dot: 'bg-amber-2',
+    }
+  return {
+    key: 'al_dia',
+    label: 'Al día',
+    badge:
+      'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/40',
+    dot: 'bg-emerald-500',
+  }
+}

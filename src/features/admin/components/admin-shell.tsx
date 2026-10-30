@@ -1,0 +1,76 @@
+'use client'
+
+import { useEffect, type ReactNode } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { useAuth } from '../context/auth-context'
+import { useRole } from '../hooks/use-role'
+import { AppSidebar } from './app-sidebar'
+
+const TITLES: Record<string, string> = {
+  '/admin': 'Inicio',
+  '/admin/novedades': 'Asuntos pendientes',
+  '/admin/tareas': 'Tareas',
+  '/admin/solicitudes': 'Solicitudes de cotización',
+  '/admin/inbox': 'Whatsapp',
+  '/admin/usuarios': 'Usuarios',
+  '/admin/numeros': 'Números',
+  '/admin/facturacion': 'Facturación',
+  '/admin/organizaciones': 'Organizaciones',
+  '/admin/configuracion': 'Configuración',
+  '/admin/mejoras': 'Mejoras',
+}
+
+const OWNER_PATHS = ['/admin/organizaciones', '/admin/mejoras']
+
+export function AdminShell({ children }: { children: ReactNode }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const { isAuthenticated, hydrated } = useAuth()
+  const { isOwner, isLoading: roleLoading } = useRole()
+
+  useEffect(() => {
+    if (hydrated && !isAuthenticated) router.replace('/admin/login')
+  }, [hydrated, isAuthenticated, router])
+
+  // The OWNER's interface is "Organizaciones" plus the "Mejoras" editor: keep it there.
+  useEffect(() => {
+    if (!roleLoading && isOwner && !OWNER_PATHS.some(p => pathname.startsWith(p))) {
+      router.replace('/admin/organizaciones')
+    }
+  }, [roleLoading, isOwner, pathname, router])
+
+  if (!hydrated || !isAuthenticated) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-sidebar">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  const title = TITLES[pathname] ?? 'Panel'
+  // The Whatsapp section fills the whole screen, like WhatsApp Web, and carries
+  // the menu button in its own header.
+  const fullScreen = pathname === '/admin/inbox'
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          {!fullScreen && (
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b border-line bg-background/85 px-4 backdrop-blur-md">
+              <SidebarTrigger className="-ml-1 text-muted-foreground" />
+              <Separator orientation="vertical" className="mr-1 !h-4" />
+              <span className="font-display text-[14.5px] tracking-[-0.01em] text-ink">{title}</span>
+            </header>
+          )}
+          <div className="flex flex-1 flex-col">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  )
+}

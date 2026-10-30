@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { Logo } from "@/components/brand/logo";
 import { CtaButton } from "@/components/ui/primitives";
 import { gsap, useGSAP } from "@/lib/gsap";
-import { SITE } from "@/lib/site";
 
 const LINKS = [
   { href: "#bot", label: "El bot" },
@@ -56,15 +55,13 @@ export function Nav() {
           ))}
         </nav>
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* The Polisend panel, once its domain is set (NEXT_PUBLIC_PANEL_URL). */}
-          {SITE.panelUrl && (
-            <a
-              href={`${SITE.panelUrl}/admin/login`}
-              className="inline-flex h-10 items-center rounded-full px-3 text-[13.5px] font-semibold whitespace-nowrap text-fg/80 transition-colors hover:bg-fg/6 hover:text-fg sm:border sm:border-fg/12 sm:px-4.5"
-            >
-              Iniciar sesión
-            </a>
-          )}
+          {/* The panel lives in this same app, under /admin (its own root layout, so a full page load). */}
+          <a
+            href="/admin/login"
+            className="inline-flex h-10 items-center rounded-full px-3 text-[13.5px] font-semibold whitespace-nowrap text-fg/80 transition-colors hover:bg-fg/6 hover:text-fg sm:border sm:border-fg/12 sm:px-4.5"
+          >
+            Iniciar sesión
+          </a>
           <CtaButton size="sm">
             <span className="sm:hidden">Quiero</span>
             <span className="hidden sm:inline">Quiero Polisend</span>

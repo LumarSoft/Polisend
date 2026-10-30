@@ -1,0 +1,22 @@
+import { apiRequest } from '@/lib/api-client'
+import type { CobranzasPage, CobranzasQuery, CobranzasScopeQuery, CobranzasStats } from '@/types/api/cobranzas'
+
+function buildQuery(params: CobranzasQuery): string {
+  const search = new URLSearchParams()
+  if (params.search?.trim()) search.set('search', params.search.trim())
+  if (params.status) search.set('status', params.status)
+  if (params.producerCodeId) search.set('producerCodeId', String(params.producerCodeId))
+  if (params.phoneNumberId) search.set('phoneNumberId', String(params.phoneNumberId))
+  if (params.paymentMethod) search.set('paymentMethod', params.paymentMethod)
+  if (params.page) search.set('page', String(params.page))
+  if (params.pageSize) search.set('pageSize', String(params.pageSize))
+  const qs = search.toString()
+  return qs ? `?${qs}` : ''
+}
+
+export const cobranzasService = {
+  list: (params: CobranzasQuery, token: string) =>
+    apiRequest<CobranzasPage>(`/admin/cobranzas${buildQuery(params)}`, { token }),
+  stats: (params: CobranzasScopeQuery, token: string) =>
+    apiRequest<CobranzasStats>(`/admin/cobranzas/stats${buildQuery(params)}`, { token }),
+}

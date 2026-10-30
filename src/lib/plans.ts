@@ -3,7 +3,7 @@ import type { PlanCatalog } from "./plan-format";
 
 /**
  * The catalog the platform starts with (api_john, migration
- * 20261030120000_global_message_plans). Shown while POLISEND_API_URL is not set
+ * 20261030120000_global_message_plans). Shown while NEXT_PUBLIC_API_URL is not set
  * or the API does not answer, so the page always has prices.
  */
 export const DEFAULT_CATALOG: PlanCatalog = {
@@ -29,13 +29,13 @@ function isCatalog(value: unknown): value is PlanCatalog {
 
 /**
  * The plans the owner set in the panel (GET /public/plans of the API), cached
- * for an hour. Without POLISEND_API_URL, or when the API fails, the default
+ * for an hour. Without NEXT_PUBLIC_API_URL, or when the API fails, the default
  * catalog.
  */
 export async function getPlans(): Promise<PlanCatalog> {
   "use cache";
   cacheLife("hours");
-  const api = process.env.POLISEND_API_URL?.replace(/\/$/, "");
+  const api = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
   if (!api) return DEFAULT_CATALOG;
   try {
     const res = await fetch(`${api}/public/plans`, { signal: AbortSignal.timeout(5000) });

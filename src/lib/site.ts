@@ -33,8 +33,6 @@ export const SITE = {
   phoneDisplay: "+54 9 341 277-6893",
   whatsappMessage:
     "¡Hola! Quiero Polisend para mi productora de seguros. ¿Me cuentan cómo arrancamos?",
-  /** The Polisend panel (NEXT_PUBLIC_PANEL_URL, no trailing slash). Unset hides "Iniciar sesión". */
-  panelUrl: process.env.NEXT_PUBLIC_PANEL_URL?.replace(/\/$/, "") || null,
   /** Where people write about their data and these terms (NEXT_PUBLIC_LEGAL_EMAIL). */
   legalEmail: process.env.NEXT_PUBLIC_LEGAL_EMAIL || null,
   insurers: ["Triunfo Seguros", "Sancor Seguros"],
