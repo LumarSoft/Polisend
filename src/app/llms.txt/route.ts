@@ -1,4 +1,6 @@
-import { FAQ } from "@/components/sections/faq";
+import { faqFor } from "@/components/sections/faq";
+import { pricingSentence } from "@/lib/plan-format";
+import { getPlans } from "@/lib/plans";
 import { FEATURES } from "@/lib/product";
 import { SITE } from "@/lib/site";
 
@@ -6,8 +8,8 @@ import { SITE } from "@/lib/site";
  * /llms.txt (llmstxt.org): a plain-markdown brief so AI assistants can
  * describe Polisend accurately and link to the right section.
  */
-export function GET() {
-  const messages = SITE.messagesPerPlan.toLocaleString("es-AR");
+export async function GET() {
+  const catalog = await getPlans();
   const body = `# ${SITE.name}
 
 > ${SITE.name} es un bot de WhatsApp con inteligencia artificial y un panel de gestión para productores asesores de seguros de Argentina. Atiende a los asegurados las 24 horas: los identifica por DNI o patente, toma denuncias de siniestro con fotos, informa cuotas, envía la documentación de la póliza y cotiza auto y moto en tiempo real. Lo desarrolla ${SITE.company} en ${SITE.city}, ${SITE.region}.
@@ -34,11 +36,11 @@ ${FEATURES.map((f) => `- ${f}`).join("\n")}
 
 ## Precio
 
-USD ${SITE.priceUsd} por mes por cada ${messages} mensajes. Incluye el bot, el panel, la integración con la compañía y la puesta en marcha.
+${pricingSentence(catalog)}
 
 ## Preguntas frecuentes
 
-${FAQ.map((f) => `### ${f.q}\n\n${f.a}`).join("\n\n")}
+${faqFor(catalog).map((f) => `### ${f.q}\n\n${f.a}`).join("\n\n")}
 
 ## Enlaces
 
@@ -48,6 +50,8 @@ ${FAQ.map((f) => `### ${f.q}\n\n${f.a}`).join("\n\n")}
 - [Panel de gestión](${SITE.url}/#panel)
 - [Precio](${SITE.url}/#precio)
 - [Preguntas frecuentes](${SITE.url}/#faq)
+- [Política de privacidad](${SITE.url}/privacidad)
+- [Términos del servicio](${SITE.url}/terminos)
 - [Contacto por WhatsApp](https://wa.me/${SITE.whatsappNumber}): ${SITE.phoneDisplay}
 `;
 

@@ -1,7 +1,10 @@
 import { Plus } from "@phosphor-icons/react/ssr";
 import { Eyebrow, SplitReveal } from "@/components/ui/primitives";
+import { pricingSentence, type PlanCatalog } from "@/lib/plan-format";
 
-export const FAQ = [
+/** The questions, with the price answered from the owner's catalog. */
+export function faqFor(catalog: PlanCatalog) {
+  return [
   {
     q: "¿Qué es Polisend?",
     a: "Polisend es un bot de WhatsApp con inteligencia artificial y un panel de gestión para productores asesores de seguros. Atiende a tus asegurados las 24 horas: identifica a cada cliente por DNI o patente, toma denuncias de siniestro con fotos, informa cuotas y deuda, envía la documentación de la póliza y cotiza auto y moto en tiempo real. Lo desarrolla Lumarsoft, en Rosario.",
@@ -40,15 +43,17 @@ export const FAQ = [
   },
   {
     q: "¿Cuánto cuesta?",
-    a: "USD 60 por mes por cada 1.000 mensajes. Incluye el bot, el panel, la integración con la compañía y la puesta en marcha. Además, cada número tiene un tope de gasto: si se alcanza, el bot sigue atendiendo con los flujos guiados.",
+    a: pricingSentence(catalog),
   },
   {
     q: "¿Puedo tener varios números, códigos de productor o usuarios?",
     a: "Sí. Tu productora puede tener varios números de WhatsApp, varios códigos de productor y un usuario para cada persona del equipo.",
   },
-];
+  ];
+}
 
-export function Faq() {
+export function Faq({ catalog }: { catalog: PlanCatalog }) {
+  const faq = faqFor(catalog);
   return (
     <section id="faq" className="relative border-t border-fg/6 py-20 sm:py-32">
       <div className="mx-auto grid grid-cols-1 max-w-[1400px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10">
@@ -59,7 +64,7 @@ export function Faq() {
           </SplitReveal>
         </div>
         <div className="divide-y divide-fg/8 border-y border-fg/8">
-          {FAQ.map((f) => (
+          {faq.map((f) => (
             <details key={f.q} data-reveal className="group py-1 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-left font-display text-[clamp(1.1rem,1.6vw,1.4rem)] font-semibold tracking-[-0.02em] text-fg transition-colors hover:text-brand">
                 <h3>{f.q}</h3>

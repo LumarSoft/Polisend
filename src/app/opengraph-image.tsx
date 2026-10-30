@@ -3,7 +3,8 @@ import { join } from "node:path";
 import type { ReactNode } from "react";
 import { ImageResponse } from "next/og";
 import { MARK_PATH } from "@/components/brand/logo";
-import { SITE } from "@/lib/site";
+import { paidPlans, usd } from "@/lib/plan-format";
+import { getPlans } from "@/lib/plans";
 
 export const alt =
   "Polisend: bot de WhatsApp con IA para productores de seguros. Denuncias de siniestro con fotos, cuotas, documentación y cotizaciones 24/7.";
@@ -56,8 +57,8 @@ function Bubble({ out, children }: { out?: boolean; children: ReactNode }) {
   );
 }
 
-export default function Image() {
-  const messages = SITE.messagesPerPlan.toLocaleString("es-AR");
+export default async function Image() {
+  const from = paidPlans(await getPlans())[0];
   return new ImageResponse(
     (
       <div
@@ -126,7 +127,7 @@ export default function Image() {
 
           <div style={{ display: "flex", gap: 12, fontSize: 21, fontWeight: 700, whiteSpace: "nowrap" }}>
             <span style={{ padding: "11px 20px", borderRadius: 999, background: BLUE, color: "#ffffff" }}>
-              {`USD ${SITE.priceUsd}/mes · ${messages} mensajes`}
+              {from ? `Desde ${usd(from.priceUsd)}/mes` : "WhatsApp 24/7"}
             </span>
             <span style={{ padding: "11px 20px", borderRadius: 999, background: "#ffffff", border: "1px solid #dfe5ee" }}>
               Atiende 24/7

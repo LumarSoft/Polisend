@@ -24,8 +24,11 @@ Copiá `.env.example` a `.env.local`:
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | Número de ventas al que llevan todos los botones "Quiero Polisend" (formato internacional, solo dígitos). Si falta, usa la línea de ventas `5493412776893` (341 277-6893). |
 | `NEXT_PUBLIC_SITE_URL` | Opcional. Dominio público del sitio, sin barra final (canonical, sitemap, robots, vista previa al compartir, datos estructurados y `llms.txt`). Si está vacío, en Vercel se usa el dominio de producción del proyecto (hoy `polisend.vercel.app`, o el dominio propio cuando se conecte). |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Opcional. Token de verificación de Google Search Console (meta tag). |
+| `POLISEND_API_URL` | URL de la API. Los precios salen del catálogo que configura el Owner en el panel (`GET /public/plans`, cache de 1 hora). Vacía o sin respuesta: el catálogo inicial de `src/lib/plans.ts`. |
+| `NEXT_PUBLIC_PANEL_URL` | URL del panel de Polisend. Vacía oculta "Iniciar sesión". |
+| `NEXT_PUBLIC_LEGAL_EMAIL` | Correo de contacto de las páginas de privacidad y términos. Vacío: solo el WhatsApp de ventas. |
 
-El precio (USD 60/mes por cada 1.000 mensajes), el número de ventas y las compañías integradas están en `src/lib/site.ts`.
+Los planes y precios vienen de la API (`src/lib/plans.ts`, con el catálogo inicial como respaldo); el número de ventas y las compañías integradas, de `src/lib/site.ts`. Las páginas `/privacidad` y `/terminos` toman su texto de `src/lib/legal/`.
 
 ## Estructura
 

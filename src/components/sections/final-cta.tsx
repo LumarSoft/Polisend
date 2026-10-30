@@ -60,14 +60,16 @@ export function Footer() {
         </div>
         <nav aria-label="Pie de página" className="grid grid-cols-2 gap-x-12 gap-y-2 text-[14px] text-fg/60 sm:grid-cols-3">
           {[
-            ["#bot", "El bot"],
-            ["#velocidad", "Velocidad"],
-            ["#asesor", "Asesor humano"],
-            ["#panel", "Panel"],
-            ["#integraciones", "Integraciones"],
-            ["#precio", "Precio"],
-            ["#faq", "Preguntas"],
-            ["#empezar", "Cómo empezás"],
+            ["/#bot", "El bot"],
+            ["/#velocidad", "Velocidad"],
+            ["/#asesor", "Asesor humano"],
+            ["/#panel", "Panel"],
+            ["/#integraciones", "Integraciones"],
+            ["/#precio", "Precio"],
+            ["/#faq", "Preguntas"],
+            ["/#empezar", "Cómo empezás"],
+            ["/privacidad", "Privacidad"],
+            ["/terminos", "Términos"],
           ].map(([href, label]) => (
             <a key={href} href={href} className="transition-colors hover:text-brand">
               {label}
