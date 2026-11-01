@@ -18,6 +18,7 @@ import { initialsOf } from '../lib/org-brand'
 import { LogoUploader } from './logo-uploader'
 import { BillingSummary, CodesTable, NumbersSection, UsersSection } from './organizacion-secciones'
 import { OrganizacionTriunfo } from './organizacion-triunfo'
+import { OrganizacionTriunfoErrores } from './organizacion-triunfo-errores'
 
 function errMsg(error: unknown, fallback = 'No se pudo guardar. Intentá de nuevo.') {
   return error instanceof ApiError ? error.message : fallback
@@ -193,6 +194,7 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
       </section>
 
       <OrganizacionTriunfo orgId={orgId} />
+      <OrganizacionTriunfoErrores orgId={orgId} />
 
       <UsersSection orgId={orgId} users={org.users} />
 
