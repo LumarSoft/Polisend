@@ -7,8 +7,23 @@ organizaciones (`/admin`). Habla con la API multi-tenant `api_john` (NestJS + Pr
 `BOT_JPMG`; la web y el portal de asegurados de JPMG siguen en `front_John`. El plan y su estado están en
 `docs/PLAN-SAAS.md`, en la carpeta `john/` de arriba. Estructura y variables: `README.md`.
 
-**Todo cambio del panel va acá, nunca a `front_John`.** Ningún nombre de cliente en el código: un pedido termina en
-una función para todos, una configuración por organización o un desarrollo a medida fuera del producto.
+Ningún nombre de cliente en el código: un pedido termina en una función para todos, una configuración por organización o
+un desarrollo a medida fuera del producto.
+
+## El panel vive en dos repos: se editan los dos
+
+Hasta que se apague el panel de JPMG (`front_John`, también en `/admin`), **todo cambio del panel se hace acá y en
+`front_John`, en la misma tarea**, para que queden lo más nivelados posible: mismas pantallas, mismos endpoints, mismo
+comportamiento. Un cambio que entra en uno solo queda a medias.
+
+- Portar de un repo al otro: el alias de imports es `@/` acá y `@/src/` en `front_John`; el resto del código del panel
+  se copia igual.
+- Lo que puede diferir, y solo eso: la marca (acá Polisend, allá JPMG), los textos que nombran a quién pedirle ayuda
+  (acá "soporte de Polisend") y lo que ya es propio de cada uno (acá el OWNER también ve Facturación y los avisos de plan
+  llevan a Facturación). Si un cambio no tiene sentido en uno de los dos, decirlo en vez de omitirlo en silencio.
+- Formato: este repo no tiene configuración de Prettier y el de `front_John` sí. Para archivos del panel usar
+  `prettier --single-quote --no-semi --print-width 120 --arrow-parens avoid`; un `prettier --write` pelado los pasa a
+  comillas dobles y punto y coma.
 
 ## Comandos
 
