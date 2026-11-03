@@ -26,7 +26,9 @@ export function PlanLimitActions({ row, showNumber = false }: { row: BillingNumb
       {
         onSuccess: () =>
           toast.success(
-            choice === 'continue' ? 'Listo: el asistente vuelve a responder' : `Queda en pausa hasta el ${resumeDay(row)}`,
+            choice === 'continue'
+              ? 'Listo: el asistente vuelve a responder'
+              : `Queda en pausa hasta el ${resumeDay(row)}`,
           ),
         onError: error =>
           toast.error(error instanceof ApiError ? error.message : 'No se pudo guardar la elección', {

@@ -19,7 +19,12 @@ export interface TriunfoAuthState {
 }
 
 export type TriunfoErrorKind =
-  'CREDENTIALS_REJECTED' | 'REJECTED' | 'UNEXPECTED_RESPONSE' | 'HTTP_ERROR' | 'TIMEOUT' | 'NETWORK'
+  | 'CREDENTIALS_REJECTED'
+  | 'REJECTED'
+  | 'UNEXPECTED_RESPONSE'
+  | 'HTTP_ERROR'
+  | 'TIMEOUT'
+  | 'NETWORK'
 
 /** One distinct failed call to Triunfo, with how many times it happened. */
 export interface TriunfoErrorRow {

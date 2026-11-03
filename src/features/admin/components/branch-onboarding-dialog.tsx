@@ -299,7 +299,8 @@ function PlanStep({ numberId, onDone }: { numberId: number; onDone: (planName: s
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[13px] text-muted-foreground">
-        Cuántos mensajes por mes incluye el número. Al llegar a ese límite, el asistente se pausa y te avisamos para que elijas si pasa al plan siguiente.
+        Cuántos mensajes por mes incluye el número. Al llegar a ese límite, el asistente se pausa y te avisamos para que
+        elijas si pasa al plan siguiente.
         {hasTrial &&
           ' Una cuenta nueva arranca con el plan de prueba su primer mes; si elegís un plan ahora, cuenta desde ya.'}
       </p>

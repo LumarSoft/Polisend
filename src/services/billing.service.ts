@@ -16,7 +16,11 @@ export const billingService = {
   },
 
   /** At the plan's limit: continue on the next plan, or keep the assistant paused until next month. */
-  resolveLimit(token: string, numberId: number, choice: 'continue' | 'pause'): Promise<{ ok: boolean; paused: boolean }> {
+  resolveLimit(
+    token: string,
+    numberId: number,
+    choice: 'continue' | 'pause',
+  ): Promise<{ ok: boolean; paused: boolean }> {
     return apiRequest<{ ok: boolean; paused: boolean }>(`/admin/billing/numbers/${numberId}/limit`, {
       method: 'POST',
       token,
