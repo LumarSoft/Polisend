@@ -18,9 +18,17 @@ comportamiento. Un cambio que entra en uno solo queda a medias.
 
 - Portar de un repo al otro: el alias de imports es `@/` acá y `@/src/` en `front_John`; el resto del código del panel
   se copia igual.
-- Lo que puede diferir, y solo eso: la marca (acá Polisend, allá JPMG), los textos que nombran a quién pedirle ayuda
-  (acá "soporte de Polisend") y lo que ya es propio de cada uno (acá el OWNER también ve Facturación y los avisos de plan
-  llevan a Facturación). Si un cambio no tiene sentido en uno de los dos, decirlo en vez de omitirlo en silencio.
+- Lo que puede diferir, y solo eso: la marca (acá Polisend, allá JPMG) y los textos que nombran a quién pedirle ayuda o
+  quién define los planes (acá "Polisend", allá "Lumarsoft"). Si un cambio no tiene sentido en uno de los dos, decirlo en
+  vez de omitirlo en silencio.
+- Antes de cerrar una tarea del panel, revisar el desnivel desde la carpeta `JohnPellegrini`. Solo puede listar
+  `app-sidebar.tsx`, `facturacion-view.tsx`, `login-form.tsx`, `org-mark.tsx`, `triunfo-status-banner.tsx`,
+  `use-panel-brand.ts`, `org-brand.ts`, `panel-theme.ts` (marca y textos), `query-keys.ts` y `siniestros.service.ts`
+  (`front_John` también tiene las claves y llamadas de su web pública); cualquier otro es un cambio que falta portar:
+
+  ```bash
+  cd polisend/src && for f in $(git ls-files features/admin services types lib/api-client.ts lib/query-keys.ts hooks); do diff -q <(sed "s#'@/src/#'@/#g" ../../front_John/src/$f 2>/dev/null) $f >/dev/null || echo "$f"; done
+  ```
 - Formato: este repo no tiene configuración de Prettier y el de `front_John` sí. Para archivos del panel usar
   `prettier --single-quote --no-semi --print-width 120 --arrow-parens avoid`; un `prettier --write` pelado los pasa a
   comillas dobles y punto y coma.
