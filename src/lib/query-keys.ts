@@ -1,4 +1,5 @@
 import type { CampaignCandidatesQuery, CampaignKind } from '@/types/api/campaigns'
+import type { BalanceQuery } from '@/types/api/balance'
 import type { AdminClientsQuery } from '@/types/api/clients'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
 import type { ExpiredPoliciesQuery } from '@/types/api/expired-policies'
@@ -21,6 +22,7 @@ export const QUERY_KEYS = {
   },
   admin: {
     dashboard: ['admin', 'dashboard'] as const,
+    balance: (params: BalanceQuery) => ['admin', 'balance', params] as const,
     profile: ['admin', 'profile'] as const,
     config: ['admin', 'config'] as const,
     botProfile: ['admin', 'config', 'profile'] as const,
