@@ -1,3 +1,4 @@
+import type { CampaignCandidatesQuery, CampaignKind } from '@/types/api/campaigns'
 import type { AdminClientsQuery } from '@/types/api/clients'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
 import type { ExpiredPoliciesQuery } from '@/types/api/expired-policies'
@@ -66,6 +67,10 @@ export const QUERY_KEYS = {
     internalChatUnread: ['admin', 'internal-chat', 'unread'] as const,
     internalChatPeople: ['admin', 'internal-chat', 'people'] as const,
     internalChatMessages: (chatId: number) => ['admin', 'internal-chat', 'messages', chatId] as const,
+    campaignsAll: ['admin', 'campaigns'] as const,
+    campaigns: ['admin', 'campaigns', 'list'] as const,
+    campaignCandidates: (kind: CampaignKind, params: CampaignCandidatesQuery) =>
+      ['admin', 'campaigns', 'candidates', kind, params] as const,
     rejectionsAll: ['admin', 'rejections'] as const,
     rejectionImports: ['admin', 'rejections', 'list'] as const,
     rejectionImport: (id: number) => ['admin', 'rejections', 'detail', id] as const,
