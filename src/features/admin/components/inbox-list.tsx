@@ -1,12 +1,7 @@
 'use client'
 
 import { Camera, ChevronDown, Clock, FileText, Headset, MessageCircle, Mic, Trash2 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { InboxConversation, InboxLastMessage } from '@/types/api/inbox'
 import { contactDisplayName, formatPhone } from '../lib/inbox-contact'
@@ -73,7 +68,7 @@ export function InboxList({ conversations, selectedId, onSelect, onDelete }: Pro
               )}
             >
               <span className="pl-3 pr-[15px]">
-                <InboxAvatar className="size-[49px]" />
+                <InboxAvatar name={name} seed={conv.waId} className="size-[49px]" />
               </span>
 
               <span className="flex h-full min-w-0 flex-1 flex-col justify-center border-b border-(--wa-line) pr-[15px] group-last:border-b-0">
