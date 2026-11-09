@@ -1,4 +1,4 @@
-import type { CampaignCandidatesQuery, CampaignKind } from '@/types/api/campaigns'
+import type { CampaignCandidatesQuery, CampaignKind, CampaignResultsQuery } from '@/types/api/campaigns'
 import type { BalanceQuery } from '@/types/api/balance'
 import type { AdminClientsQuery } from '@/types/api/clients'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
@@ -68,6 +68,7 @@ export const QUERY_KEYS = {
     campaigns: ['admin', 'campaigns', 'list'] as const,
     campaignCandidates: (kind: CampaignKind, params: CampaignCandidatesQuery) =>
       ['admin', 'campaigns', 'candidates', kind, params] as const,
+    campaignResults: (params: CampaignResultsQuery) => ['admin', 'campaigns', 'results', params] as const,
     rejectionsAll: ['admin', 'rejections'] as const,
     rejectionImports: ['admin', 'rejections', 'list'] as const,
     rejectionImport: (id: number) => ['admin', 'rejections', 'detail', id] as const,
