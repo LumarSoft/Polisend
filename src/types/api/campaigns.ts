@@ -21,14 +21,7 @@ export type CampaignFilter = 'coverage' | 'reason'
 
 /** Why Triunfo cancelled a policy (Bajas y anulaciones). */
 export type CancellationReason =
-  | 'falta_pago'
-  | 'venta'
-  | 'desistimiento'
-  | 'costo'
-  | 'cambio_compania'
-  | 'siniestro'
-  | 'rescision'
-  | 'otros'
+  'falta_pago' | 'venta' | 'desistimiento' | 'costo' | 'cambio_compania' | 'siniestro' | 'rescision' | 'otros'
 
 /** The column a campaign's client list is sorted by: its date (Motivo), the client, the vehicle or the last message. */
 export type CampaignSortField = 'date' | 'name' | 'item' | 'lastMessage'
