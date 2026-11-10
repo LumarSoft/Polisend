@@ -30,7 +30,7 @@ Copiá `.env.example` a `.env.local`:
 | Variable | Para qué |
 |---|---|
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | Número de ventas al que llevan todos los botones "Quiero Polisend" (formato internacional, solo dígitos). Si falta, usa la línea de ventas `5493412776893` (341 277-6893). |
-| `NEXT_PUBLIC_SITE_URL` | Opcional. Dominio público del sitio, sin barra final (canonical, sitemap, robots, vista previa al compartir, datos estructurados y `llms.txt`). Si está vacío, en Vercel se usa el dominio de producción del proyecto (hoy `polisend.vercel.app`, o el dominio propio cuando se conecte). |
+| `NEXT_PUBLIC_SITE_URL` | Opcional. Dominio público del sitio, sin barra final (canonical, sitemap, robots, vista previa al compartir, datos estructurados y `llms.txt`). Si está vacío, en Vercel se usa el dominio de producción del proyecto (`polisend.com.ar`). |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Opcional. Token de verificación de Google Search Console (meta tag). |
 | `NEXT_PUBLIC_API_URL` | URL de la API, sin barra final. La usa el panel para todo y la landing para los precios (catálogo del Owner, `GET /public/plans`, cache de 1 hora; sin respuesta: el catálogo inicial de `src/lib/plans.ts`). En los builds de Vercel sale de `.env.production` (la API de producción); en local, de `.env.local`. |
 | `NEXT_PUBLIC_LEGAL_EMAIL` | Correo de contacto de las páginas de privacidad y términos. Vacío: solo el WhatsApp de ventas. |
