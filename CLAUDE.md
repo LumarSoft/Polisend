@@ -29,9 +29,12 @@ comportamiento. Un cambio que entra en uno solo queda a medias.
   ```bash
   cd polisend/src && for f in $(git ls-files features/admin services types lib/api-client.ts lib/query-keys.ts hooks); do diff -q <(sed "s#'@/src/#'@/#g" ../../front_John/src/$f 2>/dev/null) $f >/dev/null || echo "$f"; done
   ```
-- Formato: este repo no tiene configuración de Prettier y el de `front_John` sí. Para archivos del panel usar
-  `prettier --single-quote --no-semi --print-width 120 --arrow-parens avoid`; un `prettier --write` pelado los pasa a
-  comillas dobles y punto y coma.
+- Formato: este repo no tiene configuración de Prettier y el de `front_John` sí. Un archivo del panel que existe en los
+  dos se porta copiándolo ya formateado desde `front_John` con el `sed` de los imports, y acá no se le vuelve a pasar
+  Prettier: con los imports `@/`, más cortos, y otra versión de Prettier (`npx` baja la última) reacomoda líneas y el
+  chequeo de arriba deja de dar igual. Solo un archivo que existe nada más acá se formatea, con el Prettier de
+  `front_John`: `../front_John/node_modules/.bin/prettier --single-quote --no-semi --print-width 120 --arrow-parens avoid`
+  (un `prettier --write` pelado los pasa a comillas dobles y punto y coma).
 
 ## Comandos
 
