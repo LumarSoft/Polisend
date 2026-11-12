@@ -4,37 +4,23 @@
 
 Este repo tiene la landing pública de Polisend (`/`, `/privacidad`, `/terminos`) y el panel que usan todas las
 organizaciones (`/admin`). Habla con la API multi-tenant `api_john` (NestJS + Prisma + MySQL); el bot de WhatsApp es
-`BOT_JPMG`; la web y el portal de asegurados de JPMG siguen en `front_John`. El plan y su estado están en
+`BOT_JPMG`; la web pública y el portal de asegurados de JPMG siguen en `front_John` (su `/admin` ya no se mantiene). El plan y su estado están en
 `docs/PLAN-SAAS.md`, en la carpeta `john/` de arriba. Estructura y variables: `README.md`.
 
 Ningún nombre de cliente en el código: un pedido termina en una función para todos, una configuración por organización o
 un desarrollo a medida fuera del producto.
 
-## El panel vive en dos repos: se editan los dos
+## El panel es solo este repo
 
-Hasta que se apague el panel de JPMG (`front_John`, también en `/admin`), **todo cambio del panel se hace acá y en
-`front_John`, en la misma tarea**, para que queden lo más nivelados posible: mismas pantallas, mismos endpoints, mismo
-comportamiento. Un cambio que entra en uno solo queda a medias.
+Desde el 11/11/2026 el panel que usan todas las organizaciones es este (`/admin`) y es el único que se mantiene. El
+`/admin` de `front_John` quedó congelado hasta que se apague el panel de JPMG: **un cambio del panel se hace acá y
+nada más**, no se porta a `front_John` ni se revisa el desnivel entre los dos repos. `front_John` sigue solo para su
+web pública y el portal de asegurados.
 
-- Portar de un repo al otro: el alias de imports es `@/` acá y `@/src/` en `front_John`; el resto del código del panel
-  se copia igual.
-- Lo que puede diferir, y solo eso: la marca (acá Polisend, allá JPMG) y los textos que nombran a quién pedirle ayuda o
-  quién define los planes (acá "Polisend", allá "Lumarsoft"). Si un cambio no tiene sentido en uno de los dos, decirlo en
-  vez de omitirlo en silencio.
-- Antes de cerrar una tarea del panel, revisar el desnivel desde la carpeta `JohnPellegrini`. Solo puede listar
-  `app-sidebar.tsx`, `facturacion-view.tsx`, `login-form.tsx`, `org-mark.tsx`, `triunfo-status-banner.tsx`,
-  `use-panel-brand.ts`, `org-brand.ts`, `panel-theme.ts` (marca y textos), `query-keys.ts` y `siniestros.service.ts`
-  (`front_John` también tiene las claves y llamadas de su web pública); cualquier otro es un cambio que falta portar:
-
-  ```bash
-  cd polisend/src && for f in $(git ls-files features/admin services types lib/api-client.ts lib/query-keys.ts hooks); do diff -q <(sed "s#'@/src/#'@/#g" ../../front_John/src/$f 2>/dev/null) $f >/dev/null || echo "$f"; done
-  ```
-- Formato: este repo no tiene configuración de Prettier y el de `front_John` sí. Un archivo del panel que existe en los
-  dos se porta copiándolo ya formateado desde `front_John` con el `sed` de los imports, y acá no se le vuelve a pasar
-  Prettier: con los imports `@/`, más cortos, y otra versión de Prettier (`npx` baja la última) reacomoda líneas y el
-  chequeo de arriba deja de dar igual. Solo un archivo que existe nada más acá se formatea, con el Prettier de
-  `front_John`: `../front_John/node_modules/.bin/prettier --single-quote --no-semi --print-width 120 --arrow-parens avoid`
-  (un `prettier --write` pelado los pasa a comillas dobles y punto y coma).
+- Formato del panel: este repo no tiene configuración de Prettier. El código de `src/app/admin` y `src/features/admin`
+  va con comillas simples y sin punto y coma; para formatear un archivo del panel usar
+  `pnpm dlx prettier@3 --write --single-quote --no-semi --print-width 120 --arrow-parens avoid <archivo>`
+  (un `prettier --write` pelado lo pasa a comillas dobles y punto y coma).
 
 ## Comandos
 
