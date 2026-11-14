@@ -309,6 +309,8 @@ const DOC_LABELS: Record<string, string> = {
   tarjeta: 'Tarjeta verde o azul',
   // Requests taken before the tarjeta could be either color.
   tarjeta_azul: 'Tarjeta azul',
+  // Asked instead of the tarjeta when the customer does not have it.
+  titulo: 'Título del vehículo',
   certificado_no_rodamiento: 'Certificado de no rodamiento',
   foto_vehiculo: 'Foto del vehículo',
   tarjeta_gnc: 'Tarjeta de GNC',
