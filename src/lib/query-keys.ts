@@ -87,6 +87,8 @@ export const QUERY_KEYS = {
     plans: ['owner', 'plans'] as const,
     featureRoles: ['owner', 'plans', 'feature-roles'] as const,
     templates: ['owner', 'templates'] as const,
+    codes: ['owner', 'codes'] as const,
+    code: (code: string) => ['owner', 'codes', code] as const,
     billingAll: ['owner', 'billing'] as const,
     billing: (period?: string) => ['owner', 'billing', period ?? 'current'] as const,
     settlementAll: ['owner', 'settlement'] as const,

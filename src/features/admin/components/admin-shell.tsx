@@ -29,6 +29,7 @@ const TITLES: Record<string, string> = {
   '/admin/funciones': 'Funciones por plan',
   '/admin/plantillas': 'Plantillas',
   '/admin/organizaciones': 'Organizaciones',
+  '/admin/codigos': 'Códigos',
   '/admin/configuracion': 'Configuración',
   '/admin/mejoras': 'Mejoras',
   '/admin/status': 'Status',
@@ -40,6 +41,7 @@ const OWNER_PATHS = [
   '/admin/facturacion',
   '/admin/funciones',
   '/admin/plantillas',
+  '/admin/codigos',
   '/admin/mejoras',
   '/admin/status',
 ]

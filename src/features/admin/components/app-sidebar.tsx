@@ -19,6 +19,7 @@ import {
   LogOut,
   Megaphone,
   MessageSquare,
+  Network,
   Palette,
   Phone,
   Settings,
@@ -139,6 +140,8 @@ const NAV: NavEntry[] = [
       // Every organization's Meta templates, account by account: the OWNER's view.
       { label: 'Plantillas', href: '/admin/plantillas', icon: FileText, ownerOnly: true },
       { label: 'Organizaciones', href: '/admin/organizaciones', icon: Building2, ownerOnly: true },
+      // Which Triunfo codes depend on a code, across organizations: the OWNER's lookup.
+      { label: 'Códigos', href: '/admin/codigos', icon: Network, ownerOnly: true },
       { label: 'Configuración', href: '/admin/configuracion', icon: UserCog },
     ],
   },
