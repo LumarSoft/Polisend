@@ -12,7 +12,7 @@ import { ApiError } from '@/lib/api-client'
 import { saveBlob } from '@/lib/download'
 import type { SettlementAmounts, SettlementMonth, SettlementOrganization } from '@/types/api/billing'
 import { isSettlementNotConfigured, useCloseMonth, useSettlement } from '../hooks/use-settlement'
-import { monthLabel, settlementCsv, shareLabel } from '../lib/settlement-format'
+import { monthLabel, settledTokensOf, settlementCsv, shareLabel } from '../lib/settlement-format'
 import { HEAD, int, Kpi, MonthPicker, thisMonth, usd } from './billing-ui'
 import { SettlementPrint } from './liquidacion-print'
 import { SettlementSeriesCard } from './liquidacion-series'
@@ -25,7 +25,7 @@ function MoneyCells({ amounts }: { amounts: SettlementAmounts }) {
   return (
     <>
       <TableCell className="hidden text-right text-[13px] text-ink-3 sm:table-cell">
-        {int(amounts.consumedMessages)}
+        {int(settledTokensOf(amounts))}
       </TableCell>
       <TableCell className="text-right text-[13px] font-semibold text-ink">{usd(amounts.billedUsd)}</TableCell>
       <TableCell className="hidden text-right text-[13px] text-ink-3 sm:table-cell">
@@ -206,7 +206,7 @@ export function LiquidacionTab() {
             <Kpi
               label="Costo de servicio"
               value={usd(totals.serviceCostUsd)}
-              hint={`${int(totals.consumedMessages)} mensajes consumidos`}
+              hint={`${int(settledTokensOf(totals))} tokens consumidos`}
             />
             <Kpi
               label="Remanente"
@@ -242,7 +242,7 @@ export function LiquidacionTab() {
             <TableRow className="border-line-2 hover:bg-transparent">
               <TableHead className={`h-11 pl-5 ${HEAD}`}>Organización</TableHead>
               <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Números</TableHead>
-              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Mensajes</TableHead>
+              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Tokens</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Facturado</TableHead>
               <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Costo</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Remanente</TableHead>
