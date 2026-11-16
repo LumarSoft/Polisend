@@ -169,7 +169,15 @@ export interface CampaignCandidate {
   producerCode: { id: number; code: string } | null
   /** What the message fills in for this person ({ nombre, bien, vencimiento }). Missing from an older API. */
   values?: Record<string, string>
-  lastMessage: { status: CampaignMessageStatus; sentAt: string | null; createdAt: string; error: string | null } | null
+  lastMessage: {
+    status: CampaignMessageStatus
+    sentAt: string | null
+    // What Meta reported after taking it: a sent message is not a delivered one.
+    deliveredAt: string | null
+    readAt: string | null
+    createdAt: string
+    error: string | null
+  } | null
   optedOut: boolean
   /** Who said so: the client in the chat, or the office for them (missing from an older API). */
   optedOutBy?: 'client' | 'office' | null
@@ -306,6 +314,10 @@ export interface CampaignResultRow extends CampaignResultCounts {
   kind: CampaignKind
   label: string
   sent: number
+  /** Of the sent ones, those Meta reported delivered to the phone. Missing from an older API. */
+  delivered?: number
+  /** Meta took them and then could not deliver them. Missing from an older API. */
+  undelivered?: number
   marked: number
 }
 
@@ -313,6 +325,6 @@ export interface CampaignResultsResponse {
   from: string
   to: string
   campaigns: CampaignResultRow[]
-  totals: CampaignResultCounts & { sent: number; marked: number }
+  totals: CampaignResultCounts & { sent: number; delivered?: number; undelivered?: number; marked: number }
   byAssignee: Array<CampaignResultCounts & { user: OpportunityPerson | null }>
 }

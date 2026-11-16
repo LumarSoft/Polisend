@@ -52,6 +52,15 @@ interface Kpi {
   tone: string
 }
 
+/** "12 entregados · 2 no entregados · + 3 contactados por otra vía", with only the parts that apply. */
+function sentHint(totals: CampaignResultsResponse['totals']): string {
+  const parts: string[] = []
+  if (totals.delivered != null && totals.sent) parts.push(`${totals.delivered} entregados`)
+  if (totals.undelivered) parts.push(`${totals.undelivered} no entregados`)
+  if (totals.marked) parts.push(`+ ${totals.marked} contactados por otra vía`)
+  return parts.length ? parts.join(' · ') : 'mensajes de WhatsApp'
+}
+
 function buildKpis(totals: CampaignResultsResponse['totals']): Kpi[] {
   const contacted = totals.contacted
   return [
@@ -59,7 +68,7 @@ function buildKpis(totals: CampaignResultsResponse['totals']): Kpi[] {
       key: 'sent',
       label: 'Enviados',
       value: String(totals.sent),
-      hint: totals.marked ? `+ ${totals.marked} contactados por otra vía` : 'mensajes de WhatsApp',
+      hint: sentHint(totals),
       icon: Send,
       tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400',
     },

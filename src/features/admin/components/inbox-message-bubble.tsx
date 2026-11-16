@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, CornerUpLeft, FileText, Info } from 'lucide-react'
+import { AlertTriangle, Check, CheckCheck, CornerUpLeft, FileText, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { InboxMessage } from '@/types/api/inbox'
 import { adjuntoUrl } from '@/services/siniestros.service'
@@ -29,6 +29,46 @@ const SENDER_COLOR: Record<InboxMessage['role'], string> = {
   user: 'text-(--wa-green-dark)',
   assistant: 'text-(--wa-author-assistant)',
   agent: 'text-(--wa-author-agent)',
+}
+
+/**
+ * What became of an outgoing message, as WhatsApp draws it next to the time:
+ * one tick when Meta took it, two when the phone got it, two blue when it was
+ * read, and a warning with the reason when WhatsApp refused or could not
+ * deliver it. Nothing for incoming messages and for ones older than this.
+ */
+export function DeliveryTicks({ message }: { message: InboxMessage }) {
+  if (message.role === 'user') return null
+  if (message.failedAt) {
+    return (
+      <span
+        className="ml-0.5 inline-flex items-center text-destructive"
+        title={message.deliveryError ?? 'WhatsApp no entregó el mensaje.'}
+        aria-label={`No se entregó: ${message.deliveryError ?? 'WhatsApp no entregó el mensaje.'}`}
+      >
+        <AlertTriangle className="size-3.5" />
+      </span>
+    )
+  }
+  if (message.readAt) {
+    return (
+      <span className="ml-0.5 inline-flex items-center text-(--wa-link)" title="Leído" aria-label="Leído">
+        <CheckCheck className="size-4" />
+      </span>
+    )
+  }
+  if (message.deliveredAt) {
+    return (
+      <span className="ml-0.5 inline-flex items-center" title="Entregado" aria-label="Entregado">
+        <CheckCheck className="size-4" />
+      </span>
+    )
+  }
+  return (
+    <span className="ml-0.5 inline-flex items-center" title="Enviado, sin confirmar entrega" aria-label="Enviado">
+      <Check className="size-4" />
+    </span>
+  )
 }
 
 /** The sticky "Hoy" / "Ayer" / date label above the first message of a day. */
@@ -144,15 +184,17 @@ export function InboxMessageBubble({
                 {!caption && (
                   <span className="absolute inset-x-0 bottom-0 flex h-7 items-end justify-end rounded-b-[6px] bg-linear-to-t from-black/40 to-transparent px-2 pb-1 text-[11px] text-white">
                     {time}
+                    <DeliveryTicks message={message} />
                   </span>
                 )}
               </a>
               {caption && (
                 <p className="relative px-1.5 pb-1.5 pt-1">
                   <InboxMessageText text={caption} highlight={highlight} />
-                  <span className="inline-block w-12" />
-                  <span className="absolute bottom-1 right-2 text-[11px] leading-[15px] text-(--wa-text-2)">
+                  <span className={cn('inline-block', outgoing ? 'w-16' : 'w-12')} />
+                  <span className="absolute bottom-1 right-2 inline-flex items-center text-[11px] leading-[15px] text-(--wa-text-2)">
                     {time}
+                    <DeliveryTicks message={message} />
                   </span>
                 </p>
               )}
@@ -190,8 +232,11 @@ export function InboxMessageBubble({
                 <InboxMessageText text={body || message.content} highlight={highlight} />
               )}
               {/* Reserves room so the time never overlaps the last line, as in WhatsApp. */}
-              <span className="inline-block w-12" />
-              <span className="absolute -bottom-1 right-0 text-[11px] leading-[15px] text-(--wa-text-2)">{time}</span>
+              <span className={cn('inline-block', outgoing ? 'w-16' : 'w-12')} />
+              <span className="absolute -bottom-1 right-0 inline-flex items-center text-[11px] leading-[15px] text-(--wa-text-2)">
+                {time}
+                <DeliveryTicks message={message} />
+              </span>
             </div>
           )}
         </div>
