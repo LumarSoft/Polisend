@@ -17,6 +17,7 @@ import type {
 import { useIntegrationStatus } from '../hooks/use-integration-status'
 import { useProfile } from '../hooks/use-profile'
 import { numberLabel } from '../lib/number-label'
+import { isPlatformOperator } from '../lib/roles'
 import {
   blameLabel,
   COMPONENT_COPY,
@@ -42,7 +43,7 @@ import {
  */
 export function StatusView() {
   const { data: profile } = useProfile()
-  const isOwner = profile?.role === 'OWNER'
+  const isOwner = isPlatformOperator(profile?.role)
   const { data, isLoading, isError, refetch, isFetching } = useIntegrationStatus()
 
   return (

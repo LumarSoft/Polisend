@@ -1,4 +1,5 @@
 import type { AdminOrganization, AdminRole } from '@/types/api/auth'
+import { isPlatformOperator } from './roles'
 
 /** How the panel presents the organization of whoever is logged in. */
 export interface PanelBrand {
@@ -36,7 +37,7 @@ export function initialsOf(name: string): string {
 
 /** The user's organization as the panel shows it. The owner runs the platform, so it sees Polisend. */
 export function brandOf(org: AdminOrganization | undefined, role: AdminRole | undefined): PanelBrand {
-  if (!org || role === 'OWNER') return PLATFORM_BRAND
+  if (!org || isPlatformOperator(role)) return PLATFORM_BRAND
   return {
     name: org.displayName,
     signature: org.displayName,

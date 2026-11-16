@@ -19,6 +19,7 @@ import type {
 } from '@/types/api/organizations'
 import { useOrganizationMutations } from '../hooks/use-organizations'
 import { numberLabel } from '../lib/number-label'
+import { isPlatformOperator } from '../lib/roles'
 import { MetaPortfolioLine } from './meta-portfolio-line'
 
 // ── helpers ────────────────────────────────────────────────
@@ -342,7 +343,7 @@ export function UsersSection({
             <ShieldCheck className="size-3.5 text-ember-2" />
             <span className="text-[13px] text-ink">{u.email}</span>
             <Badge variant="secondary" className="text-[11px]">
-              {u.role === 'SUPERADMIN' ? 'SuperAdmin' : u.role === 'OWNER' ? 'Owner' : 'Admin'}
+              {u.role === 'SUPERADMIN' ? 'SuperAdmin' : isPlatformOperator(u.role) ? 'Owner' : 'Admin'}
             </Badge>
             {u.role === 'ADMIN' &&
               u.codes &&
@@ -354,7 +355,7 @@ export function UsersSection({
                 <span className="text-[12px] text-amber-600 dark:text-amber-400">Sin códigos: no ve nada</span>
               ))}
 
-            {u.role !== 'OWNER' && (
+            {!isPlatformOperator(u.role) && (
               <div className="ml-auto flex items-center gap-1">
                 <Button
                   variant="ghost"
