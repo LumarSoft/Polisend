@@ -143,7 +143,7 @@ export function TriunfoCredentialForm({
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="triunfo-usuario" className="text-[11px]">
-            Usuario del web service
+            Usuario de TriunfoNet
           </Label>
           <Input
             id="triunfo-usuario"
@@ -157,7 +157,7 @@ export function TriunfoCredentialForm({
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="triunfo-password" className="text-[11px]">
-            Contraseña
+            Contraseña de TriunfoNet
           </Label>
           <Input
             id="triunfo-password"
@@ -179,6 +179,10 @@ export function TriunfoCredentialForm({
       <div className="flex items-start gap-2 rounded-lg border border-line-2 bg-paper-2 p-3 text-[12px] text-muted-foreground">
         <LockKeyhole className="mt-0.5 size-4 shrink-0 text-ember-2" />
         <div className="flex flex-col gap-1">
+          <p>
+            Son el usuario y la contraseña con los que entrás a TriunfoNet: escribila tal cual, sin convertirla. El
+            usuario de web service que muestra TriunfoNet (empieza con WS) todavía no sirve para esto.
+          </p>
           <p>
             <span className="font-medium text-ink">La contraseña no sale de este navegador.</span> Antes de enviarse se
             convierte acá mismo a un código (MD5), que es lo que piden los servicios de Triunfo. De la contraseña solo
