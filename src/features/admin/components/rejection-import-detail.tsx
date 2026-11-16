@@ -22,6 +22,7 @@ import { usePlanFeature } from '../hooks/use-billing'
 import { useRejectionActions, useRejectionImport } from '../hooks/use-rejections'
 import { useRejectionSelection } from '../hooks/use-rejection-selection'
 import {
+  deliveryNote,
   formatDay,
   formatMoment,
   formatMoney,
@@ -117,6 +118,7 @@ export function RejectionImportDetail({ importId, onDeleted }: { importId: numbe
       <div className="flex flex-wrap gap-2 border-b border-line-2 px-4 py-3 text-[12.5px]">
         <Chip label="Para enviar" value={totals.ready} strong />
         <Chip label="Avisados" value={totals.sent} />
+        {totals.undelivered > 0 && <Chip label="Sin entregar" value={totals.undelivered} />}
         {totals.sending > 0 && <Chip label="Enviando" value={totals.sending} />}
         {totals.failed > 0 && <Chip label="No se enviaron" value={totals.failed} />}
         <Chip label="Ya pagadas" value={totals.paid} />
@@ -234,6 +236,7 @@ export function RejectionImportDetail({ importId, onDeleted }: { importId: numbe
                       <p className="mt-1 text-[11.5px] text-muted-foreground">
                         {formatMoment(row.sentAt)}
                         {row.sentBy ? ` · ${personName(row.sentBy)}` : ''}
+                        {deliveryNote(row) ? ` · ${deliveryNote(row)}` : ''}
                       </p>
                     )}
                   </td>

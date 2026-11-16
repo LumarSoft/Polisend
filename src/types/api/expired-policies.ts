@@ -39,6 +39,9 @@ export interface ExpiryNotice {
   id: number
   status: ExpiryNoticeStatus
   sentAt: string | null
+  // What Meta reported after taking it: a sent notice is not a delivered one.
+  deliveredAt: string | null
+  readAt: string | null
   createdAt: string
   error: string | null
 }
