@@ -22,11 +22,14 @@ export function statusLabel(row: Rejection): { text: string; tone: string } {
     case 'SENDING':
       return { text: 'Enviando…', tone: TONES.busy }
     case 'SENT':
-      return { text: 'Enviado', tone: TONES.ok }
+      // Meta took it; only its later callbacks say the client got it.
+      if (row.readAt) return { text: 'Leído', tone: TONES.ok }
+      if (row.deliveredAt) return { text: 'Entregado', tone: TONES.ok }
+      return { text: 'Enviado, sin entregar', tone: TONES.busy }
     case 'MARKED':
       return { text: 'Avisado a mano', tone: TONES.ok }
     case 'FAILED':
-      return { text: 'No se envió', tone: TONES.bad }
+      return { text: row.sentAt ? 'No se entregó' : 'No se envió', tone: TONES.bad }
     case 'SKIPPED':
       if (row.skipReason === 'NO_PHONE') return { text: 'Sin WhatsApp', tone: TONES.muted }
       if (row.skipReason === 'ALREADY_PAID') return { text: 'Ya pagada', tone: TONES.muted }
@@ -44,6 +47,8 @@ export function summarize(rows: Rejection[]) {
     notified: count(row => row.skipReason === 'ALREADY_NOTIFIED' && isOpen(row)),
     sending: count(row => row.status === 'SENDING'),
     sent: count(row => row.status === 'SENT' || row.status === 'MARKED'),
+    // Meta took them but has not said the client got them.
+    undelivered: count(row => row.status === 'SENT' && !row.deliveredAt),
     failed: count(row => row.status === 'FAILED'),
   }
 }
@@ -56,6 +61,13 @@ export const formatMoney = (amount: number): string => money.format(amount)
 export function formatDay(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split('-')
   return `${day}/${month}/${year}`
+}
+
+/** "entregado 20/10 15:24" or "leído …": what Meta said became of a sent notice. */
+export function deliveryNote(row: { deliveredAt: string | null; readAt: string | null }): string | null {
+  if (row.readAt) return `leído ${formatMoment(row.readAt)}`
+  if (row.deliveredAt) return `entregado ${formatMoment(row.deliveredAt)}`
+  return null
 }
 
 /** "20/10 15:24" in local time. */

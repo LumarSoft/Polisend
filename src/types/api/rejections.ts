@@ -42,6 +42,9 @@ export interface Rejection {
   skipReason: RejectionSkipReason | null
   error: string | null
   sentAt: string | null
+  // What Meta reported after taking it: a sent notice is not a delivered one.
+  deliveredAt: string | null
+  readAt: string | null
   conversationId: number | null
   client: { id: number; firstName: string; lastName: string } | null
   sentBy: RejectionPerson | null
