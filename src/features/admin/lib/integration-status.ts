@@ -68,7 +68,7 @@ export const COMPONENT_COPY: Record<IntegrationComponentKey, ComponentCopy> = {
   'triunfo.RESTNovedadesCartera': {
     provider: 'Triunfo',
     name: 'Cartera',
-    usedFor: 'La actualización de pólizas, cuotas y pagos, a las 06:00 y a las 20:00.',
+    usedFor: 'La actualización de pólizas, cuotas y pagos, a las 07:00 y a las 20:00.',
     impact: 'Pólizas, cuotas y pagos quedan como en la última actualización que anduvo.',
   },
   'infoauto.cars': {
