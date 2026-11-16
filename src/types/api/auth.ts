@@ -1,4 +1,5 @@
-export type AdminRole = 'OWNER' | 'SUPERADMIN' | 'ADMIN'
+/** DEVELOPER is the platform account's new role; until the API finishes moving it there, OWNER means the same. */
+export type AdminRole = 'DEVELOPER' | 'OWNER' | 'SUPERADMIN' | 'ADMIN'
 
 export interface AdminUserProducerCode {
   producerCode: { id: number; code: string; holderName: string | null }

@@ -70,6 +70,7 @@ import { useTaskStats } from '../hooks/use-tasks'
 import { useIntegrationStatus } from '../hooks/use-integration-status'
 import { failingNames } from '../lib/integration-status'
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
+import { isPlatformOperator } from '../lib/roles'
 import { AppearanceDialog } from './appearance-dialog'
 import { SidebarUsage } from './sidebar-usage'
 
@@ -322,7 +323,7 @@ export function AppSidebar() {
   useInboxMessageSound(inboxConversations)
   const inboxPending = inboxConversations?.filter(c => c.status === 'pending').length ?? 0
   const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount()
-  const isOwner = profile?.role === 'OWNER'
+  const isOwner = isPlatformOperator(profile?.role)
   // "Mejoras" badge: unseen improvements for the office, new proposals for the OWNER.
   const { data: improvementsUnseen } = useImprovementsUnseenCount(!!profile && !isOwner)
   const { data: newProposals } = useNewProposalsCount(isOwner)
@@ -343,7 +344,8 @@ export function AppSidebar() {
   const brand = usePanelBrand()
   const initials = profile?.email.slice(0, 2).toUpperCase() ?? brand.initials
   const isSuperAdmin = profile?.role === 'SUPERADMIN'
-  const roleLabel = isOwner ? 'Owner · Lumar' : isSuperAdmin ? 'SuperAdmin' : 'Administrador'
+  const platformLabel = profile?.role === 'DEVELOPER' ? 'Developer · Lumar' : 'Owner · Lumar'
+  const roleLabel = isOwner ? platformLabel : isSuperAdmin ? 'SuperAdmin' : 'Administrador'
   // The OWNER's interface is "Organizaciones" plus the "Mejoras" editor. Everyone
   // else sees their items (SuperAdmin-only hidden for admins). A group left empty is not shown.
   const visible = (item: NavItem) =>
