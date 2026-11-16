@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import {
   AlertCircle,
   ArrowDown,
@@ -128,16 +129,24 @@ function LastMessageCell({ candidate }: { candidate: CampaignCandidate }) {
           Enviando…
         </span>
       )
-    case 'SENT':
+    case 'SENT': {
+      // Meta took it; only its later callbacks say the client got it.
+      const delivered = !!message.deliveredAt
       return (
-        <div className="text-[12px] text-emerald-600 dark:text-emerald-400">
+        <div
+          className={cn(
+            'text-[12px]',
+            delivered ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-300',
+          )}
+        >
           <span className="inline-flex items-center gap-1">
             <WhatsAppIcon className="size-3.5" />
-            Enviado
+            {message.readAt ? 'Leído' : delivered ? 'Entregado' : 'Enviado, sin entregar'}
           </span>
           <div className="text-[11px] text-muted-foreground">{when}</div>
         </div>
       )
+    }
     case 'MARKED':
       return (
         <div className="text-[12px] text-emerald-600 dark:text-emerald-400">
@@ -155,7 +164,7 @@ function LastMessageCell({ candidate }: { candidate: CampaignCandidate }) {
             <TooltipTrigger asChild>
               <span className="inline-flex cursor-default items-center gap-1 text-[12px] text-destructive">
                 <AlertCircle className="size-3.5" />
-                No se envió
+                {message.sentAt ? 'No se entregó' : 'No se envió'}
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">{message.error ?? 'No se pudo enviar el mensaje.'}</TooltipContent>

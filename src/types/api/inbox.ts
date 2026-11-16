@@ -50,6 +50,12 @@ export interface InboxMessage {
   role: 'user' | 'assistant' | 'agent'
   content: string
   createdAt: string
+  // Outgoing messages: what Meta reported after taking them (null until it does,
+  // and for messages older than this tracking).
+  deliveredAt: string | null
+  readAt: string | null
+  failedAt: string | null
+  deliveryError: string | null
   media: {
     url: string
     mimeType: string
