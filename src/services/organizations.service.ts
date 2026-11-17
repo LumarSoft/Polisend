@@ -3,7 +3,6 @@ import type {
   CreateOrganizationRequest,
   CreateOrganizationResponse,
   CreateProducerCodeRequest,
-  OrganizationCode,
   OrganizationDetail,
   OrganizationSummary,
   SetOrganizationPlanResponse,
@@ -11,6 +10,7 @@ import type {
   UpdateOrganizationResponse,
   UpdateProducerCodeRequest,
 } from '@/types/api/organizations'
+import type { PrincipalCode } from '@/types/api/hierarchy'
 
 export const organizationsService = {
   list: (token: string): Promise<OrganizationSummary[]> =>
@@ -51,11 +51,12 @@ export const organizationsService = {
       body: { planId },
     }),
 
-  addCode: (token: string, id: number, data: CreateProducerCodeRequest): Promise<OrganizationCode> =>
-    apiRequest<OrganizationCode>(`/platform/organizations/${id}/codes`, { method: 'POST', token, body: data }),
+  /** Answers the plain code (no cartera counts): the detail's counts come from refetching it. */
+  addCode: (token: string, id: number, data: CreateProducerCodeRequest): Promise<PrincipalCode> =>
+    apiRequest<PrincipalCode>(`/platform/organizations/${id}/codes`, { method: 'POST', token, body: data }),
 
-  updateCode: (token: string, id: number, codeId: number, data: UpdateProducerCodeRequest): Promise<OrganizationCode> =>
-    apiRequest<OrganizationCode>(`/platform/organizations/${id}/codes/${codeId}`, {
+  updateCode: (token: string, id: number, codeId: number, data: UpdateProducerCodeRequest): Promise<PrincipalCode> =>
+    apiRequest<PrincipalCode>(`/platform/organizations/${id}/codes/${codeId}`, {
       method: 'PATCH',
       token,
       body: data,
