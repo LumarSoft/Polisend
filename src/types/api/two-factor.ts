@@ -47,8 +47,8 @@ export interface TwoFactorDisableResponse {
 }
 
 /**
- * `POST /hierarchy/users/:id/2fa/reset` (Owner or SuperAdmin, for their people) and `POST /platform/owners/:id/2fa/reset`
- * (Developer, for Owners): the account's next login asks only for the password.
+ * `POST /hierarchy/users/:id/2fa/reset` (the account's SuperAdmin, its Owner or the Developer) and
+ * `POST /platform/owners/:id/2fa/reset` (Developer, for Owners): the account's next login asks only for the password.
  */
 export interface TwoFactorResetResponse {
   id: number
