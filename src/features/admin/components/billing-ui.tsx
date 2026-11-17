@@ -1,8 +1,10 @@
 'use client'
 
+import { Coins } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TOKENS_HINT } from '../lib/tokens'
 
 export const int = (n: number) => n.toLocaleString('es-AR')
 export const usd = (n: number) =>
@@ -62,5 +64,15 @@ export function Kpi({
       <span className={`font-display text-[24px] tracking-[-0.02em] ${color}`}>{value}</span>
       <span className="text-[12px] text-muted-foreground">{hint}</span>
     </Card>
+  )
+}
+
+/** «1 mensaje = 1 token · un mensaje de campaña = 2 tokens», next to every consumption view. */
+export function TokensHint({ className = '' }: { className?: string }) {
+  return (
+    <p className={`flex items-center gap-1.5 text-[12.5px] text-muted-foreground ${className}`}>
+      <Coins className="size-3.5 shrink-0 text-ember-2" />
+      {TOKENS_HINT}
+    </p>
   )
 }

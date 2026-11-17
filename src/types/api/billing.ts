@@ -133,6 +133,33 @@ export interface BillingOverview {
   totalBilledUsd?: number
 }
 
+// ─── Por administrador (SuperAdmin, and an Owner inside a principal) ─────────────
+
+/** A code an Admin was granted, as `GET /admin/billing/by-admin` lists it (`name`: its holder). */
+export interface AdminBillingCode {
+  id: number
+  code: string
+  name: string | null
+}
+
+/** One Admin of the principal with the numbers billed to its codes. */
+export interface AdminBilling {
+  userId: number
+  name: string | null
+  email: string
+  codes: AdminBillingCode[]
+  /** The numbers whose responsible code it has (a number shows under every Admin that has its code). */
+  numbers: BillingNumber[]
+}
+
+/** `GET /admin/billing/by-admin?period=YYYY-MM`: the principal's month by Admin, tokens only. */
+export interface BillingByAdmin {
+  period: string
+  admins: AdminBilling[]
+  /** The numbers no Admin has the responsible code of: «Sin administrador». */
+  unassigned: BillingNumber[]
+}
+
 export interface CreatePlanRequest {
   name: string
   messages: number
@@ -153,7 +180,10 @@ export interface UpdatePlanRequest {
   features?: Partial<PlanFeatures>
 }
 
-/** The platform's month (Developer): billed vs what its messages cost, and what Meta and OpenAI really charged. */
+/**
+ * The platform's month (Developer), in tokens and USD: 1 token per message sent, 2 per campaign message. The real cost
+ * of Meta and OpenAI is not part of it (decision of 17/11): the cost is Lumarsoft's, per token.
+ */
 export interface PlatformBillingTotals {
   /** Plan messages consumed: a campaign (marketing) message counts 2 from its start date; every other, 1. */
   messages: number
@@ -165,18 +195,18 @@ export interface PlatformBillingTotals {
   botMessages?: number
   /** Of the messages sent, the campaign ones (each at `messageCost.campaignMessageUsd`). */
   campaignMessages?: number
-  /** Messages Meta charged for (past the free service messages, and every template). */
-  metaBillableMessages: number
+  /** "Tokens usados": 1 per message sent and 2 per campaign message. */
+  settledTokens: number
+  /** "Tokens del plan": what the plans of the numbers include. */
+  planTokens: number
   billedUsd: number
-  /** Bot messages × the message rate + campaign messages × the campaign rate. Missing from an older API. */
-  messageCostUsd?: number
-  /** billedUsd − messageCostUsd: what the plan leaves over its messages. */
-  marginUsd?: number
-  metaCostUsd: number
-  /** Prepaid: shown apart, outside the profit. */
-  openaiCostUsd: number
-  /** billedUsd − metaCostUsd. */
-  profitUsd: number
+  /** "Costo Lumarsoft": the tokens at the message and campaign rates; null when the rate is not configured. */
+  costUsd: number | null
+  /** "Margen de ganancia": billed − cost; null when the cost is unknown. */
+  marginUsd: number | null
+  /** The margin split as in the settlement (`PARTNER_PROFIT_SHARE`); null when the partner terms are not configured. */
+  lumarsoftMarginUsd: number | null
+  nicoMarginUsd: number | null
 }
 
 export interface PlatformBillingNumber extends PlatformBillingTotals {

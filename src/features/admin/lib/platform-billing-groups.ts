@@ -17,33 +17,34 @@ export interface BillingOwnerGroup {
   /** "Sin zona": its organizations go right under it, with no zone row. */
   flat: boolean
   zones: PlatformBillingZone[]
-  totals: PlatformBillingTotals & { organizations: number }
+  totals: GroupTotals
 }
 
-/** The numeric fields of a month's totals (the optional ones count as 0 when an older API leaves them out). */
-type SummedKey = {
-  [K in keyof PlatformBillingTotals]-?: NonNullable<PlatformBillingTotals[K]> extends number ? K : never
-}[keyof PlatformBillingTotals]
+type GroupTotals = PlatformBillingTotals & { organizations: number }
 
-/** The sum of several totals (zones of one Owner). */
-export function sumBillingTotals(
-  list: Array<PlatformBillingTotals & { organizations: number }>,
-): PlatformBillingTotals & { organizations: number } {
-  const sum = (key: SummedKey) => list.reduce((acc, totals) => acc + (totals[key] ?? 0), 0)
+/**
+ * The sum of several totals (zones of one Owner). An amount the API could not compute (null: no cost rate or no
+ * partner terms) stays null when it is null in every zone.
+ */
+export function sumBillingTotals(list: GroupTotals[]): GroupTotals {
+  const sum = (read: (totals: GroupTotals) => number | null | undefined) =>
+    list.reduce((acc, totals) => acc + (read(totals) ?? 0), 0)
+  const sumKnown = (read: (totals: GroupTotals) => number | null) =>
+    list.some(totals => read(totals) !== null) ? sum(read) : null
   return {
-    organizations: list.reduce((acc, totals) => acc + totals.organizations, 0),
-    messages: sum('messages'),
-    sentMessages: sum('sentMessages'),
-    templateMessages: sum('templateMessages'),
-    botMessages: sum('botMessages'),
-    campaignMessages: sum('campaignMessages'),
-    metaBillableMessages: sum('metaBillableMessages'),
-    billedUsd: sum('billedUsd'),
-    messageCostUsd: sum('messageCostUsd'),
-    marginUsd: sum('marginUsd'),
-    metaCostUsd: sum('metaCostUsd'),
-    openaiCostUsd: sum('openaiCostUsd'),
-    profitUsd: sum('profitUsd'),
+    organizations: sum(t => t.organizations),
+    messages: sum(t => t.messages),
+    sentMessages: sum(t => t.sentMessages),
+    templateMessages: sum(t => t.templateMessages),
+    botMessages: sum(t => t.botMessages),
+    campaignMessages: sum(t => t.campaignMessages),
+    settledTokens: sum(t => t.settledTokens),
+    planTokens: sum(t => t.planTokens),
+    billedUsd: sum(t => t.billedUsd),
+    costUsd: sumKnown(t => t.costUsd),
+    marginUsd: sumKnown(t => t.marginUsd),
+    lumarsoftMarginUsd: sumKnown(t => t.lumarsoftMarginUsd),
+    nicoMarginUsd: sumKnown(t => t.nicoMarginUsd),
   }
 }
 

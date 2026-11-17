@@ -43,6 +43,10 @@ export const QUERY_KEYS = {
     expiredPoliciesAll: ['admin', 'cobranzas', 'vencidas'] as const,
     billingAll: ['admin', 'billing'] as const,
     billing: (period?: string) => ['admin', 'billing', 'overview', period ?? 'current'] as const,
+    /** An Owner reading one principal of its network other than the acting one (a number's plan). */
+    billingOfPrincipal: (principalId: number, period?: string) =>
+      ['admin', 'billing', 'principal', principalId, period ?? 'current'] as const,
+    billingByAdmin: (period?: string) => ['admin', 'billing', 'by-admin', period ?? 'current'] as const,
     planFeatures: ['admin', 'billing', 'features'] as const,
     expiredPolicies: (params?: ExpiredPoliciesQuery) =>
       ['admin', 'cobranzas', 'vencidas', 'list', params ?? {}] as const,

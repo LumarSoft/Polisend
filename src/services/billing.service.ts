@@ -1,5 +1,6 @@
 import { apiRequest } from '@/lib/api-client'
 import type {
+  BillingByAdmin,
   BillingOverview,
   CatalogPlan,
   CloseMonthResult,
@@ -18,8 +19,14 @@ import type {
 const periodQuery = (period?: string) => (period ? `?period=${encodeURIComponent(period)}` : '')
 
 export const billingService = {
-  overview(token: string, period?: string): Promise<BillingOverview> {
-    return apiRequest<BillingOverview>(`/admin/billing${periodQuery(period)}`, { token })
+  /** `forPrincipal`: an Owner reading a principal of its network other than the acting one. */
+  overview(token: string, period?: string, forPrincipal?: number): Promise<BillingOverview> {
+    return apiRequest<BillingOverview>(`/admin/billing${periodQuery(period)}`, { token, forPrincipal })
+  },
+
+  /** The principal's month by Admin (SuperAdmin, and an Owner in its acting principal). */
+  byAdmin(token: string, period?: string): Promise<BillingByAdmin> {
+    return apiRequest<BillingByAdmin>(`/admin/billing/by-admin${periodQuery(period)}`, { token })
   },
 
   /** At the plan's limit: continue on the next plan, or keep the assistant paused until next month. */
@@ -40,11 +47,13 @@ export const billingService = {
     return apiRequest<OrganizationFeatures>('/admin/billing/features', { token })
   },
 
-  assignPlan(token: string, numberId: number, planId: number): Promise<{ ok: boolean }> {
+  /** The running month only. `forPrincipal`: an Owner changing a number of another principal of its network. */
+  assignPlan(token: string, numberId: number, planId: number, forPrincipal?: number): Promise<{ ok: boolean }> {
     return apiRequest<{ ok: boolean }>(`/admin/billing/numbers/${numberId}/plan`, {
       method: 'PATCH',
       token,
       body: { planId },
+      forPrincipal,
     })
   },
 
