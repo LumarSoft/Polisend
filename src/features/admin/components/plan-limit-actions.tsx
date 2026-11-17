@@ -44,7 +44,7 @@ export function PlanLimitActions({ row, showNumber = false }: { row: BillingNumb
         {showNumber ? `El asistente del ${numberLabel(row)} está en pausa` : 'El asistente está en pausa'}
       </p>
       <p className="mt-1 text-[12.5px] leading-relaxed text-ink-3">
-        Llegó a los {int(row.includedMessages)} mensajes de su plan {row.plan.name} este mes. Los mensajes se siguen
+        Llegó a los {int(row.includedMessages)} tokens de su plan {row.plan.name} este mes. Los mensajes se siguen
         guardando y podés contestar desde Whatsapp.{' '}
         {limit.confirmed
           ? `Vuelve a responder solo el ${resumeDay(row)}.`
@@ -54,7 +54,7 @@ export function PlanLimitActions({ row, showNumber = false }: { row: BillingNumb
         {row.nextPlan && (
           <Button size="sm" disabled={resolve.isPending} onClick={() => choose('continue')}>
             {resolve.isPending && resolve.variables?.choice === 'continue' && <Loader2 className="animate-spin" />}
-            Pasar a {row.nextPlan.name} · {int(row.nextPlan.messages)} mensajes por mes
+            Pasar a {row.nextPlan.name} · {int(row.nextPlan.messages)} tokens por mes
           </Button>
         )}
         {!limit.confirmed && (

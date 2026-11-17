@@ -309,8 +309,8 @@ function PlanStep({ numberId, onDone }: { numberId: number; onDone: (planName: s
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[13px] text-muted-foreground">
-        Cuántos mensajes por mes incluye el número. Al llegar a ese límite, el asistente se pausa y te avisamos para que
-        elijas si pasa al plan siguiente.
+        Cuántos tokens por mes incluye el número: cada mensaje que envía cuenta 1 token, y cada mensaje de campaña, 2.
+        Al llegar a ese límite, el asistente se pausa y te avisamos para que elijas si pasa al plan siguiente.
         {hasTrial &&
           ' Una cuenta nueva arranca con el plan de prueba su primer mes; si elegís un plan ahora, cuenta desde ya.'}
       </p>
@@ -330,7 +330,7 @@ function PlanStep({ numberId, onDone }: { numberId: number; onDone: (planName: s
             <span>
               <span className="block text-[14px] font-medium text-ink">{plan.name}</span>
               <span className="text-[12px] text-muted-foreground">
-                {plan.messages.toLocaleString('es-AR')} mensajes por mes
+                {plan.messages.toLocaleString('es-AR')} tokens por mes
               </span>
             </span>
           </button>
@@ -401,7 +401,7 @@ export function BranchOnboardingDialog({
     user: 'Su Admin',
     number: 'Su número de WhatsApp',
     assistant: 'Cómo atiende el bot',
-    plan: 'Su plan de mensajes',
+    plan: 'Su plan de tokens',
     done: 'Productor listo',
   }
 

@@ -126,7 +126,7 @@ export function NetworkPrincipalCard({
           )}
         </Stat>
         <Stat icon={<ShieldCheck />}>{plural(principal.clients, 'asegurado', 'asegurados')}</Stat>
-        <Stat icon={<MessageSquare />}>{plural(principal.messagesThisMonth, 'mensaje', 'mensajes')} este mes</Stat>
+        <Stat icon={<MessageSquare />}>{plural(principal.messagesThisMonth, 'token', 'tokens')} este mes</Stat>
         <Stat icon={<PlugZap />}>
           {!triunfo.configured ? (
             <span className="text-muted-foreground">Triunfo sin configurar</span>
