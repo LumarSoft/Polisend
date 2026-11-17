@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, KeyRound, Plus } from 'lucide-react'
+import { ArrowLeft, KeyRound, Plus, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,18 +11,49 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api-client'
+import type { OrganizationDetail } from '@/types/api/organizations'
 import { useRole } from '../hooks/use-role'
+import { isAdminRole, isSuperAdminRole } from '../lib/roles'
 import { useOrganization, useOrganizationMutations } from '../hooks/use-organizations'
 import { useOrganizationLogo } from '../hooks/use-organization-logo'
+import { usePlatformZones } from '../hooks/use-platform-structure'
+import { networkUsersHref } from '../lib/network-links'
 import { initialsOf } from '../lib/org-brand'
 import { LogoUploader } from './logo-uploader'
 import { OrganizacionPlan } from './organizacion-plan'
-import { BillingSummary, CodesTable, NumbersSection, UsersSection } from './organizacion-secciones'
+import { BillingSummary, CodesTable, NumbersSection } from './organizacion-secciones'
 import { OrganizacionTriunfo } from './organizacion-triunfo'
 import { OrganizacionTriunfoErrores } from './organizacion-triunfo-errores'
+import { OrganizationZoneSelect } from './organizacion-zona'
 
 function errMsg(error: unknown, fallback = 'No se pudo guardar. Intentá de nuevo.') {
   return error instanceof ApiError ? error.message : fallback
+}
+
+/**
+ * The organization's accounts live in Usuarios (one screen, one form, by invitation for the platform): here only how
+ * many it has and the way there.
+ */
+function UsersLink({ orgId, users }: { orgId: number; users: OrganizationDetail['users'] }) {
+  const superAdmins = users.filter(user => isSuperAdminRole(user.role)).length
+  const admins = users.filter(user => isAdminRole(user.role)).length
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-2 p-4">
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-[15px] font-semibold text-ink">Usuarios</h2>
+        <p className="text-[12.5px] text-muted-foreground">
+          {users.length === 0
+            ? 'Todavía no tiene usuarios. Su primer SuperAdmin entra por invitación, desde Usuarios.'
+            : `${superAdmins === 1 ? '1 SuperAdmin' : `${superAdmins} SuperAdmin`} · ${admins === 1 ? '1 Admin' : `${admins} Admin`}`}
+        </p>
+      </div>
+      <Button asChild variant="outline" size="sm" className="h-9">
+        <Link href={networkUsersHref(orgId)}>
+          <Users className="size-4" /> Ver usuarios
+        </Link>
+      </Button>
+    </section>
+  )
 }
 
 /** Same page frame every admin view uses, so the tables never touch the edges. */
@@ -39,6 +70,7 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
   const { data: org, isLoading } = useOrganization(Number.isFinite(orgId) ? orgId : null)
   const { addCode, updateCode, setActive } = useOrganizationMutations(orgId)
   const logo = useOrganizationLogo(orgId)
+  const { data: zones = [] } = usePlatformZones(isDeveloper)
 
   const [newCode, setNewCode] = useState('')
   const [newCodeHolder, setNewCodeHolder] = useState('')
@@ -63,7 +95,7 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
     return (
       <div className={PAGE}>
         <Card className="p-6">
-          <p className="text-[13px] text-muted-foreground">Esta sección es exclusiva del owner de la plataforma.</p>
+          <p className="text-[13px] text-muted-foreground">Esta sección es exclusiva de Developer (Lumar).</p>
         </Card>
       </div>
     )
@@ -103,6 +135,10 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
               <Badge variant="secondary">slug: {org.slug}</Badge>
               {org.masterCode && <Badge variant="secondary">master {org.masterCode}</Badge>}
               <Badge variant={org.isActive ? 'secondary' : 'destructive'}>{org.isActive ? 'Activa' : 'Inactiva'}</Badge>
+            </div>
+            <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              Zona
+              <OrganizationZoneSelect organization={org} zones={zones} />
             </div>
           </div>
 
@@ -199,7 +235,7 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
       <OrganizacionTriunfo orgId={orgId} />
       <OrganizacionTriunfoErrores orgId={orgId} />
 
-      <UsersSection orgId={orgId} users={org.users} codes={org.codes} />
+      <UsersLink orgId={orgId} users={org.users} />
 
       <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
         <KeyRound className="size-3.5" />

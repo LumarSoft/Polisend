@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import type { HierarchyPrincipal, NetworkUser, NetworkUserRole, NetworkUsersQuery } from '@/types/api/hierarchy'
@@ -228,7 +229,19 @@ function UsersScreen() {
       )}
 
       {isSuperAdmin && tab === 'productores' ? (
-        <PrincipalCodesBlock principal={tree.data?.home ?? null} isLoading={tree.isLoading} />
+        <div className="flex flex-col gap-4">
+          <p className="max-w-xl text-[13.5px] text-muted-foreground">
+            Los códigos de Triunfo de {ownPrincipal?.name ?? 'tu principal'}. Los SuperAdmin ven todos; cada Admin ve los
+            que le marques en Usuarios.
+          </p>
+          {tree.data?.home ? (
+            <PrincipalCodesBlock principalId={tree.data.home.id} codes={tree.data.home.codes} />
+          ) : tree.isLoading ? (
+            <Skeleton className="h-40 w-full rounded-lg" />
+          ) : (
+            <p className="text-[13px] text-muted-foreground">No se pudieron cargar los códigos.</p>
+          )}
+        </div>
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-2">
