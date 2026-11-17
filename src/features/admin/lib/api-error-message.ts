@@ -1,6 +1,9 @@
 import { ApiError } from '@/lib/api-client'
 import type { EmailRestorableError } from '@/types/api/hierarchy'
 
+/** The API's 400 for a code that is not of the account's principal. */
+const CODES_OF_ANOTHER_PRINCIPAL = 'One or more producer codes do not belong to this organization'
+
 /**
  * What the network screens (Mi red, Usuarios, Owners y zonas, Organizaciones, the account actions) say when the API
  * refuses something. Most refusals already come in Spanish (the PLATFORM_* restrictions, the last SuperAdmin, a used
@@ -13,7 +16,7 @@ const SPANISH: Array<[RegExp, string]> = [
   [/^You cannot access this organization$/, 'No tenés acceso a ese principal.'],
   [/^You cannot act on that organization$/, 'Ya no tenés acceso a ese principal.'],
   [/^You cannot delete your own account$/, 'No podés eliminar tu propia cuenta.'],
-  [/^One or more producer codes do not belong to this organization$/, 'Alguno de los códigos no es de ese principal.'],
+  [new RegExp(`^${CODES_OF_ANOTHER_PRINCIPAL}$`), 'Alguno de los códigos no es de ese principal.'],
   [/^One or more zones do not exist$/, 'Alguna de las zonas elegidas ya no existe.'],
   [/^Only a SuperAdmin or an Admin can become an Owner$/, 'Solo un SuperAdmin o un Admin puede pasar a ser Owner.'],
   [/^Zone \d+ not found$/, 'Esa zona ya no existe.'],
@@ -43,6 +46,11 @@ export function apiErrorMessage(error: unknown, fallback = 'No se pudo guardar. 
   // No JSON body: nothing worth showing.
   if (message.startsWith('Request failed with status')) return fallback
   return message
+}
+
+/** A 400 because a code sent is not of the account's principal (on a restore: the account was in another one). */
+export function isCodesOfAnotherPrincipal(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400 && error.message === CODES_OF_ANOTHER_PRINCIPAL
 }
 
 /** The deleted user a 409 offers to restore (`code: EMAIL_RESTORABLE`), or null. */

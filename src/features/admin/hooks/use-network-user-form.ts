@@ -4,12 +4,13 @@ import type {
   NetworkUser,
   NetworkUserRole,
   NewPrincipalInput,
+  RestoreNetworkUserResponse,
   UpdateNetworkUserRequest,
 } from '@/types/api/hierarchy'
-import { apiErrorMessage, restorableUserIdOf } from '../lib/api-error-message'
+import { apiErrorMessage, isCodesOfAnotherPrincipal, restorableUserIdOf } from '../lib/api-error-message'
 import { accessSummary, MIN_PASSWORD_LENGTH, type FormPrincipal } from '../lib/network-users'
 import { isValidCode } from '../lib/producer-code'
-import { ROLES } from '../lib/roles'
+import { ROLES, roleLabel } from '../lib/roles'
 import { useNetworkUserActions, usePrincipalCodeActions } from './use-hierarchy'
 import { useProfile } from './use-profile'
 import { useRole } from './use-role'
@@ -97,6 +98,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
   const [codeIds, setCodeIds] = useState<number[]>(user?.codes.map(code => code.id) ?? [])
   const [createdCodes, setCreatedCodes] = useState<Array<CodeOption & { principalId: number }>>([])
   const [restoreUserId, setRestoreUserId] = useState<number | null>(null)
+  const [restoring, setRestoring] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   /** Every principal the caller reaches (all of them for the Developer). */
@@ -286,38 +288,65 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
   }
 
   /**
-   * Brings back the deleted user the 409 offered, with the role and codes chosen now. Without a password typed (always,
-   * for the Developer) the API mails it a link to choose its own, as a new account is invited.
+   * Brings back the deleted user the 409 offered, with the role and codes chosen now, in the principal the form shows
+   * or not at all. The API restores an account in the principal it was deleted from, and its 409 does not say which,
+   * so the API is made to check it: an Admin's codes must be of that principal (else a 400, and nothing changes). A
+   * SuperAdmin has no codes to check: the Owner and the Developer, who reach several principals, restore it as an Admin
+   * with one code of the form's principal and then make it SuperAdmin, so it never comes back as SuperAdmin of a
+   * principal nobody chose. A SuperAdmin caller reaches only its own principal, where its deleted users were. Without a
+   * password typed (always, for the Developer) the API mails the account a link to choose its own.
    */
-  const restore = () => {
-    if (restoreUserId === null) return
+  const restore = async () => {
+    if (restoreUserId === null || !principal || restoring) return
+    const id = restoreUserId
+    const target = principal
     const chosen = isDeveloper ? '' : password
-    actions.restoreUser.mutate(
-      {
-        id: restoreUserId,
-        data: {
-          ...(chosen ? { password: chosen } : {}),
-          role,
-          ...(name.trim() ? { name: name.trim() } : {}),
-          ...codesBody,
-        },
-      },
-      {
-        onSuccess: restored => {
-          const where = `Vuelve en ${restored.principal.name}`
-          onSaved({
-            title: 'Usuario restaurado',
-            description: chosen
-              ? `${where}, con la contraseña que elegiste.`
-              : `${where}. Le mandamos a ${restored.email} un enlace para elegir su contraseña.`,
-          })
-        },
-        onError: error => {
+    const base = { ...(chosen ? { password: chosen } : {}), ...(name.trim() ? { name: name.trim() } : {}) }
+    const anchor = target.codes.find(code => code.isMaster) ?? target.codes[0]
+    const viaAdmin = role === ROLES.superAdmin && !isSuperAdmin
+
+    setRestoring(true)
+    setErrorMessage(null)
+    try {
+      let restored: RestoreNetworkUserResponse
+      try {
+        restored = await actions.restoreUser.mutateAsync({
+          id,
+          data: viaAdmin
+            ? { ...base, role: ROLES.admin, producerCodeIds: anchor ? [anchor.id] : [] }
+            : { ...base, role, ...codesBody },
+        })
+      } catch (error) {
+        setRestoreUserId(null)
+        setErrorMessage(
+          isCodesOfAnotherPrincipal(error)
+            ? `Ese usuario eliminado era de otro principal, no de ${target.name}: no lo restauramos. Elegí el principal donde estaba, o usá otro correo.`
+            : apiErrorMessage(error, 'No se pudo restaurar el usuario.'),
+        )
+        return
+      }
+      if (viaAdmin) {
+        try {
+          const promoted = await actions.updateUser.mutateAsync({ id, data: { role: ROLES.superAdmin } })
+          restored = { ...promoted, invitationSent: restored.invitationSent }
+        } catch (error) {
           setRestoreUserId(null)
-          setErrorMessage(apiErrorMessage(error, 'No se pudo restaurar el usuario.'))
-        },
-      },
-    )
+          setErrorMessage(
+            `Volvió como Admin de ${target.name}, con el código ${anchor?.code ?? ''}, pero no pudimos hacerlo SuperAdmin (${apiErrorMessage(error, 'error de conexión')}). Editalo desde la lista para cambiarle el rol.`,
+          )
+          return
+        }
+      }
+      const where = `Vuelve como ${roleLabel(role)} de ${restored.principal.name}`
+      onSaved({
+        title: 'Usuario restaurado',
+        description: chosen
+          ? `${where}, con la contraseña que elegiste.`
+          : `${where}. Le mandamos a ${restored.email} un enlace para elegir su contraseña.`,
+      })
+    } finally {
+      setRestoring(false)
+    }
   }
 
   return {
@@ -359,9 +388,13 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
     submit,
     saving: actions.createUser.isPending || actions.updateUser.isPending,
     restoreUserId,
+    /** Where the restore lands: the form's principal, or nowhere (see `restore`). */
+    restorePrincipalName: principal?.name ?? '',
+    /** A SuperAdmin restores only in its own principal; the others may have picked one the account was not in. */
+    restoreMayMiss: !isSuperAdmin,
     cancelRestore: () => setRestoreUserId(null),
-    restore,
-    restoring: actions.restoreUser.isPending,
+    restore: () => void restore(),
+    restoring,
   }
 }
 

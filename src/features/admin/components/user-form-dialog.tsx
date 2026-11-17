@@ -145,10 +145,16 @@ function RestoreDialog({ form }: { form: NetworkUserFormState }) {
             <div className="flex flex-col gap-2">
               <span>
                 Podés restaurar a <span className="font-medium text-ink">{fields.email}</span> como{' '}
-                {roleLabel(fields.role)}
-                {fields.role === ROLES.admin ? ', con los códigos que marcaste' : ''}. Vuelve en el principal donde
-                estaba; no recupera nada de antes: ni el rol, ni los códigos, ni la verificación en dos pasos.
+                {roleLabel(fields.role)} de <span className="font-medium text-ink">{form.restorePrincipalName}</span>
+                {fields.role === ROLES.admin ? ', con los códigos que marcaste' : ''}. No recupera nada de antes: ni el
+                rol, ni los códigos, ni la verificación en dos pasos.
               </span>
+              {form.restoreMayMiss && (
+                <span>
+                  Solo vuelve si estaba en {form.restorePrincipalName}. Si era de otro principal, no cambia nada y te lo
+                  decimos.
+                </span>
+              )}
               <span>
                 {fields.password && !form.isDeveloper
                   ? 'Va a entrar con la contraseña que escribiste.'
