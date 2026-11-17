@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Network, Plus, Search, ShieldCheck, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
@@ -11,19 +12,21 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import type { HierarchyPrincipal, NetworkUser, NetworkUserRole, NetworkUsersQuery } from '@/types/api/hierarchy'
+import type { AccountAccessAction } from '../hooks/use-account-access'
 import { useGuidedOnboarding, type GuidedPrincipal } from '../hooks/use-guided-onboarding'
 import { useHierarchyPrincipals, useNetworkTree, useNetworkUsers } from '../hooks/use-hierarchy'
-import { useLinkedId, useUrlTab } from '../hooks/use-panel-link'
+import { setUrlParams, useLinkedId, useUrlTab } from '../hooks/use-panel-link'
 import { useProfile } from '../hooks/use-profile'
 import { useRole } from '../hooks/use-role'
-import { useUserAccountActions } from '../hooks/use-user-account-actions'
 import { NO_ZONE, zoneKeyOf } from '../lib/network'
+import { USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
 import { ROLES, roleLabel } from '../lib/roles'
+import { AccountAccessDialog } from './account-access-dialog'
 import { BranchOnboardingDialog } from './branch-onboarding-dialog'
 import { EMPTY_NETWORK_FILTER, NetworkFilter, type NetworkListFilterValue } from './network-filter'
 import { NetworkUsersTable } from './network-users-table'
 import { PrincipalCodesBlock } from './principal-codes-block'
-import { DeleteUserDialog, ResetTwoFactorDialog } from './user-account-dialogs'
+import { DeleteUserDialog } from './user-account-dialogs'
 import { UserFormDialog } from './user-form-dialog'
 
 const ALL = 'all'
@@ -127,7 +130,6 @@ function narrowUsers(
 function UsersScreen() {
   const { isDeveloper, isOwner, isSuperAdmin } = useRole()
   const { data: profile } = useProfile()
-  const account = useUserAccountActions()
   const guided = useGuidedOnboarding()
   const [tab, setTab] = useUrlTab(TABS, 'usuarios')
 
@@ -135,10 +137,21 @@ function UsersScreen() {
   const [role, setRole] = useState<NetworkUserRole | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput.trim(), 300)
-  // `?principal=<id>` (Mi red's "Ver usuarios", an organization's detail) preselects the principal.
-  const clearPrincipalLink = useLinkedId('principal', id =>
-    setFilter({ zoneKey: null, principalId: id, producerCodeId: null }),
-  )
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<NetworkUser | null>(null)
+  /** The role "Nuevo usuario" starts with when a link asked for one (`&nuevo=superadmin`). */
+  const [linkedRole, setLinkedRole] = useState<NetworkUserRole | undefined>(undefined)
+  const params = useSearchParams()
+  // `?principal=<id>` (Mi red's "Ver usuarios", an organization's detail) preselects the principal; with
+  // `&nuevo=superadmin` (Mi red's «Sin SuperAdmin · crear uno») it also opens "Nuevo usuario" as its SuperAdmin.
+  const clearPrincipalLink = useLinkedId(USERS_PRINCIPAL_PARAM, id => {
+    setFilter({ zoneKey: null, principalId: id, producerCodeId: null })
+    if (params.get(USERS_NEW_PARAM) === USERS_NEW_SUPERADMIN) {
+      setEditing(null)
+      setLinkedRole(ROLES.superAdmin)
+      setFormOpen(true)
+    }
+  })
   const changeFilter = (next: NetworkListFilterValue) => {
     setFilter(next)
     clearPrincipalLink()
@@ -157,10 +170,8 @@ function UsersScreen() {
   const tree = useNetworkTree(isSuperAdmin)
   const ownPrincipal = isSuperAdmin ? (principals.find(p => p.isHome) ?? principals[0] ?? null) : null
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<NetworkUser | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<NetworkUser | null>(null)
-  const [resetTarget, setResetTarget] = useState<NetworkUser | null>(null)
+  const [access, setAccess] = useState<{ action: AccountAccessAction; user: NetworkUser } | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
@@ -168,7 +179,16 @@ function UsersScreen() {
 
   const openCreate = () => {
     setEditing(null)
+    setLinkedRole(undefined)
     setFormOpen(true)
+  }
+
+  const changeFormOpen = (open: boolean) => {
+    setFormOpen(open)
+    if (!open && linkedRole) {
+      setLinkedRole(undefined)
+      setUrlParams({ [USERS_NEW_PARAM]: null })
+    }
   }
 
   const startGuided = () => {
@@ -231,8 +251,8 @@ function UsersScreen() {
       {isSuperAdmin && tab === 'productores' ? (
         <div className="flex flex-col gap-4">
           <p className="max-w-xl text-[13.5px] text-muted-foreground">
-            Los códigos de Triunfo de {ownPrincipal?.name ?? 'tu principal'}. Los SuperAdmin ven todos; cada Admin ve los
-            que le marques en Usuarios.
+            Los códigos de Triunfo de {ownPrincipal?.name ?? 'tu principal'}. Los SuperAdmin ven todos; cada Admin ve
+            los que le marques en Usuarios.
           </p>
           {tree.data?.home ? (
             <PrincipalCodesBlock principalId={tree.data.home.id} codes={tree.data.home.codes} />
@@ -295,8 +315,8 @@ function UsersScreen() {
               setEditing(user)
               setFormOpen(true)
             }}
-            onSendPasswordLink={account.sendPasswordLink}
-            onResetTwoFactor={setResetTarget}
+            onSendPasswordLink={user => setAccess({ action: 'password-setup', user })}
+            onResetTwoFactor={user => setAccess({ action: 'reset-two-factor', user })}
             onDelete={setDeleteTarget}
           />
         </>
@@ -305,12 +325,18 @@ function UsersScreen() {
       <UserFormDialog
         user={editing}
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={changeFormOpen}
         defaultPrincipalId={filter.principalId}
+        defaultRole={linkedRole}
         onEditCodes={isSuperAdmin ? () => setTab('productores') : undefined}
       />
       <DeleteUserDialog user={deleteTarget} onClose={() => setDeleteTarget(null)} canRestore={!isDeveloper} />
-      <ResetTwoFactorDialog user={resetTarget} onClose={() => setResetTarget(null)} />
+      <AccountAccessDialog
+        scope="network"
+        action={access?.action ?? 'password-setup'}
+        account={access?.user ?? null}
+        onClose={() => setAccess(null)}
+      />
       {isOwner && (
         <GuidedPrincipalPicker
           key={pickerOpen ? 'open' : 'closed'}

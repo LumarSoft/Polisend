@@ -51,16 +51,6 @@ export function zonesOfTree(tree: NetworkTree | undefined): Zone[] {
   return (tree?.zones ?? []).map(({ id, name, code }) => ({ id, name, code }))
 }
 
-/** What a producer code may look like (same rule as the API): letters, digits, "/" and "-". */
-export const PRODUCER_CODE_PATTERN = /^[0-9A-Za-z/-]+$/
-
-export const PRODUCER_CODE_HINT = 'Solo letras, números, "/" y "-".'
-
-export function isValidProducerCode(code: string): boolean {
-  const trimmed = code.trim()
-  return trimmed.length > 0 && trimmed.length <= 20 && PRODUCER_CODE_PATTERN.test(trimmed)
-}
-
 const PASSWORD_ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 /** A random password without look-alike characters (no l/1, O/0), for the manager to copy and hand over. */

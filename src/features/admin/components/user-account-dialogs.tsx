@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +12,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import type { NetworkUser } from '@/types/api/hierarchy'
-import { useUserAccountActions } from '../hooks/use-user-account-actions'
+import { useNetworkUserActions } from '../hooks/use-hierarchy'
+import { apiErrorMessage } from '../lib/api-error-message'
 import { roleLabel } from '../lib/roles'
 
 interface TargetDialogProps {
@@ -32,7 +34,16 @@ export function DeleteUserDialog({
   /** Owner and SuperAdmin may restore it later; the platform may not. */
   canRestore: boolean
 }) {
-  const { deleteUser, deleting } = useUserAccountActions()
+  const { removeUser } = useNetworkUserActions()
+  const deleting = removeUser.isPending
+  const deleteUser = (target: NetworkUser) =>
+    removeUser.mutate(target.id, {
+      onSuccess: () => {
+        toast.success(`${target.name || target.email} eliminado`)
+        onClose()
+      },
+      onError: error => toast.error(apiErrorMessage(error, 'No se pudo eliminar el usuario.')),
+    })
   return (
     <AlertDialog open={!!user} onOpenChange={open => !open && onClose()}>
       <AlertDialogContent>
@@ -52,41 +63,11 @@ export function DeleteUserDialog({
             disabled={deleting}
             onClick={e => {
               e.preventDefault()
-              if (user) deleteUser(user, onClose)
+              if (user) deleteUser(user)
             }}
             variant="destructive"
           >
             {deleting ? 'Eliminando…' : 'Eliminar'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
-
-/** "Reiniciar verificación en dos pasos" (lost phone), with confirmation. Owner or SuperAdmin, never on oneself. */
-export function ResetTwoFactorDialog({ user, onClose }: TargetDialogProps) {
-  const { resetSecondStep, resettingSecondStep } = useUserAccountActions()
-  return (
-    <AlertDialog open={!!user} onOpenChange={open => !open && onClose()}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Reiniciar la verificación en dos pasos?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Hacelo solo si {who(user)} perdió el teléfono o la app de autenticación. Desde ahora entra solo con su
-            contraseña, le avisamos por correo y puede volver a activarla desde Mi cuenta.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={resettingSecondStep}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={resettingSecondStep}
-            onClick={e => {
-              e.preventDefault()
-              if (user) resetSecondStep(user, onClose)
-            }}
-          >
-            {resettingSecondStep ? 'Reiniciando…' : 'Reiniciar'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -13,8 +13,9 @@ import type { PrincipalCode } from '@/types/api/hierarchy'
 import type { OnboardWhatsappResponse } from '@/types/api/whatsapp-onboarding'
 import { useAssignPlan, useBillingOverview } from '../hooks/use-billing'
 import { useNetworkUserActions, usePrincipalCodeActions } from '../hooks/use-hierarchy'
-import { networkErrorMessage, restorableUserIdOf } from '../lib/network-user-errors'
-import { isValidProducerCode, MIN_PASSWORD_LENGTH, PRODUCER_CODE_HINT } from '../lib/network-users'
+import { apiErrorMessage, restorableUserIdOf } from '../lib/api-error-message'
+import { MIN_PASSWORD_LENGTH } from '../lib/network-users'
+import { CODE_HINT, isValidCode } from '../lib/producer-code'
 import { ROLES } from '../lib/roles'
 import { ConectarWhatsapp } from './conectar-whatsapp'
 import { NumberAssistantSheet } from './number-assistant-sheet'
@@ -37,7 +38,7 @@ const STEPS: { key: Step; label: string }[] = [
 ]
 
 function failed(error: unknown, fallback: string) {
-  toast.error(networkErrorMessage(error, fallback))
+  toast.error(apiErrorMessage(error, fallback))
 }
 
 function Stepper({ current }: { current: Step }) {
@@ -82,8 +83,8 @@ function CodeStep({
   const { createCode } = usePrincipalCodeActions()
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!isValidProducerCode(code)) {
-      toast.error(`El código no es válido. ${PRODUCER_CODE_HINT}`)
+    if (!isValidCode(code)) {
+      toast.error(CODE_HINT)
       return
     }
     createCode.mutate(
@@ -111,7 +112,7 @@ function CodeStep({
           value={code}
           onChange={e => setCode(e.target.value)}
         />
-        <p className="text-[12px] text-muted-foreground">{PRODUCER_CODE_HINT}</p>
+        <p className="text-[12px] text-muted-foreground">{CODE_HINT}</p>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="onboarding-holder">
@@ -170,7 +171,7 @@ function UserStep({
           toast.error(
             restorableUserIdOf(error) !== null
               ? 'Ese correo es de un usuario eliminado: usá otro, o restauralo desde "Nuevo usuario" en Usuarios.'
-              : networkErrorMessage(error, 'No se pudo crear el usuario'),
+              : apiErrorMessage(error, 'No se pudo crear el usuario'),
           ),
       },
     )

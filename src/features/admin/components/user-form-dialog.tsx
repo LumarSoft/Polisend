@@ -1,6 +1,6 @@
 'use client'
 
-import type { FormEvent, ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Info, Loader2, MailCheck, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -15,9 +15,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import type { NetworkUser } from '@/types/api/hierarchy'
+import type { NetworkUser, NetworkUserRole } from '@/types/api/hierarchy'
 import { useNetworkUserForm, type NetworkUserFormState, type SavedResult } from '../hooks/use-network-user-form'
-import { useUserAccountActions } from '../hooks/use-user-account-actions'
 import { ROLES, roleLabel } from '../lib/roles'
 import {
   CodesPicker,
@@ -28,6 +27,7 @@ import {
   PrincipalPicker,
   RoleCards,
 } from './user-access-fields'
+import { AccountAccessDialog } from './account-access-dialog'
 import { UserDataFields } from './user-data-fields'
 
 interface UserFormDialogProps {
@@ -37,6 +37,8 @@ interface UserFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** The principal a new user starts in: the list's filter or `?principal=`. */
   defaultPrincipalId: number | null
+  /** The role a new user starts with (Mi red's «Sin SuperAdmin · crear uno» asks for SuperAdmin); Admin by default. */
+  defaultRole?: NetworkUserRole
   /** The SuperAdmin edits its principal's codes in the "Productores" tab of the same screen. */
   onEditCodes?: () => void
 }
@@ -183,11 +185,13 @@ function RestoreDialog({ form }: { form: NetworkUserFormState }) {
 function UserForm({
   user,
   defaultPrincipalId,
+  defaultRole,
   onEditCodes,
   onDone,
 }: {
   user: NetworkUser | null
   defaultPrincipalId: number | null
+  defaultRole?: NetworkUserRole
   onEditCodes?: () => void
   onDone: () => void
 }) {
@@ -195,8 +199,8 @@ function UserForm({
     toast.success(title, description ? { description } : undefined)
     onDone()
   }
-  const form = useNetworkUserForm({ user, defaultPrincipalId, onSaved: saved })
-  const account = useUserAccountActions()
+  const form = useNetworkUserForm({ user, defaultPrincipalId, defaultRole, onSaved: saved })
+  const [linkOpen, setLinkOpen] = useState(false)
   const { fields } = form
 
   const handleSubmit = (e: FormEvent) => {
@@ -234,18 +238,8 @@ function UserForm({
           />
           {user && (
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 border-line-2"
-                disabled={account.sendingPasswordLink}
-                onClick={() => account.sendPasswordLink(user)}
-              >
-                {account.sendingPasswordLink ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Send className="size-4" />
-                )}
+              <Button type="button" variant="outline" className="h-9 border-line-2" onClick={() => setLinkOpen(true)}>
+                <Send className="size-4" />
                 Mandar enlace para elegir contraseña
               </Button>
               <span className="text-[12px] text-muted-foreground">Le llega a su correo actual.</span>
@@ -297,12 +291,27 @@ function UserForm({
       </div>
 
       <RestoreDialog form={form} />
+      {user && (
+        <AccountAccessDialog
+          scope="network"
+          action="password-setup"
+          account={linkOpen ? user : null}
+          onClose={() => setLinkOpen(false)}
+        />
+      )}
     </form>
   )
 }
 
 /** "Nuevo usuario" and "Editar usuario": the single form of plan §6.3, in one view. */
-export function UserFormDialog({ user, open, onOpenChange, defaultPrincipalId, onEditCodes }: UserFormDialogProps) {
+export function UserFormDialog({
+  user,
+  open,
+  onOpenChange,
+  defaultPrincipalId,
+  defaultRole,
+  onEditCodes,
+}: UserFormDialogProps) {
   const isEdit = user !== null
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -320,6 +329,7 @@ export function UserFormDialog({ user, open, onOpenChange, defaultPrincipalId, o
             key={user?.id ?? 'new'}
             user={user}
             defaultPrincipalId={defaultPrincipalId}
+            defaultRole={defaultRole}
             onEditCodes={
               onEditCodes &&
               (() => {

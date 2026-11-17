@@ -24,17 +24,16 @@ import {
   usePlatformZoneActions,
   usePlatformZones,
 } from '../hooks/use-platform-structure'
+import type { AccountAccessAction } from '../hooks/use-account-access'
 import { useRole } from '../hooks/use-role'
 import { apiErrorMessage } from '../lib/api-error-message'
+import { AccountAccessDialog, TwoFactorBadge } from './account-access-dialog'
 import { ConfirmActionDialog } from './confirm-action-dialog'
 import { EditOwnerDialog, NewOwnerDialog } from './owner-form-dialog'
 import { ZoneFormDialog } from './zone-form-dialog'
 
 const HEAD = 'text-[11px] uppercase tracking-[0.12em] text-faint'
 const PAGE = 'mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10'
-
-/** The acts on an Owner that need a confirmation first. */
-type OwnerAct = { kind: 'password' | 'twoFactor' | 'demote'; owner: PlatformOwner }
 
 function ownerName(owner: { name: string | null; email: string }): string {
   return owner.name ?? owner.email
@@ -54,7 +53,8 @@ export function OwnersZonesView() {
 
   const [newOwnerOpen, setNewOwnerOpen] = useState(false)
   const [editing, setEditing] = useState<PlatformOwner | null>(null)
-  const [act, setAct] = useState<OwnerAct | null>(null)
+  const [access, setAccess] = useState<{ action: AccountAccessAction; owner: PlatformOwner } | null>(null)
+  const [demoting, setDemoting] = useState<PlatformOwner | null>(null)
   const [zoneDialog, setZoneDialog] = useState<{ zone: Zone | null } | null>(null)
   const [zoneToDelete, setZoneToDelete] = useState<PlatformZone | null>(null)
 
@@ -68,38 +68,18 @@ export function OwnersZonesView() {
 
   const zoneList = zones.data ?? []
 
-  const runAct = () => {
-    if (!act) return
-    const { owner } = act
-    const options = (done: string, fallback: string) => ({
+  const demote = () => {
+    if (!demoting) return
+    ownerActions.demoteOwner.mutate(demoting.id, {
       onSuccess: () => {
-        toast.success(done)
-        setAct(null)
+        toast.success(`${ownerName(demoting)} volvió a ser SuperAdmin de ${demoting.home.name}`)
+        setDemoting(null)
       },
-      onError: (error: unknown) => {
-        toast.error(apiErrorMessage(error, fallback))
-        setAct(null)
+      onError: error => {
+        toast.error(apiErrorMessage(error, 'No se pudo bajar a SuperAdmin.'))
+        setDemoting(null)
       },
     })
-    if (act.kind === 'password') {
-      ownerActions.sendPasswordSetup.mutate(
-        owner.id,
-        options(`Le mandamos a ${owner.email} un enlace para elegir contraseña`, 'No se pudo mandar el enlace.'),
-      )
-    } else if (act.kind === 'twoFactor') {
-      ownerActions.resetTwoFactor.mutate(
-        owner.id,
-        options(
-          `Se reinició la verificación en dos pasos de ${ownerName(owner)}`,
-          'No se pudo reiniciar la verificación en dos pasos.',
-        ),
-      )
-    } else {
-      ownerActions.demoteOwner.mutate(
-        owner.id,
-        options(`${ownerName(owner)} volvió a ser SuperAdmin de ${owner.home.name}`, 'No se pudo bajar a SuperAdmin.'),
-      )
-    }
   }
 
   const saveZone = (data: CreateZoneRequest) => {
@@ -128,11 +108,6 @@ export function OwnersZonesView() {
       },
     })
   }
-
-  const actPending =
-    ownerActions.sendPasswordSetup.isPending ||
-    ownerActions.resetTwoFactor.isPending ||
-    ownerActions.demoteOwner.isPending
 
   return (
     <div className={`${PAGE} flex flex-col gap-10`}>
@@ -198,11 +173,7 @@ export function OwnersZonesView() {
                       <div className="flex flex-col">
                         <span className="flex flex-wrap items-center gap-1.5 text-[14px] font-medium text-ink">
                           {ownerName(owner)}
-                          {owner.twoFactorEnabled && (
-                            <Badge variant="secondary" className="text-[10.5px]">
-                              2 pasos
-                            </Badge>
-                          )}
+                          <TwoFactorBadge enabled={owner.twoFactorEnabled} />
                         </span>
                         {owner.name && <span className="text-[12px] text-muted-foreground">{owner.email}</span>}
                       </div>
@@ -237,16 +208,16 @@ export function OwnersZonesView() {
                           <DropdownMenuItem onSelect={() => setEditing(owner)}>
                             <Pencil className="size-4" /> Editar nombre y zonas
                           </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setAct({ kind: 'password', owner })}>
+                          <DropdownMenuItem onSelect={() => setAccess({ action: 'password-setup', owner })}>
                             <KeyRound className="size-4" /> Mandar enlace para elegir contraseña
                           </DropdownMenuItem>
                           {owner.twoFactorEnabled && (
-                            <DropdownMenuItem onSelect={() => setAct({ kind: 'twoFactor', owner })}>
+                            <DropdownMenuItem onSelect={() => setAccess({ action: 'reset-two-factor', owner })}>
                               <ShieldOff className="size-4" /> Reiniciar verificación en dos pasos
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem variant="destructive" onSelect={() => setAct({ kind: 'demote', owner })}>
+                          <DropdownMenuItem variant="destructive" onSelect={() => setDemoting(owner)}>
                             <UserMinus className="size-4" /> Bajar a SuperAdmin
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -379,46 +350,27 @@ export function OwnersZonesView() {
       <NewOwnerDialog open={newOwnerOpen} onOpenChange={setNewOwnerOpen} zones={zoneList} />
       <EditOwnerDialog owner={editing} onOpenChange={open => !open && setEditing(null)} zones={zoneList} />
 
+      <AccountAccessDialog
+        scope="owner"
+        action={access?.action ?? 'password-setup'}
+        account={access?.owner ?? null}
+        onClose={() => setAccess(null)}
+      />
+
       <ConfirmActionDialog
-        open={act !== null}
-        onOpenChange={open => !open && setAct(null)}
-        title={
-          act?.kind === 'password'
-            ? 'Mandar enlace para elegir contraseña'
-            : act?.kind === 'twoFactor'
-              ? 'Reiniciar verificación en dos pasos'
-              : `¿Bajar a ${act ? ownerName(act.owner) : ''} a SuperAdmin?`
-        }
-        confirmLabel={
-          act?.kind === 'password' ? 'Mandar enlace' : act?.kind === 'twoFactor' ? 'Reiniciar' : 'Bajar a SuperAdmin'
-        }
-        destructive={act?.kind !== 'password'}
-        pending={actPending}
-        onConfirm={runAct}
+        open={demoting !== null}
+        onOpenChange={open => !open && setDemoting(null)}
+        title={`¿Bajar a ${demoting ? ownerName(demoting) : ''} a SuperAdmin?`}
+        confirmLabel="Bajar a SuperAdmin"
+        destructive
+        pending={ownerActions.demoteOwner.isPending}
+        onConfirm={demote}
       >
-        {act?.kind === 'password' && (
-          <>
-            <p>
-              Le llega a <span className="font-medium text-ink">{act.owner.email}</span> un enlace para elegir una
-              contraseña nueva. Vence en 72 horas y sirve una sola vez.
-            </p>
-            <p>
-              Su contraseña actual sigue funcionando hasta que la cambie (si nunca usó su invitación, le llega una
-              nueva). Los principales que ve reciben un aviso.
-            </p>
-          </>
-        )}
-        {act?.kind === 'twoFactor' && (
+        {demoting && (
           <p>
-            Para cuando perdió el teléfono: la próxima vez entra solo con su contraseña y puede volver a activarla desde
-            Mi cuenta. Le avisamos por mail.
-          </p>
-        )}
-        {act?.kind === 'demote' && (
-          <p>
-            Vuelve a ser SuperAdmin de {act.owner.home.name} y deja de manejar sus zonas
-            {act.owner.zones.length > 0 ? ` (${act.owner.zones.map(zone => zone.name).join(', ')})` : ''}. La cuenta no
-            se borra.
+            Vuelve a ser SuperAdmin de {demoting.home.name} y deja de manejar sus zonas
+            {demoting.zones.length > 0 ? ` (${demoting.zones.map(zone => zone.name).join(', ')})` : ''}. La cuenta no se
+            borra.
           </p>
         )}
       </ConfirmActionDialog>

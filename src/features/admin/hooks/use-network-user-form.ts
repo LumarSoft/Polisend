@@ -6,14 +6,9 @@ import type {
   NewPrincipalInput,
   UpdateNetworkUserRequest,
 } from '@/types/api/hierarchy'
-import { networkErrorMessage, restorableUserIdOf } from '../lib/network-user-errors'
-import {
-  accessSummary,
-  generatePassword,
-  isValidProducerCode,
-  MIN_PASSWORD_LENGTH,
-  type FormPrincipal,
-} from '../lib/network-users'
+import { apiErrorMessage, restorableUserIdOf } from '../lib/api-error-message'
+import { accessSummary, generatePassword, MIN_PASSWORD_LENGTH, type FormPrincipal } from '../lib/network-users'
+import { isValidCode } from '../lib/producer-code'
 import { ROLES } from '../lib/roles'
 import { useNetworkUserActions, usePrincipalCodeActions } from './use-hierarchy'
 import { useProfile } from './use-profile'
@@ -59,6 +54,8 @@ interface Options {
   user: NetworkUser | null
   /** The principal a new user starts in (the list's filter or `?principal=`). */
   defaultPrincipalId: number | null
+  /** The role a new user starts with; Admin by default. */
+  defaultRole?: NetworkUserRole
   onSaved: (result: SavedResult) => void
 }
 
@@ -76,7 +73,7 @@ function principalCodes(principal: FormPrincipal | null, created: Array<CodeOpti
   return codes
 }
 
-export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Options) {
+export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROLES.admin, onSaved }: Options) {
   const { isDeveloper, isOwner, isSuperAdmin } = useRole()
   const { data: profile } = useProfile()
   const options = useUserFormOptions()
@@ -88,7 +85,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Option
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [password, setPassword] = useState('')
-  const [role, setRoleState] = useState<NetworkUserRole>(user?.role ?? ROLES.admin)
+  const [role, setRoleState] = useState<NetworkUserRole>(user?.role ?? defaultRole)
   const [principalMode, setPrincipalMode] = useState<PrincipalMode>('existing')
   const [principalId, setPrincipalIdState] = useState<number | null>(user?.principal.id ?? defaultPrincipalId)
   const [draft, setDraft] = useState<NewPrincipalDraft>(EMPTY_DRAFT)
@@ -140,7 +137,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Option
       setCodeIds(prev => (prev.includes(created.id) ? prev : [...prev, created.id]))
       return null
     } catch (error) {
-      return networkErrorMessage(error, 'No se pudo crear el código.')
+      return apiErrorMessage(error, 'No se pudo crear el código.')
     }
   }
 
@@ -179,8 +176,8 @@ export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Option
   if (usingNewPrincipal) {
     if (isOwner && draft.zoneId === null) problems.push('Elegí la zona del principal nuevo.')
     if (draft.name.trim().length < 2) problems.push('Falta el nombre del principal nuevo.')
-    if (!isValidProducerCode(draft.masterCode)) problems.push('Falta el código master del principal nuevo.')
-    if (draft.codes.some(row => row.code.trim() && !isValidProducerCode(row.code))) {
+    if (!isValidCode(draft.masterCode)) problems.push('Falta el código master del principal nuevo.')
+    if (draft.codes.some(row => row.code.trim() && !isValidCode(row.code))) {
       problems.push('Revisá los códigos: solo letras, números, "/" y "-".')
     }
   } else if (!principal) {
@@ -222,7 +219,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Option
       onError: error => {
         const restorable = restorableUserIdOf(error)
         if (restorable === null) {
-          setErrorMessage(networkErrorMessage(error, 'No se pudo crear el usuario. Probá de nuevo.'))
+          setErrorMessage(apiErrorMessage(error, 'No se pudo crear el usuario. Probá de nuevo.'))
         } else if (usingNewPrincipal || isDeveloper) {
           // A restore brings the account back in its old principal, never in a new one; the platform never restores.
           setErrorMessage(
@@ -251,7 +248,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Option
             title: 'Usuario actualizado',
             description: password ? 'Sus sesiones abiertas se cerraron: entra con la contraseña nueva.' : undefined,
           }),
-        onError: error => setErrorMessage(networkErrorMessage(error, 'No se pudo guardar. Probá de nuevo.')),
+        onError: error => setErrorMessage(apiErrorMessage(error, 'No se pudo guardar. Probá de nuevo.')),
       },
     )
   }
@@ -305,7 +302,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, onSaved }: Option
         },
         onError: error => {
           setRestoreUserId(null)
-          setErrorMessage(networkErrorMessage(error, 'No se pudo restaurar el usuario.'))
+          setErrorMessage(apiErrorMessage(error, 'No se pudo restaurar el usuario.'))
         },
       },
     )

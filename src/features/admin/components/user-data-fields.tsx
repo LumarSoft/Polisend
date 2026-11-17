@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { generatePassword, MIN_PASSWORD_LENGTH } from '../lib/network-users'
+import { copyToClipboard } from '../lib/clipboard'
 
 /**
  * How the form handles the password:
@@ -32,11 +33,9 @@ export function PasswordField({ id, value, onChange, placeholder }: PasswordFiel
     setVisible(true)
   }
 
-  const copy = () => {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => toast.success('Contraseña copiada'))
-      .catch(() => toast.error('No se pudo copiar: seleccionala y copiala a mano.'))
+  const copy = async () => {
+    if (await copyToClipboard(value)) toast.success('Contraseña copiada')
+    else toast.error('No se pudo copiar: seleccionala y copiala a mano.')
   }
 
   return (

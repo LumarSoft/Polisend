@@ -11,7 +11,8 @@ import { cn } from '@/lib/utils'
 import type { NetworkUserRole, Zone } from '@/types/api/hierarchy'
 import type { CodeOption, NewPrincipalDraft } from '../hooks/use-network-user-form'
 import { newCodeRow } from '../hooks/use-network-user-form'
-import { isValidProducerCode, PRODUCER_CODE_HINT, type FormPrincipal } from '../lib/network-users'
+import type { FormPrincipal } from '../lib/network-users'
+import { CODE_HINT, isValidCode } from '../lib/producer-code'
 import { ROLES } from '../lib/roles'
 
 /** The pieces of the user form that say what an account reaches: its role, its principal and its codes (plan §6.3). */
@@ -183,7 +184,7 @@ export function NewPrincipalFields({
   ]
   const setRow = (key: string, changes: Partial<{ code: string; holderName: string }>) =>
     onChange({ ...draft, codes: draft.codes.map(row => (row.key === key ? { ...row, ...changes } : row)) })
-  const masterInvalid = draft.masterCode.trim() !== '' && !isValidProducerCode(draft.masterCode)
+  const masterInvalid = draft.masterCode.trim() !== '' && !isValidCode(draft.masterCode)
 
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-line-2 p-4">
@@ -238,7 +239,7 @@ export function NewPrincipalFields({
               aria-label="Código"
               maxLength={20}
               placeholder="14831"
-              aria-invalid={row.code.trim() !== '' && !isValidProducerCode(row.code)}
+              aria-invalid={row.code.trim() !== '' && !isValidCode(row.code)}
               className="h-9 w-32"
               value={row.code}
               onChange={e => setRow(row.key, { code: e.target.value })}
@@ -272,9 +273,7 @@ export function NewPrincipalFields({
           <Plus className="size-4" />
           Agregar código
         </Button>
-        <p className="text-[12px] text-muted-foreground">
-          {PRODUCER_CODE_HINT} El master queda a nombre del principal.
-        </p>
+        <p className="text-[12px] text-muted-foreground">{CODE_HINT} El master queda a nombre del principal.</p>
       </div>
     </div>
   )
@@ -362,8 +361,8 @@ export function CodesPicker({
     : options
 
   const create = async () => {
-    if (!isValidProducerCode(code)) {
-      setCreateError(`El código no es válido. ${PRODUCER_CODE_HINT}`)
+    if (!isValidCode(code)) {
+      setCreateError(CODE_HINT)
       return
     }
     const error = await onCreate(code, holderName)

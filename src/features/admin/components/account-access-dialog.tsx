@@ -13,12 +13,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
-  accountAccessErrorMessage,
   useAccountAccess,
   type AccountAccessAction,
   type AccountAccessScope,
   type AccountAccessTarget,
 } from '../hooks/use-account-access'
+import { useRole } from '../hooks/use-role'
+import { apiErrorMessage } from '../lib/api-error-message'
 
 interface AccountAccessDialogProps {
   scope: AccountAccessScope
@@ -50,6 +51,14 @@ function whoOf(account: AccountAccessTarget): string {
  */
 export function AccountAccessDialog({ scope, action, account, onClose }: AccountAccessDialogProps) {
   const mutation = useAccountAccess(scope, action)
+  const { isDeveloper } = useRole()
+  // What the platform does to an account is mailed to the principals concerned (contract addendum, "Notices").
+  const notice =
+    scope === 'owner'
+      ? ' Los principales que ve reciben un aviso.'
+      : isDeveloper
+        ? ' Los SuperAdmin de su principal reciben un aviso de la plataforma.'
+        : ''
 
   const confirm = () => {
     if (!account) return
@@ -62,7 +71,7 @@ export function AccountAccessDialog({ scope, action, account, onClose }: Account
         )
         onClose()
       },
-      onError: error => toast.error(accountAccessErrorMessage(error)),
+      onError: error => toast.error(apiErrorMessage(error, 'No se pudo completar. Intentá de nuevo.')),
     })
   }
 
@@ -77,7 +86,7 @@ export function AccountAccessDialog({ scope, action, account, onClose }: Account
                 <>
                   Le mandamos a <span className="font-medium text-foreground">{account.email}</span> un enlace para que
                   elija una contraseña nueva. Vence en 72 horas y sirve una sola vez; hasta que la cambie, su contraseña
-                  actual sigue funcionando. Si nunca usó su invitación, le llega una invitación nueva.
+                  actual sigue funcionando. Si nunca usó su invitación, le llega una invitación nueva.{notice}
                 </>
               ) : (
                 <>

@@ -3,6 +3,7 @@ const CODE_PATTERN = /^[A-Za-z0-9/-]{1,20}$/
 
 export const CODE_HINT = 'El código solo admite letras, números, "/" y "-" (hasta 20).'
 
+/** Checks the code as it will be sent (trimmed); an empty code is not valid. */
 export function isValidCode(code: string): boolean {
-  return CODE_PATTERN.test(code)
+  return CODE_PATTERN.test(code.trim())
 }

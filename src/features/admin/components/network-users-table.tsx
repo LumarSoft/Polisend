@@ -1,6 +1,6 @@
 'use client'
 
-import { Ellipsis, Send, ShieldCheck, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
+import { Ellipsis, Send, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { NetworkUser } from '@/types/api/hierarchy'
 import { formatJoinDate } from '../lib/network-users'
 import { ROLES, roleLabel } from '../lib/roles'
+import { TwoFactorBadge } from './account-access-dialog'
 
 const HEAD = 'text-[11px] uppercase tracking-[0.12em] text-muted-foreground'
 const SHOWN_CODES = 3
@@ -161,15 +162,7 @@ export function NetworkUsersTable({
                             Vos
                           </Badge>
                         )}
-                        {user.twoFactorEnabled && (
-                          <Badge
-                            variant="secondary"
-                            title="Tiene activa la verificación en dos pasos"
-                            className="gap-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          >
-                            <ShieldCheck className="size-3" />2 pasos
-                          </Badge>
-                        )}
+                        <TwoFactorBadge enabled={user.twoFactorEnabled} />
                       </div>
                       {user.name && <div className="truncate text-[12px] text-muted-foreground">{user.email}</div>}
                     </div>
