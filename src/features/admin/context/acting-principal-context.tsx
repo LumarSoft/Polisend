@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useEffectEvent, useRef, useState,
 import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { onActingPrincipalInvalid, setActingPrincipal } from '@/lib/api-client'
+import { onActingPrincipalInvalid, onActingPrincipalMismatch, setActingPrincipal } from '@/lib/api-client'
 import { QUERY_KEYS } from '@/lib/query-keys'
 import { hierarchyService } from '@/services/hierarchy.service'
 import type { AdminUser } from '@/types/api/auth'
@@ -144,10 +144,30 @@ export function ActingPrincipalProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => onActingPrincipalInvalid(principalId => onInvalid(principalId)), [])
 
+  // An answer dropped for not naming the principal it was sent for: the account may have stopped being an Owner, and
+  // only its profile says so (the API echoes nothing to a SuperAdmin). One profile request at a time.
+  const onMismatch = useEffectEvent((principalId: number) => {
+    if (!isOwnerSession || principalId !== actingPrincipalId || profileQuery.isFetching) return
+    void profileQuery.refetch({ cancelRefetch: false })
+  })
+
+  useEffect(() => onActingPrincipalMismatch(principalId => onMismatch(principalId)), [])
+
   // Logging out forgets the Owner's choice (this tab's and the last one).
   const ownerUserRef = useRef<number | null>(null)
   useEffect(() => {
     if (isOwnerSession && userId !== null) ownerUserRef.current = userId
+  }, [isOwnerSession, userId])
+  // So does an Owner that stopped being one in this session: the panel is back on its own principal.
+  useEffect(() => {
+    if (isOwnerSession || userId === null || ownerUserRef.current !== userId) return
+    clearStoredSelection(userId)
+    ownerUserRef.current = null
+    setChosen(null)
+    toast.info('Tu cuenta ya no es Owner', {
+      id: 'owner-role-lost',
+      description: 'El panel volvió a tu principal, con lo que tu rol ve ahora.',
+    })
   }, [isOwnerSession, userId])
   useEffect(() => {
     if (token || ownerUserRef.current === null) return

@@ -45,10 +45,11 @@ export class ActingPrincipalMismatchError extends ApiError {
 // ─── Listeners ─────────────────────────────────────────────────────────────────
 
 type UnauthorizedListener = (token: string) => void
-type ActingPrincipalInvalidListener = (principalId: number) => void
+type ActingPrincipalListener = (principalId: number) => void
 
 const unauthorizedListeners = new Set<UnauthorizedListener>()
-const actingPrincipalInvalidListeners = new Set<ActingPrincipalInvalidListener>()
+const actingPrincipalInvalidListeners = new Set<ActingPrincipalListener>()
+const actingPrincipalMismatchListeners = new Set<ActingPrincipalListener>()
 
 /** Hears every request made with a token that the API answered 401 to, with that token. */
 export function onUnauthorized(listener: UnauthorizedListener): () => void {
@@ -59,10 +60,22 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
 }
 
 /** Hears every principal the API refused as an Owner's acting principal (403 ACTING_PRINCIPAL_INVALID or actingInvalid). */
-export function onActingPrincipalInvalid(listener: ActingPrincipalInvalidListener): () => void {
+export function onActingPrincipalInvalid(listener: ActingPrincipalListener): () => void {
   actingPrincipalInvalidListeners.add(listener)
   return () => {
     actingPrincipalInvalidListeners.delete(listener)
+  }
+}
+
+/**
+ * Hears every answer dropped because it did not come back for the principal it was sent for (no echo, or another
+ * one). The API echoes only an Owner's principal: an account that stopped being an Owner (the Developer took it back
+ * to SuperAdmin) gets answers without it, and only a fresh profile tells the panel to stop acting on a principal.
+ */
+export function onActingPrincipalMismatch(listener: ActingPrincipalListener): () => void {
+  actingPrincipalMismatchListeners.add(listener)
+  return () => {
+    actingPrincipalMismatchListeners.delete(listener)
   }
 }
 
@@ -169,7 +182,10 @@ async function ensureResponse(
   }
   if (!checkPrincipal || actingPrincipalId === null) return
   const received = res.headers.get(ACTING_PRINCIPAL_HEADER)
-  if (received !== String(actingPrincipalId)) throw new ActingPrincipalMismatchError(actingPrincipalId, received)
+  if (received !== String(actingPrincipalId)) {
+    actingPrincipalMismatchListeners.forEach(listener => listener(actingPrincipalId))
+    throw new ActingPrincipalMismatchError(actingPrincipalId, received)
+  }
 }
 
 interface RequestOptions {

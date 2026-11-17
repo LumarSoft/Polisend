@@ -4,6 +4,7 @@ import {
   apiRequestReportingPrincipal,
   reportActingPrincipalInvalid,
 } from '@/lib/api-client'
+import { isOwnerRole } from '@/features/admin/lib/roles'
 import type {
   AdminUser,
   LoginRequest,
@@ -24,11 +25,13 @@ export const adminAuthService = {
 
   /**
    * The account and, for an Owner, the acting principal it sent. A refused principal is not a 403 here: the API
-   * answers the Owner's own principal with `actingInvalid`, and the panel falls back to it.
+   * answers the Owner's own principal with `actingInvalid`, and the panel falls back to it. An account that is no
+   * longer an Owner (the Developer took it back to SuperAdmin) is taken as it is: the API ignores the principal it
+   * sent, and this profile is what makes the panel stop sending one.
    */
   getProfile: async (token: string): Promise<AdminUser> => {
     const { data, actingPrincipalId } = await apiRequestReportingPrincipal<AdminUser>('/users/me', { token })
-    if (actingPrincipalId !== null) {
+    if (actingPrincipalId !== null && isOwnerRole(data.role)) {
       if (data.actingInvalid) reportActingPrincipalInvalid(actingPrincipalId)
       else if (data.actingProducerId !== actingPrincipalId) {
         throw new ActingPrincipalMismatchError(actingPrincipalId, String(data.actingProducerId ?? ''))
