@@ -1,17 +1,22 @@
 'use client'
 
 import { Fragment, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Loader2, Lock, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { NetworkUsage, NetworkUsageNumber, NetworkUsagePrincipal, NetworkUsageTotals } from '@/types/api/hierarchy'
+import { usePrincipalBillingOverview } from '../hooks/use-billing'
 import { useHierarchyPrincipals, useNetworkUsage } from '../hooks/use-hierarchy'
 import { useRole } from '../hooks/use-role'
 import { NO_ZONE, noZoneLabel, type ZoneKey } from '../lib/network'
 import { numberLabel } from '../lib/number-label'
-import { HEAD, int, Kpi, MonthPicker, thisMonth } from './billing-ui'
+import { tokens } from '../lib/tokens'
+import { PlanSelect } from './billing-number-parts'
+import { HEAD, int, Kpi, MonthPicker, thisMonth, TokensHint } from './billing-ui'
 import { EMPTY_NETWORK_FILTER, NetworkFilter, type NetworkListFilterValue } from './network-filter'
 
 interface UsageGroup {
@@ -80,14 +85,67 @@ function PlanBar({ row }: { row: NetworkUsageNumber }) {
         <div className={`h-full rounded-full ${tone}`} style={{ width: `${percent}%` }} />
       </div>
       <div className="mt-1 text-[12px] text-ink-3">
-        <span className="font-semibold text-ink">{int(row.consumedMessages)}</span> de {int(row.planMessages)} ·{' '}
+        <span className="font-semibold text-ink">{int(row.consumedMessages)}</span> de {tokens(row.planMessages)} ·{' '}
         {int(Math.round(row.percentUsed))}%
       </div>
     </div>
   )
 }
 
-function NumberRow({ row }: { row: NetworkUsageNumber }) {
+/**
+ * The plan of one number of the network for the running month. It reads and changes it on the number's own principal
+ * (`/admin/billing` with that principal in X-Acting-Principal for these requests only): the panel stays where it is.
+ */
+function NumberPlanForm({ principalId, numberId }: { principalId: number; numberId: number }) {
+  const { data, isLoading, isError } = usePrincipalBillingOverview(principalId)
+  const row = data?.numbers.find(n => n.id === numberId)
+  if (isLoading) return <Loader2 className="m-2 size-4 animate-spin text-muted-foreground" />
+  if (isError || !data) return <p className="text-[12.5px] text-destructive">No se pudo cargar el plan del número.</p>
+  if (!row) return <p className="text-[12.5px] text-muted-foreground">Este número no tiene un plan para elegir.</p>
+  return (
+    <div className="flex flex-col gap-2.5">
+      <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+        El plan de este mes. Al llegar a sus tokens, el asistente se pausa y el principal elige si pasa al siguiente.
+      </p>
+      <PlanSelect row={row} plans={data.plans} principalId={principalId} showLabel={false} />
+    </div>
+  )
+}
+
+function NumberPlanPopover({ principalId, row }: { principalId: number; row: NetworkUsageNumber }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-[12px] text-ember-2 hover:bg-ember-soft"
+          aria-label={`Cambiar el plan de ${numberLabel(row)}`}
+        >
+          <Pencil className="size-3.5" />
+          Cambiar
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 p-3.5">
+        <div className="mb-2 font-mono text-[13px] font-medium text-ink">{numberLabel(row)}</div>
+        {open && <NumberPlanForm principalId={principalId} numberId={row.id} />}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function NumberRow({
+  row,
+  principalId,
+  canChangePlan,
+}: {
+  row: NetworkUsageNumber
+  principalId: number
+  /** The running month: the plan can still change. */
+  canChangePlan: boolean
+}) {
   return (
     <TableRow>
       <TableCell className="whitespace-normal pl-10">
@@ -117,7 +175,12 @@ function NumberRow({ row }: { row: NetworkUsageNumber }) {
           </div>
         )}
       </TableCell>
-      <TableCell className="text-[13px] text-ink-3">{row.plan ?? '—'}</TableCell>
+      <TableCell className="text-[13px] text-ink-3">
+        <div className="flex flex-wrap items-center gap-1">
+          {row.plan ?? '—'}
+          {canChangePlan && <NumberPlanPopover principalId={principalId} row={row} />}
+        </div>
+      </TableCell>
       <TableCell>
         <PlanBar row={row} />
       </TableCell>
@@ -127,7 +190,7 @@ function NumberRow({ row }: { row: NetworkUsageNumber }) {
   )
 }
 
-function PrincipalRows({ principal }: { principal: NetworkUsagePrincipal }) {
+function PrincipalRows({ principal, canChangePlan }: { principal: NetworkUsagePrincipal; canChangePlan: boolean }) {
   return (
     <>
       <TableRow className="bg-secondary/40 hover:bg-secondary/40">
@@ -149,9 +212,7 @@ function PrincipalRows({ principal }: { principal: NetworkUsagePrincipal }) {
         <TableCell className="text-[12px] text-muted-foreground">
           {principal.totals.numbers === 1 ? '1 número' : `${int(principal.totals.numbers)} números`}
         </TableCell>
-        <TableCell className="text-[12px] text-muted-foreground">
-          {int(principal.totals.consumedMessages)} del plan
-        </TableCell>
+        <TableCell className="text-[12px] text-muted-foreground">{tokens(principal.totals.consumedMessages)}</TableCell>
         <TableCell className="text-right text-[13px] font-medium text-ink">
           {int(principal.totals.sentMessages)}
         </TableCell>
@@ -166,7 +227,9 @@ function PrincipalRows({ principal }: { principal: NetworkUsagePrincipal }) {
           </TableCell>
         </TableRow>
       ) : (
-        principal.numbers.map(row => <NumberRow key={row.id} row={row} />)
+        principal.numbers.map(row => (
+          <NumberRow key={row.id} row={row} principalId={principal.id} canChangePlan={canChangePlan} />
+        ))
       )}
     </>
   )
@@ -176,8 +239,9 @@ const PAGE = 'mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10'
 
 /**
  * "Consumo de la red" (plan §6.2): every number of the Owner's network by Zona → Principal → Número for a month, in
- * message counts only (plan by name, the plan's messages with its bar, sent and campaign messages). No amount at all:
- * `GET /hierarchy/usage` has no field for one.
+ * tokens and message counts only (plan by name, the plan's tokens with its bar, sent and campaign messages). No amount
+ * at all: `GET /hierarchy/usage` has no field for one. In the running month the Owner changes a number's plan here,
+ * on the number's own principal.
  */
 export function NetworkUsageView() {
   const { isOwner, isDeveloper, isLoading: roleLoading } = useRole()
@@ -198,6 +262,8 @@ export function NetworkUsageView() {
   }
 
   const groups = data ? filterGroups(groupsOf(data, isDeveloper), filter, code) : []
+  // A closed month keeps the plans it had; only the running month's can change (on the API too).
+  const running = period === thisMonth() && data?.closed !== true
   const filtered = filter.zoneKey !== null || filter.principalId !== null
   const totals = !data
     ? null
@@ -213,8 +279,9 @@ export function NetworkUsageView() {
           Consumo de la red
         </h1>
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
-          Los mensajes de cada número de tu red, por zona y principal. Cada número tiene un plan de mensajes por mes: la
-          barra muestra cuánto usó de su plan. Elegido un productor, se ven los números que se le facturan.
+          Los tokens de cada número de tu red, por zona y principal. Cada número tiene un plan de tokens por mes: la
+          barra muestra cuánto usó de su plan, y en el mes en curso podés cambiarle el plan. Elegido un productor, se
+          ven los números que se le facturan.
         </p>
       </div>
 
@@ -222,6 +289,7 @@ export function NetworkUsageView() {
         <MonthPicker value={period} onChange={setPeriod} id="network-usage-period" />
         <NetworkFilter mode="network" value={filter} onChange={setFilter} />
       </div>
+      <TokensHint className="-mt-2 mb-5" />
 
       {data?.closed && (
         <p className="mb-4 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
@@ -237,10 +305,14 @@ export function NetworkUsageView() {
         ) : (
           <>
             <Kpi label="Números" value={int(totals.numbers)} hint="Los números de la red en el mes" />
-            <Kpi label="Mensajes enviados" value={int(totals.sentMessages)} hint="Cada mensaje cuenta una vez" />
-            <Kpi label="De campaña" value={int(totals.campaignMessages)} hint="Incluidos en los enviados" />
+            <Kpi label="Mensajes enviados" value={int(totals.sentMessages)} hint="Cada uno cuenta 1 token" />
             <Kpi
-              label="Consumo de los planes"
+              label="De campaña"
+              value={int(totals.campaignMessages)}
+              hint="Incluidos en los enviados · 2 tokens cada uno"
+            />
+            <Kpi
+              label="Tokens usados"
               value={int(totals.consumedMessages)}
               hint="Lo que cuentan los planes de los números"
             />
@@ -255,7 +327,7 @@ export function NetworkUsageView() {
               <TableRow className="border-line-2 hover:bg-transparent">
                 <TableHead className={`h-11 pl-5 ${HEAD}`}>Zona · Principal · Número</TableHead>
                 <TableHead className={HEAD}>Plan</TableHead>
-                <TableHead className={HEAD}>Mensajes del plan</TableHead>
+                <TableHead className={HEAD}>Tokens del plan</TableHead>
                 <TableHead className={`text-right ${HEAD}`}>Enviados</TableHead>
                 <TableHead className={`pr-5 text-right ${HEAD}`}>De campaña</TableHead>
               </TableRow>
@@ -287,7 +359,7 @@ export function NetworkUsageView() {
                         {sum.numbers === 1 ? '1 número' : `${int(sum.numbers)} números`}
                       </TableCell>
                       <TableCell className="pt-5 text-[12px] text-muted-foreground">
-                        {int(sum.consumedMessages)} del plan
+                        {tokens(sum.consumedMessages)}
                       </TableCell>
                       <TableCell className="pt-5 text-right text-[13px] font-semibold text-ink">
                         {int(sum.sentMessages)}
@@ -297,7 +369,7 @@ export function NetworkUsageView() {
                       </TableCell>
                     </TableRow>
                     {group.principals.map(principal => (
-                      <PrincipalRows key={principal.id} principal={principal} />
+                      <PrincipalRows key={principal.id} principal={principal} canChangePlan={running} />
                     ))}
                   </Fragment>
                 )
