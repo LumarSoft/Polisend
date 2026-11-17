@@ -14,9 +14,9 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
 
 - No role literal outside `lib/roles.ts` and `src/types/api/`. An ESLint rule enforces it. Use `useRole()`
   (`isDeveloper`, `isOwner`, `isSuperAdmin`, `isAdmin`, `canManageOrg`, `seesMoney`) or `ROLES`.
-- Labels: `Developer · Lumar`, `Owner`, `SuperAdmin`, `Admin` (`roleLabel`).
+- Labels: `Lumarsoft · Developer`, `Owner`, `SuperAdmin`, `Admin` (`roleLabel`).
 - Money (`USD`, price, cost, margin, profit, budget) renders only when `seesMoney` is true, that is, for the
-  Developer. The Owner, SuperAdmin and Admin see message counts and plan names.
+  Developer. The Owner, SuperAdmin and Admin see plans and consumption in tokens (see «Tokens» below).
 
 ## Acting principal (Owner)
 
@@ -54,11 +54,12 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
 | Route | Who | What |
 |---|---|---|
 | `/admin/red` | Owner | Mi red: zones, principals, productores and their Admins. «Sin SuperAdmin · crear uno», «Entrar», «Ver usuarios». |
-| `/admin/red/consumo` | Owner | Consumo de la red: plan, plan messages, sent and campaign messages. No amount. Productor = the numbers billed to that code. |
+| `/admin/red/consumo` | Owner | Consumo de la red: plan, plan tokens, sent and campaign messages, and «Cambiar» on each number's plan in the running month. No amount. Productor = the numbers billed to that code. |
 | `/admin/usuarios` | Developer, Owner, SuperAdmin | One screen and one form for SuperAdmins and Admins. `?principal=<id>` preselects one. |
 | `/admin/owners` | Developer | Owners y zonas: Owners with their zones and «2 pasos» badge; zones, plus a «Sin zona» row. |
 | `/admin/cuenta` | Every role | Mi cuenta, with «Verificación en dos pasos». The only Configuración screen of the Developer. |
 | `/admin/activar` | Public | Choose a password from a mailed link. Outside `(panel)`. |
+| `/admin/recuperar` | Public | «¿Olvidaste tu contraseña?»: a 6-digit code by e-mail, then a new password. Outside `(panel)`. |
 
 - `DEVELOPER_PATHS` (`lib/panel-areas.ts`) is the Developer's whole panel. Any other path, a pasted cartera URL
   included, goes back to Organizaciones, and no tenant request fires.
@@ -68,8 +69,7 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
 - **Developer.**
   - Organizaciones gets a Zona column and selector. Its detail links to Usuarios instead of listing users.
   - "Nueva organización" uses the new-principal form, with an optional first account by invitation.
-  - Facturación → Tablero groups Owner › Zona › Principal, plus "Sin zona", with billed, cost at 0.04/0.08, profit
-    and the real Meta and OpenAI cost.
+  - Facturación → Tablero groups Owner › Zona › Principal › Número, plus "Sin zona" (see «Tokens» below).
   - New screens: Owners y zonas, and Usuarios for every principal.
 - **Owner.**
   - Home is Mi red.
@@ -117,3 +117,65 @@ usuario eliminado era de otro principal».
 Any `PLATFORM_*` refusal the API still returns is shown with the API's Spanish message (`apiErrorMessage`).
 Owner and SuperAdmin keep their rules: they may type a password (empty = invitation), edit the e-mail, and never
 move an account to another principal.
+
+## Tokens, password recovery and consumption per Admin (decisions of 17/11)
+
+Plan: `docs/PLAN-TOKENS-Y-RECUPERACION.md` in the `john/` folder above (§1 decisions, §2 API contract, §3 panel).
+
+### Tokens
+
+- Every role but the Developer sees plans and consumption in **tokens**: 1 message = 1 token, a campaign message = 2.
+  The API keeps its JSON names (`messages`, `includedMessages`, `messagesUsed`, `consumedMessages`, `planMessages`):
+  they already hold tokens. Wording helpers: `lib/tokens.ts` (`tokens(n)`, `TOKENS_HINT`) and `<TokensHint>`
+  (`billing-ui.tsx`), shown next to every consumption view (Facturación › Consumo and Por administrador, Números,
+  Consumo de la red).
+- Facturación › Consumo, Números, the sidebar bar, the limit notice (`plan-limit-actions.tsx`), Consumo de la red, Mi
+  red and the assistant's suggestions say tokens. No `USD`, price or `$` of the platform outside the Developer
+  (insurance prices in ARS and campaign premiums are the office's own, not platform money).
+- The landing shows the plans in tokens without a price and a «Consultanos» button (`src/lib/plans.ts` reads
+  `GET /public/plans` → `{ plans: [{ name, tokens, isTrial? }], blockTokens? }`, and falls back to `messages` /
+  `blockMessages` of an older API; a price is never read). The structured data has no offers.
+
+### Developer's Facturación
+
+- Tablero: cards Facturado, Costo Lumarsoft, Margen de ganancia, Margen Lumarsoft and Margen Nico; the table, grouped
+  Owner › Zona › Organización › Número, has exactly Tokens usados, Tokens del plan, Costo Lumarsoft, Margen de
+  ganancia, Margen Lumarsoft and Margen Nico (`settledTokens`, `planTokens`, `costUsd`, `marginUsd`,
+  `lumarsoftMarginUsd`, `nicoMarginUsd`; a null amount renders «—»). The real Meta and OpenAI cost is shown nowhere,
+  the organization's detail included.
+- Liquidación: Costo Lumarsoft (per token), Margen de ganancia, Margen Lumarsoft, Margen Nico and Total Lumarsoft
+  (the API's settlement fields keep their names). Planes: «Tokens» and «Por token».
+
+### Plan per number
+
+- `PlanSelect` (`billing-number-parts.tsx`) changes the plan of the running month with
+  `PATCH /admin/billing/numbers/:id/plan`. SuperAdmin and Owner (`canManageOrg`): Facturación › Consumo, Por
+  administrador and, for the Owner, «Cambiar» in each number of Consumo de la red.
+- In Consumo de la red the number may belong to a principal other than the acting one. The popover reads that
+  principal's `/admin/billing` and sends the change with `forPrincipal` (`lib/api-client.ts`): X-Acting-Principal
+  carries the number's principal **for that request only**, the answer must echo it like any other, and the panel
+  stays on its acting principal (no remount). `forPrincipal` is ignored outside an Owner's session.
+
+### Por administrador (SuperAdmin, and an Owner inside a principal)
+
+- Facturación › Por administrador reads `GET /admin/billing/by-admin?period=` → `{ period, admins: [{ userId, name,
+  email, codes: [{ id, code, name }], numbers }], unassigned }` (numbers in the shape of `/admin/billing`). One
+  collapsible block per Admin with its codes, tokens used against the plans' and each number with its bar and, in the
+  running month, `PlanSelect`; then «Sin administrador». The catalog comes from `/admin/billing`.
+
+### Password recovery
+
+- `/admin/login` links «¿Olvidaste tu contraseña?» to `/admin/recuperar` (public, outside `(panel)`, like
+  `/admin/activar`; no session is read or ended). Step 1: the e-mail → `POST /auth/password-reset/request`, always
+  the neutral «Si el correo tiene una cuenta, te mandamos un código». Step 2: the 6 digits, the new password twice
+  (the activation's rules) → `POST /auth/password-reset/confirm`; `PASSWORD_RESET_INVALID` says the code is wrong or
+  expired. «Reenviar código» unlocks after 60 s. Success leaves the e-mail for the login form (tab storage, never the
+  URL). No retries; the e-mail and the code live only in memory.
+
+### Usuarios (Owner)
+
+- `GET /hierarchy/users` adds, for an Owner only, rows with `readOnly: true` (role `DEVELOPER` or `OWNER`, no
+  principal, zone or codes). They render after the managed accounts under «Solo lectura», with «—» in those columns,
+  a lock instead of the actions menu, and only when no zone, principal, productor or role filter is on (the search
+  still applies). `isManagedUser` / `isReadOnlyUser` (`lib/network-users.ts`) split the list; every form and dialog
+  only ever gets managed accounts.
