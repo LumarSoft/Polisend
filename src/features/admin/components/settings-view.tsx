@@ -2,19 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import {
-  Bot,
-  Clock,
-  ImageIcon,
-  KeyRound,
-  Loader2,
-  Mail,
-  PlugZap,
-  ShieldCheck,
-  Smartphone,
-  Tags,
-  UserRound,
-} from 'lucide-react'
+import { Bot, Clock, ImageIcon, Loader2, PlugZap, ShieldCheck, Smartphone, Tags, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,10 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ApiError } from '@/lib/api-client'
-import type { UpdateProfileRequest } from '@/types/api/auth'
 import { useProfile } from '../hooks/use-profile'
-import { useUpdateProfile } from '../hooks/use-update-profile'
 import { useProducerConfig } from '../hooks/use-producer-config'
 import { useUpdateProducerConfig } from '../hooks/use-update-producer-config'
 import { useRole } from '../hooks/use-role'
@@ -38,116 +23,11 @@ import { BusinessHoursSection } from './business-hours-section'
 import { CoverageSettingsSection } from './coverage-settings-section'
 import { MotoCoverageSettingsSection } from './moto-coverage-settings-section'
 import { SuperAdminOnlyNote } from './super-admin-only-note'
+import { MyAccountSection } from './my-account-section'
 import { OwnNumberSettings } from './own-number-settings'
 import { TriunfoSettingsSection } from './triunfo-settings-section'
 import { splitNames } from '../lib/number-assistant-form'
 import { useUrlTab } from '../hooks/use-panel-link'
-
-function SettingsForm({ initialEmail, initialName }: { initialEmail: string; initialName: string }) {
-  const updateProfile = useUpdateProfile()
-
-  const [email, setEmail] = useState(initialEmail)
-  const [name, setName] = useState(initialName)
-  const [password, setPassword] = useState('')
-
-  const hasChanges = email !== initialEmail || name !== initialName || password.length > 0
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-
-    const data: UpdateProfileRequest = {}
-    if (email !== initialEmail) data.email = email
-    if (name !== initialName) data.name = name
-    if (password) data.password = password
-    if (!hasChanges) return
-
-    updateProfile.mutate(data, {
-      onSuccess: () => {
-        setPassword('')
-        toast.success('Cambios guardados')
-      },
-      onError: error => {
-        const message =
-          error instanceof ApiError && error.status === 409
-            ? 'Ese correo ya está en uso.'
-            : 'No se pudo guardar. Intentá de nuevo.'
-        toast.error(message)
-      },
-    })
-  }
-
-  return (
-    <Card className="max-w-xl border-line-2 shadow-sm">
-      <form onSubmit={handleSubmit} className="contents">
-        <CardHeader>
-          <CardTitle className="font-display text-[18px]">Datos de la cuenta</CardTitle>
-          <CardDescription>Tu nombre, tu correo electrónico y tu contraseña de acceso.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="settings-name">
-              Nombre <span className="text-muted-foreground">(así te ven en Tareas)</span>
-            </Label>
-            <Input
-              id="settings-name"
-              maxLength={80}
-              placeholder="Mili"
-              className="h-10"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="settings-email">Correo electrónico</Label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="settings-email"
-                type="email"
-                required
-                placeholder="nombre@gmail.com"
-                className="h-10 pl-9"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="settings-password">
-              Nueva contraseña <span className="text-muted-foreground">(opcional)</span>
-            </Label>
-            <div className="relative">
-              <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="settings-password"
-                type="password"
-                minLength={6}
-                autoComplete="new-password"
-                placeholder="Dejá en blanco para no cambiarla"
-                className="h-10 pl-9"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={!hasChanges || updateProfile.isPending} className="h-10">
-            {updateProfile.isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" /> Guardando…
-              </>
-            ) : (
-              'Guardar cambios'
-            )}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
-  )
-}
 
 /** "Mili, Milagros" → ["Mili", "Milagros"]. */
 /** How the bot names the organization: its name and an optional short name ("Seguros del Litoral (SDL)"). */
@@ -352,17 +232,17 @@ function FormSkeleton() {
 }
 
 export function SettingsView() {
-  const { data: profile, isLoading, isError } = useProfile()
+  const { data: profile } = useProfile()
   const { data: config } = useProducerConfig()
-  const { isSuperAdmin, isAdmin } = useRole()
+  const { canManageOrg, isAdmin } = useRole()
   // Only the SuperAdmin changes what applies to every number; a branch's admin changes their own number's
   // (from 28/10 to 10/11 any admin could, and branches saved their own data as the whole organization's).
-  const canEditOrg = isSuperAdmin
+  const canEditOrg = canManageOrg
   const [tab, setTab] = useUrlTab(TAB_VALUES, 'cuenta')
 
   const organizationAssistant = config ? (
     <div className="space-y-5">
-      {isSuperAdmin && <OwnNumberHint />}
+      {canManageOrg && <OwnNumberHint />}
       <BotConfigForm
         key={`${config.botName ?? ''}|${(config.staffNames ?? []).join(',')}`}
         initialName={config.botName ?? ''}
@@ -405,9 +285,7 @@ export function SettingsView() {
         </TabsList>
 
         <TabsContent value="cuenta" className="mt-6">
-          {isLoading && <FormSkeleton />}
-          {isError && <p className="text-[14px] text-destructive">No se pudo cargar tu perfil.</p>}
-          {profile && <SettingsForm key={profile.id} initialEmail={profile.email} initialName={profile.name ?? ''} />}
+          <MyAccountSection />
         </TabsContent>
 
         <TabsContent value="asistente" className="mt-6">
@@ -415,7 +293,7 @@ export function SettingsView() {
         </TabsContent>
 
         <TabsContent value="marca" className="mt-6">
-          <LogoCard canEdit={isSuperAdmin} />
+          <LogoCard canEdit={canManageOrg} />
         </TabsContent>
 
         <TabsContent value="horarios" className="mt-6 space-y-5">
