@@ -5,12 +5,12 @@ import type {
   ImprovementsPage,
   ImprovementsQuery,
   ImprovementsVisit,
-  OwnerImprovement,
-  OwnerImprovementsPage,
-  OwnerImprovementsQuery,
-  OwnerProposal,
-  OwnerProposalsPage,
-  OwnerProposalsQuery,
+  PlatformImprovement,
+  PlatformImprovementsPage,
+  PlatformImprovementsQuery,
+  PlatformProposal,
+  PlatformProposalsPage,
+  PlatformProposalsQuery,
   PageQuery,
   Proposal,
   ProposalRequest,
@@ -31,14 +31,14 @@ export const improvementsService = {
   unseenCount: (token: string) => apiRequest<{ count: number }>('/admin/improvements/unseen-count', { token }),
   visit: (token: string) => apiRequest<ImprovementsVisit>('/admin/improvements/visit', { method: 'POST', token }),
 
-  ownerList: (token: string, query: OwnerImprovementsQuery) =>
-    apiRequest<OwnerImprovementsPage>(`/owner/improvements${toQueryString({ ...query })}`, { token }),
+  platformList: (token: string, query: PlatformImprovementsQuery) =>
+    apiRequest<PlatformImprovementsPage>(`/platform/improvements${toQueryString({ ...query })}`, { token }),
   create: (token: string, data: ImprovementRequest) =>
-    apiRequest<OwnerImprovement>('/owner/improvements', { method: 'POST', token, body: data }),
+    apiRequest<PlatformImprovement>('/platform/improvements', { method: 'POST', token, body: data }),
   update: (token: string, id: number, data: Partial<ImprovementRequest>) =>
-    apiRequest<OwnerImprovement>(`/owner/improvements/${id}`, { method: 'PATCH', token, body: data }),
+    apiRequest<PlatformImprovement>(`/platform/improvements/${id}`, { method: 'PATCH', token, body: data }),
   remove: (token: string, id: number) =>
-    apiRequest<{ ok: true }>(`/owner/improvements/${id}`, { method: 'DELETE', token }),
+    apiRequest<{ ok: true }>(`/platform/improvements/${id}`, { method: 'DELETE', token }),
 
   proposals: (token: string, query: PageQuery) =>
     apiRequest<ImprovementsListPage<Proposal>>(`/admin/improvement-proposals${toQueryString({ ...query })}`, {
@@ -47,10 +47,10 @@ export const improvementsService = {
   propose: (token: string, data: ProposalRequest) =>
     apiRequest<Proposal>('/admin/improvement-proposals', { method: 'POST', token, body: data }),
 
-  ownerProposals: (token: string, query: OwnerProposalsQuery) =>
-    apiRequest<OwnerProposalsPage>(`/owner/improvement-proposals${toQueryString({ ...query })}`, { token }),
+  platformProposals: (token: string, query: PlatformProposalsQuery) =>
+    apiRequest<PlatformProposalsPage>(`/platform/improvement-proposals${toQueryString({ ...query })}`, { token }),
   newProposalsCount: (token: string) =>
-    apiRequest<{ count: number }>('/owner/improvement-proposals/new-count', { token }),
+    apiRequest<{ count: number }>('/platform/improvement-proposals/new-count', { token }),
   updateProposal: (token: string, id: number, data: ProposalUpdate) =>
-    apiRequest<OwnerProposal>(`/owner/improvement-proposals/${id}`, { method: 'PATCH', token, body: data }),
+    apiRequest<PlatformProposal>(`/platform/improvement-proposals/${id}`, { method: 'PATCH', token, body: data }),
 }

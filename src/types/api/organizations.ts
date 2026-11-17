@@ -101,7 +101,7 @@ export interface OrganizationDetail {
   logoUrl?: string | null
   isActive: boolean
   createdAt: string
-  /** The plan the owner put the organization on, or null (automatic). Missing from an older API. */
+  /** The plan the Developer put the organization on, or null (automatic). Missing from an older API. */
   planId?: number | null
   /** The plan in effect with no number and for its next number: the chosen one, or the automatic one. */
   startingPlan?: OrganizationStartingPlan | null
@@ -149,7 +149,7 @@ export interface CreateSuperAdminRequest {
   password: string
 }
 
-/** Roles the owner can assign inside an organization (never OWNER). */
+/** Roles the Developer can assign inside an organization (never OWNER or DEVELOPER). */
 export type AssignableRole = 'SUPERADMIN' | 'ADMIN'
 
 export interface CreateOrgUserRequest {

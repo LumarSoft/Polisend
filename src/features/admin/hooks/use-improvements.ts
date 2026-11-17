@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { improvementsService } from '@/services/improvements.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type { ImprovementRequest, ImprovementsQuery, OwnerImprovementsQuery } from '@/types/api/improvements'
+import type { ImprovementRequest, ImprovementsQuery, PlatformImprovementsQuery } from '@/types/api/improvements'
 import { useAuth } from '../context/auth-context'
 
 /** One page of the published improvements for the organization's users. */
@@ -27,21 +27,21 @@ export function useImprovementsUnseenCount(enabled = true) {
   })
 }
 
-/** Lumar (OWNER): one page of every improvement, drafts included. */
-export function useOwnerImprovements(params: OwnerImprovementsQuery) {
+/** Lumar (DEVELOPER): one page of every improvement, drafts included. */
+export function usePlatformImprovements(params: PlatformImprovementsQuery) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: QUERY_KEYS.owner.improvements(params),
-    queryFn: () => improvementsService.ownerList(token as string, params),
+    queryKey: QUERY_KEYS.platform.improvements(params),
+    queryFn: () => improvementsService.platformList(token as string, params),
     enabled: !!token,
     placeholderData: keepPreviousData,
   })
 }
 
-export function useOwnerImprovementActions() {
+export function usePlatformImprovementActions() {
   const { token } = useAuth()
   const qc = useQueryClient()
-  const invalidate = () => qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.improvementsAll })
+  const invalidate = () => qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.improvementsAll })
 
   const create = useMutation({
     mutationFn: (data: ImprovementRequest) => improvementsService.create(token as string, data),

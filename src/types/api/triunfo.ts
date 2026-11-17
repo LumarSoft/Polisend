@@ -1,4 +1,4 @@
-/** An organization's own Triunfo web-service access, as the owner sees it (never the password). */
+/** An organization's own Triunfo web-service access, as the Developer sees it (never the password). */
 export interface TriunfoCredentialStatus {
   configured: boolean
   productor: string | null

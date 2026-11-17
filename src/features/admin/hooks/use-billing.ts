@@ -20,7 +20,7 @@ export function useBillingOverview(period?: string, enabled = true) {
   })
 }
 
-/** The functions the organization's plans include (the owner gets them all). */
+/** The functions the organization's plans include (the Developer gets them all). */
 export function usePlanFeatures() {
   const { token } = useAuth()
 
@@ -48,18 +48,18 @@ export function usePlanFeature(key: PlanFeatureKey) {
   }
 }
 
-/** Who may use each function besides the plan (owner). */
+/** Who may use each function besides the plan (Developer). */
 export function useFeatureRoles(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
-    queryKey: QUERY_KEYS.owner.featureRoles,
+    queryKey: QUERY_KEYS.platform.featureRoles,
     queryFn: () => billingService.featureRoles(token as string),
     enabled: !!token && enabled,
   })
 }
 
-/** The owner turns a function on or off for a role; every screen that reads the functions refreshes. */
+/** The Developer turns a function on or off for a role; every screen that reads the functions refreshes. */
 export function useUpdateFeatureRoles() {
   const { token } = useAuth()
   const queryClient = useQueryClient()
@@ -68,7 +68,7 @@ export function useUpdateFeatureRoles() {
     mutationFn: ({ key, data }: { key: PlanFeatureKey; data: Partial<FeatureRoles> }) =>
       billingService.updateFeatureRoles(token as string, key, data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.featureRoles })
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.featureRoles })
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
     },
   })
@@ -105,37 +105,37 @@ export function useResolveLimit() {
   })
 }
 
-/** The owner's month across the platform: billed, Meta, OpenAI and profit. */
-export function useOwnerBilling(period?: string, enabled = true) {
+/** The platform's month (Developer) across the platform: billed, Meta, OpenAI and profit. */
+export function usePlatformBilling(period?: string, enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
-    queryKey: QUERY_KEYS.owner.billing(period),
-    queryFn: () => billingService.ownerBilling(token as string, period),
+    queryKey: QUERY_KEYS.platform.billing(period),
+    queryFn: () => billingService.platformBilling(token as string, period),
     enabled: !!token && enabled,
     placeholderData: keepPreviousData,
     refetchInterval: LIVE_REFRESH_MS,
   })
 }
 
-/** The platform's catalog (owner). */
-export function useOwnerPlans(enabled = true) {
+/** The platform's catalog (Developer). */
+export function usePlatformPlans(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
-    queryKey: QUERY_KEYS.owner.plans,
+    queryKey: QUERY_KEYS.platform.plans,
     queryFn: () => billingService.plans(token as string),
     enabled: !!token && enabled,
   })
 }
 
-/** Catalog changes (owner); every billing screen refreshes after each. */
+/** Catalog changes (Developer); every billing screen refreshes after each. */
 export function usePlanActions() {
   const { token } = useAuth()
   const queryClient = useQueryClient()
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.plans })
-    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.billingAll })
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.plans })
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.billingAll })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.phoneNumbers })
   }

@@ -6,7 +6,7 @@ import { useAuth } from '../context/auth-context'
 // An outage is announced by mail too; the banner only needs to catch up within minutes.
 const REFRESH_MS = 5 * 60 * 1000
 
-/** Whether Triunfo accepts the organization's credentials (the office's panel, not the OWNER's). */
+/** Whether Triunfo accepts the organization's credentials (the office's panel, not the DEVELOPER's). */
 export function useTriunfoStatus(enabled: boolean) {
   const { token } = useAuth()
 

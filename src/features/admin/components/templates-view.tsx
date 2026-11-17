@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { TemplateRow, TemplatesAccount, TemplatesNumber } from '@/types/api/templates'
-import { useOwnerTemplates } from '../hooks/use-owner-templates'
+import { usePlatformTemplates } from '../hooks/use-platform-templates'
 import { useRole } from '../hooks/use-role'
 import { categoryLabel, messagingLimitLabel, needsAttention, qualityOf, templateStatus } from '../lib/templates-format'
 import { HEAD } from './billing-ui'
@@ -119,7 +119,7 @@ function AccountCard({ account }: { account: TemplatesAccount }) {
 /** "Plantillas": the owner's view of every organization's Meta templates, account by account. */
 export function TemplatesView() {
   const { isOwner, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError, isFetching, refetch } = useOwnerTemplates(isOwner)
+  const { data, isLoading, isError, isFetching, refetch } = usePlatformTemplates(isOwner)
 
   if (!roleLoading && !isOwner) {
     return (

@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ApiError } from '@/lib/api-client'
 import type { CatalogPlan, FeatureRoleName, PlanFeatureInfo } from '@/types/api/billing'
-import { useFeatureRoles, useOwnerPlans, usePlanActions, useUpdateFeatureRoles } from '../hooks/use-billing'
+import { useFeatureRoles, usePlatformPlans, usePlanActions, useUpdateFeatureRoles } from '../hooks/use-billing'
 import { useRole } from '../hooks/use-role'
 import { HEAD } from './billing-ui'
 import { PanelSwitch } from './panel-switch'
@@ -126,7 +126,7 @@ function PlanFeaturesTable({ features, plans }: { features: PlanFeatureInfo[]; p
 /** "Funciones por plan": the owner's switches of what each plan, and each role, can use. */
 export function PlanFeaturesView() {
   const { isOwner, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError } = useOwnerPlans(isOwner)
+  const { data, isLoading, isError } = usePlatformPlans(isOwner)
   const plans = data?.plans ?? []
   const features = data?.features ?? []
 

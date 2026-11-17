@@ -4,7 +4,7 @@ import { Lightbulb, Loader2, Sparkles } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MejorasEditorView } from '@/features/admin/components/mejoras-editor-view'
 import { MejorasView } from '@/features/admin/components/mejoras-view'
-import { OwnerProposalsView } from '@/features/admin/components/owner-proposals-view'
+import { PlatformProposalsView } from '@/features/admin/components/platform-proposals-view'
 import { ProposalsBoard } from '@/features/admin/components/proposals-board'
 import { useNewProposalsCount } from '@/features/admin/hooks/use-proposals'
 import { useRole } from '@/features/admin/hooks/use-role'
@@ -48,7 +48,7 @@ export default function MejorasPage() {
           {isOwner ? <MejorasEditorView /> : <MejorasView />}
         </TabsContent>
         <TabsContent value="propuestas" className="mt-5">
-          {isOwner ? <OwnerProposalsView /> : <ProposalsBoard />}
+          {isOwner ? <PlatformProposalsView /> : <ProposalsBoard />}
         </TabsContent>
       </Tabs>
     </div>

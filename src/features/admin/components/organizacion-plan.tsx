@@ -3,7 +3,7 @@
 import { toast } from 'sonner'
 import { ApiError } from '@/lib/api-client'
 import type { OrganizationDetail } from '@/types/api/organizations'
-import { useOwnerPlans } from '../hooks/use-billing'
+import { usePlatformPlans } from '../hooks/use-billing'
 import { useOrganizationMutations } from '../hooks/use-organizations'
 import { int, usd } from './billing-ui'
 
@@ -13,7 +13,7 @@ import { int, usd } from './billing-ui'
  * numbers starts on it. Nothing is invoiced from it: billing is per number.
  */
 export function OrganizacionPlan({ org }: { org: OrganizationDetail }) {
-  const { data: catalog } = useOwnerPlans()
+  const { data: catalog } = usePlatformPlans()
   const { setPlan } = useOrganizationMutations(org.id)
 
   // An API older than the organization's plan: nothing to choose yet.

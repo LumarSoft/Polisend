@@ -38,11 +38,17 @@ import { ApiError } from '@/lib/api-client'
 import type {
   BillingNumber,
   CatalogPlan,
-  OwnerBillingOrganization,
-  OwnerBillingTotals,
+  PlatformBillingOrganization,
+  PlatformBillingTotals,
   PlanOffer,
 } from '@/types/api/billing'
-import { useAssignPlan, useBillingOverview, useOwnerBilling, useOwnerPlans, usePlanActions } from '../hooks/use-billing'
+import {
+  useAssignPlan,
+  useBillingOverview,
+  usePlatformBilling,
+  usePlatformPlans,
+  usePlanActions,
+} from '../hooks/use-billing'
 import { useRole } from '../hooks/use-role'
 import { numberLabel } from '../lib/number-label'
 import { PlanLimitActions } from './plan-limit-actions'
@@ -392,8 +398,8 @@ function PlanDialog({
   )
 }
 
-function OwnerPlansTab() {
-  const { data, isLoading } = useOwnerPlans()
+function PlatformPlansTab() {
+  const { data, isLoading } = usePlatformPlans()
   const { createPlan, updatePlan, removePlan } = usePlanActions()
   const [editing, setEditing] = useState<CatalogPlan | null>(null)
   const [creating, setCreating] = useState(false)
@@ -577,17 +583,17 @@ function OwnerPlansTab() {
 
 // ─── Dashboard (owner) ─────────────────────────────────────────────────────────
 
-/** Per message: the bot's, the office's and notices at one rate, campaign messages at another (OwnerBilling.messageCost). */
+/** Per message: the bot's, the office's and notices at one rate, campaign messages at another (PlatformBilling.messageCost). */
 type MessageCost = { messageUsd: number; campaignMessageUsd: number } | null
 
 /** USD with up to four decimals, for a per-message rate. */
 const rate = (n: number) => `USD ${n.toLocaleString('es-AR', { maximumFractionDigits: 4 })}`
 
 /** Bot (and office, and notices) and campaign messages; an older API only splits sent and consumed. */
-const botOf = (t: OwnerBillingTotals) => t.botMessages ?? t.sentMessages ?? t.messages
-const campaignsOf = (t: OwnerBillingTotals) => t.campaignMessages ?? 0
+const botOf = (t: PlatformBillingTotals) => t.botMessages ?? t.sentMessages ?? t.messages
+const campaignsOf = (t: PlatformBillingTotals) => t.campaignMessages ?? 0
 
-function MoneyCells({ totals, cost }: { totals: OwnerBillingTotals; cost: MessageCost }) {
+function MoneyCells({ totals, cost }: { totals: PlatformBillingTotals; cost: MessageCost }) {
   const margin = totals.marginUsd ?? 0
   return (
     <>
@@ -612,7 +618,7 @@ function MoneyCells({ totals, cost }: { totals: OwnerBillingTotals; cost: Messag
   )
 }
 
-function OrganizationRows({ org, cost }: { org: OwnerBillingOrganization; cost: MessageCost }) {
+function OrganizationRows({ org, cost }: { org: PlatformBillingOrganization; cost: MessageCost }) {
   const [open, setOpen] = useState(false)
   const Chevron = open ? ChevronDown : ChevronRight
   return (
@@ -654,9 +660,9 @@ function OrganizationRows({ org, cost }: { org: OwnerBillingOrganization; cost: 
   )
 }
 
-function OwnerDashboardTab() {
+function PlatformDashboardTab() {
   const [period, setPeriod] = useState(thisMonth)
-  const { data, isLoading, isError } = useOwnerBilling(period)
+  const { data, isLoading, isError } = usePlatformBilling(period)
   const totals = data?.totals
   const cost: MessageCost = data?.messageCost ?? null
 
@@ -808,11 +814,11 @@ export function FacturacionView() {
         <Skeleton className="h-[200px] rounded-xl" />
       ) : isOwner ? (
         current === 'planes' ? (
-          <OwnerPlansTab />
+          <PlatformPlansTab />
         ) : current === 'liquidacion' ? (
           <LiquidacionTab />
         ) : (
-          <OwnerDashboardTab />
+          <PlatformDashboardTab />
         )
       ) : current === 'planes' && isSuperAdmin ? (
         <OfferTab />

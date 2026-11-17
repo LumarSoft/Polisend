@@ -15,8 +15,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { OwnerImprovement, OwnerImprovementFilter } from '@/types/api/improvements'
-import { useOwnerImprovementActions, useOwnerImprovements } from '../hooks/use-improvements'
+import type { PlatformImprovement, PlatformImprovementFilter } from '@/types/api/improvements'
+import { usePlatformImprovementActions, usePlatformImprovements } from '../hooks/use-improvements'
 import { useListPage } from '../hooks/use-list-page'
 import { ImprovementCard } from './improvement-card'
 import { ImprovementFormDialog } from './improvement-form-dialog'
@@ -24,7 +24,7 @@ import { ListPagination } from './list-pagination'
 
 const PAGE_SIZE = 10
 
-const FILTERS: { key: OwnerImprovementFilter; label: string }[] = [
+const FILTERS: { key: PlatformImprovementFilter; label: string }[] = [
   { key: 'all', label: 'Todas' },
   { key: 'drafts', label: 'Borradores' },
   { key: 'published', label: 'Publicadas' },
@@ -32,29 +32,34 @@ const FILTERS: { key: OwnerImprovementFilter; label: string }[] = [
 
 /** Lumar (OWNER) writes, previews and publishes the improvements the organizations read. */
 export function MejorasEditorView() {
-  const [filter, setFilter] = useState<OwnerImprovementFilter>('all')
+  const [filter, setFilter] = useState<PlatformImprovementFilter>('all')
   const { page, goTo, reset, keepWithin, topRef } = useListPage()
-  const { data: result, isLoading, isError, isFetching } = useOwnerImprovements({ page, pageSize: PAGE_SIZE, filter })
+  const {
+    data: result,
+    isLoading,
+    isError,
+    isFetching,
+  } = usePlatformImprovements({ page, pageSize: PAGE_SIZE, filter })
   keepWithin(result?.totalPages)
-  const { update, remove } = useOwnerImprovementActions()
-  const [editing, setEditing] = useState<OwnerImprovement | null>(null)
+  const { update, remove } = usePlatformImprovementActions()
+  const [editing, setEditing] = useState<PlatformImprovement | null>(null)
   const [formOpen, setFormOpen] = useState(false)
-  const [deleting, setDeleting] = useState<OwnerImprovement | null>(null)
+  const [deleting, setDeleting] = useState<PlatformImprovement | null>(null)
 
   const visible = result?.data ?? []
   const drafts = result?.counts.drafts ?? 0
 
-  const chooseFilter = (next: OwnerImprovementFilter) => {
+  const chooseFilter = (next: PlatformImprovementFilter) => {
     setFilter(next)
     reset()
   }
 
-  const openForm = (improvement: OwnerImprovement | null) => {
+  const openForm = (improvement: PlatformImprovement | null) => {
     setEditing(improvement)
     setFormOpen(true)
   }
 
-  const setPublished = (improvement: OwnerImprovement, published: boolean) =>
+  const setPublished = (improvement: PlatformImprovement, published: boolean) =>
     update.mutate(
       { id: improvement.id, data: { published } },
       {

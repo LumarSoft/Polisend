@@ -1,4 +1,4 @@
-/** One Meta template of a WhatsApp account, as the owner's Plantillas page lists it. */
+/** One Meta template of a WhatsApp account, as the Developer's Plantillas page lists it. */
 export interface TemplateRow {
   name: string
   language: string

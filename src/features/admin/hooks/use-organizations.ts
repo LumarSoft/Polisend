@@ -14,7 +14,7 @@ import { useAuth } from '../context/auth-context'
 export function useOrganizations(enabled = true) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: QUERY_KEYS.owner.organizations,
+    queryKey: QUERY_KEYS.platform.organizations,
     queryFn: () => organizationsService.list(token as string),
     enabled: !!token && enabled,
   })
@@ -23,7 +23,7 @@ export function useOrganizations(enabled = true) {
 export function useOrganization(id: number | null) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: id != null ? QUERY_KEYS.owner.organization(id) : QUERY_KEYS.owner.organizations,
+    queryKey: id != null ? QUERY_KEYS.platform.organization(id) : QUERY_KEYS.platform.organizations,
     queryFn: () => organizationsService.detail(token as string, id as number),
     enabled: !!token && id != null,
   })
@@ -33,8 +33,8 @@ export function useOrganizationMutations(orgId?: number) {
   const { token } = useAuth()
   const qc = useQueryClient()
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.organizations })
-    if (orgId != null) qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.organization(orgId) })
+    qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.organizations })
+    if (orgId != null) qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.organization(orgId) })
   }
 
   const create = useMutation({
