@@ -22,15 +22,18 @@ export interface BillingOwnerGroup {
 
 type GroupTotals = PlatformBillingTotals & { organizations: number }
 
+const round2 = (n: number): number => Math.round(n * 100) / 100
+
 /**
- * The sum of several totals (zones of one Owner). An amount the API could not compute (null: no cost rate or no
- * partner terms) stays null when it is null in every zone.
+ * The sum of several totals (zones of one Owner), with the API's rule (`sumFigures`): an amount the API could not
+ * compute (null: no cost rate or no partner terms) makes the group's amount null as soon as one part has it null, so a
+ * partial sum never passes for the whole; an empty group sums to 0. Amounts are rounded to cents like the API's.
  */
 export function sumBillingTotals(list: GroupTotals[]): GroupTotals {
   const sum = (read: (totals: GroupTotals) => number | null | undefined) =>
     list.reduce((acc, totals) => acc + (read(totals) ?? 0), 0)
-  const sumKnown = (read: (totals: GroupTotals) => number | null) =>
-    list.some(totals => read(totals) !== null) ? sum(read) : null
+  const sumAll = (read: (totals: GroupTotals) => number | null) =>
+    list.some(totals => (read(totals) ?? null) === null) ? null : round2(sum(read))
   return {
     organizations: sum(t => t.organizations),
     messages: sum(t => t.messages),
@@ -40,11 +43,11 @@ export function sumBillingTotals(list: GroupTotals[]): GroupTotals {
     campaignMessages: sum(t => t.campaignMessages),
     settledTokens: sum(t => t.settledTokens),
     planTokens: sum(t => t.planTokens),
-    billedUsd: sum(t => t.billedUsd),
-    costUsd: sumKnown(t => t.costUsd),
-    marginUsd: sumKnown(t => t.marginUsd),
-    lumarsoftMarginUsd: sumKnown(t => t.lumarsoftMarginUsd),
-    nicoMarginUsd: sumKnown(t => t.nicoMarginUsd),
+    billedUsd: round2(sum(t => t.billedUsd)),
+    costUsd: sumAll(t => t.costUsd),
+    marginUsd: sumAll(t => t.marginUsd),
+    lumarsoftMarginUsd: sumAll(t => t.lumarsoftMarginUsd),
+    nicoMarginUsd: sumAll(t => t.nicoMarginUsd),
   }
 }
 

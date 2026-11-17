@@ -526,12 +526,16 @@ type MessageCost = { messageUsd: number; campaignMessageUsd: number } | null
 /** USD with up to four decimals, for a per-message rate. */
 const rate = (n: number) => `USD ${n.toLocaleString('es-AR', { maximumFractionDigits: 4 })}`
 
-/** An amount the API could not compute (no cost rate, or no partner terms) shows as "—". */
-const money = (n: number | null) => (n === null ? '—' : usd(n))
+/** An amount the API could not compute (null: no cost rate, or no partner terms) shows as "—". */
+const money = (n: number | null | undefined) => (n === null || n === undefined ? '—' : usd(n))
 
 /** A margin: green, red when negative, grey when unknown. */
-const marginTone = (n: number | null) =>
-  n === null ? 'text-muted-foreground' : n < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'
+const marginTone = (n: number | null | undefined) =>
+  n === null || n === undefined
+    ? 'text-muted-foreground'
+    : n < 0
+      ? 'text-destructive'
+      : 'text-emerald-600 dark:text-emerald-400'
 
 /** The Tablero's six columns, the same for an Owner, a zone, an organization and a number. */
 function MoneyCells({ totals }: { totals: PlatformBillingTotals }) {
