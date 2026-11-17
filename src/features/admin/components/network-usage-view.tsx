@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { NetworkUsage, NetworkUsageNumber, NetworkUsagePrincipal, NetworkUsageTotals } from '@/types/api/hierarchy'
-import { useNetworkUsage } from '../hooks/use-hierarchy'
+import { useHierarchyPrincipals, useNetworkUsage } from '../hooks/use-hierarchy'
 import { useRole } from '../hooks/use-role'
 import { NO_ZONE, noZoneLabel, type ZoneKey } from '../lib/network'
 import { numberLabel } from '../lib/number-label'
@@ -38,13 +38,35 @@ function groupsOf(usage: NetworkUsage, isDeveloper: boolean): UsageGroup[] {
   return groups
 }
 
-function filterGroups(groups: UsageGroup[], filter: NetworkListFilterValue): UsageGroup[] {
+/** A principal's numbers billed to one productor (its responsible code), with their totals. */
+function onlyCode(principal: NetworkUsagePrincipal, code: string): NetworkUsagePrincipal {
+  const numbers = principal.numbers.filter(row => row.responsibleCode?.code === code)
+  const totals = numbers.reduce(
+    (sum, row) =>
+      addTotals(sum, {
+        numbers: 1,
+        consumedMessages: row.consumedMessages,
+        sentMessages: row.sentMessages,
+        campaignMessages: row.campaignMessages,
+      }),
+    ZERO,
+  )
+  return { ...principal, numbers, totals }
+}
+
+/** `code`: the chosen productor's code (only with a principal chosen), or null for every one. */
+function filterGroups(groups: UsageGroup[], filter: NetworkListFilterValue, code: string | null): UsageGroup[] {
   return groups
     .filter(group => filter.zoneKey === null || group.key === filter.zoneKey)
     .map(group =>
       filter.principalId === null
         ? group
-        : { ...group, principals: group.principals.filter(p => p.id === filter.principalId) },
+        : {
+            ...group,
+            principals: group.principals
+              .filter(p => p.id === filter.principalId)
+              .map(p => (code === null ? p : onlyCode(p, code))),
+          },
     )
     .filter(group => group.principals.length > 0)
 }
@@ -162,6 +184,10 @@ export function NetworkUsageView() {
   const [period, setPeriod] = useState(thisMonth)
   const [filter, setFilter] = useState<NetworkListFilterValue>(EMPTY_NETWORK_FILTER)
   const { data, isLoading, isError } = useNetworkUsage(period, isOwner)
+  // The Productor level: a number belongs to the productor it is billed to (its responsible code).
+  const { data: principals = [] } = useHierarchyPrincipals(isOwner)
+  const code =
+    principals.find(p => p.id === filter.principalId)?.codes.find(c => c.id === filter.producerCodeId)?.code ?? null
 
   if (!roleLoading && !isOwner) {
     return (
@@ -171,7 +197,7 @@ export function NetworkUsageView() {
     )
   }
 
-  const groups = data ? filterGroups(groupsOf(data, isDeveloper), filter) : []
+  const groups = data ? filterGroups(groupsOf(data, isDeveloper), filter, code) : []
   const filtered = filter.zoneKey !== null || filter.principalId !== null
   const totals = !data
     ? null
@@ -188,13 +214,13 @@ export function NetworkUsageView() {
         </h1>
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
           Los mensajes de cada número de tu red, por zona y principal. Cada número tiene un plan de mensajes por mes: la
-          barra muestra cuánto usó de su plan.
+          barra muestra cuánto usó de su plan. Elegido un productor, se ven los números que se le facturan.
         </p>
       </div>
 
       <div className="mb-5 flex flex-wrap items-end gap-4">
         <MonthPicker value={period} onChange={setPeriod} id="network-usage-period" />
-        <NetworkFilter mode="network" value={filter} onChange={setFilter} showProducer={false} />
+        <NetworkFilter mode="network" value={filter} onChange={setFilter} />
       </div>
 
       {data?.closed && (
