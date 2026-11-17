@@ -157,6 +157,8 @@ export function useNetworkUserActions() {
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.usersAll })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.tree })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users })
+    // The Developer's Organizaciones (list and detail) count each principal's SuperAdmins and Admins.
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.organizations })
   }
   return {
     /** A `newPrincipal` also creates a principal: the whole network refreshes. */
