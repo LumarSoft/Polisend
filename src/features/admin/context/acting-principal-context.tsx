@@ -124,8 +124,8 @@ export function ActingPrincipalProvider({ children }: { children: ReactNode }) {
     setChosen({ userId, selection: next })
     writeStoredSelection(userId, next)
     // Same tab, without the previous principal's URL params (an open client, a conversation…). History only, no
-    // navigation: Next keeps useSearchParams in step with it, and the content remounts by its key.
-    if (remount && window.location.search) window.history.replaceState(window.history.state, '', pathname)
+    // navigation, and the content remounts by its key. Null state, so Next syncs useSearchParams (see setUrlParams).
+    if (remount && window.location.search) window.history.replaceState(null, '', pathname)
   }
 
   const goHome = () => {

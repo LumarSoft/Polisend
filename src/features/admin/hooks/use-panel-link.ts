@@ -11,14 +11,18 @@ import { useSearchParams } from 'next/navigation'
  * A link followed while the screen is already open applies too.
  */
 
-/** Changes the URL's query without a navigation (Next keeps useSearchParams in step). */
+/**
+ * Changes the URL's query without a navigation. The state passed is null on purpose: Next takes a replaceState that
+ * carries its own history state (`__NA`) as one of its own and does not sync useSearchParams; with null it copies its
+ * state over and useSearchParams follows the new URL.
+ */
 export function setUrlParams(changes: Record<string, string | null>): void {
   const url = new URL(window.location.href)
   for (const [name, value] of Object.entries(changes)) {
     if (value === null) url.searchParams.delete(name)
     else url.searchParams.set(name, value)
   }
-  window.history.replaceState(window.history.state, '', url)
+  window.history.replaceState(null, '', url)
 }
 
 /**

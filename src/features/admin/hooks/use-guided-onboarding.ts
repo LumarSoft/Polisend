@@ -1,21 +1,9 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useActingPrincipal } from '../context/acting-principal-context'
+import { setUrlParams } from './use-panel-link'
 
 const PARAM = 'alta'
-
-/**
- * Changes the query so that Next's useSearchParams follows it, also in the content remounted for another principal.
- * (A replaceState that passes Next's own history state, like setUrlParams does, is taken as Next's and not synced.)
- */
-function replaceQuery(changes: Record<string, string | null>): void {
-  const url = new URL(window.location.href)
-  for (const [name, value] of Object.entries(changes)) {
-    if (value === null) url.searchParams.delete(name)
-    else url.searchParams.set(name, value)
-  }
-  window.history.replaceState(null, '', url)
-}
 
 /** The principal "Alta guiada de productor" works in. */
 export interface GuidedPrincipal {
@@ -57,12 +45,12 @@ export function useGuidedOnboarding() {
     }
     acting.selectPrincipal(principal.id)
     // After the selection dropped the previous principal's params.
-    replaceQuery({ principal: String(principal.id), [PARAM]: '1' })
+    setUrlParams({ principal: String(principal.id), [PARAM]: '1' })
   }
 
   const close = () => {
     setOpen(false)
-    replaceQuery({ [PARAM]: null })
+    setUrlParams({ [PARAM]: null })
   }
 
   return { target, open, start, close }
