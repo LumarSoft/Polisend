@@ -19,14 +19,14 @@ type DetailTab = 'clientes' | 'mensaje' | 'resultados'
 
 /** One campaign's page: the portfolio suggests whom to offer something to, the office picks whom to write and follows each one. */
 export function CampaignView({ kind }: { kind: CampaignKind }) {
-  const { isOwner, isLoading: roleLoading } = useRole()
+  const { isDeveloper, isLoading: roleLoading } = useRole()
   const { data, isLoading, isError } = useCampaigns()
   const [tab, setTab] = useUrlTab<DetailTab>(['clientes', 'mensaje', 'resultados'], 'clientes')
 
   const campaign = data?.campaigns.find(c => c.kind === kind) ?? null
   const blocked = campaign ? sendBlockedReason(campaign) : null
 
-  if (!roleLoading && isOwner) {
+  if (!roleLoading && isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">

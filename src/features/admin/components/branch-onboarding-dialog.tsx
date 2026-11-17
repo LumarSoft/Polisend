@@ -17,6 +17,7 @@ import { useCreateUser } from '../hooks/use-create-user'
 import { useAssignPlan, useBillingOverview } from '../hooks/use-billing'
 import { ConectarWhatsapp } from './conectar-whatsapp'
 import { NumberAssistantSheet } from './number-assistant-sheet'
+import { ROLES } from '../lib/roles'
 
 type Step = 'branch' | 'user' | 'number' | 'assistant' | 'plan' | 'done'
 
@@ -123,7 +124,7 @@ function UserStep({ code, onCreated }: { code: ProducerCodeOption; onCreated: (e
   const submit = (e: FormEvent) => {
     e.preventDefault()
     create.mutate(
-      { email, name, password, role: 'ADMIN', producerCodeIds: [code.id] },
+      { email, name, password, role: ROLES.admin, producerCodeIds: [code.id] },
       {
         onSuccess: () => onCreated(email),
         onError: error =>

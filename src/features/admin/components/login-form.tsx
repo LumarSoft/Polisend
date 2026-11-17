@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
@@ -8,43 +8,40 @@ import { BrandMark } from '@/components/brand-mark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ApiError } from '@/lib/api-client'
 import { useAuth } from '../context/auth-context'
-import { useLogin } from '../hooks/use-login'
+import { readRememberedLoginEmail, useLoginSubmit } from '../hooks/use-login'
+import { useRole } from '../hooks/use-role'
+import { homePathFor } from '../lib/roles'
+
+const subscribeNothing = () => () => {}
 
 export function LoginForm() {
   const router = useRouter()
   const { isAuthenticated, hydrated } = useAuth()
-  const login = useLogin()
+  const { role } = useRole()
+  const login = useLoginSubmit()
 
-  const [email, setEmail] = useState('')
+  // The e-mail /admin/activar left, until the person types another.
+  const rememberedEmail = useSyncExternalStore(subscribeNothing, readRememberedLoginEmail, () => '')
+  const [typedEmail, setEmail] = useState<string | null>(null)
+  const email = typedEmail ?? rememberedEmail
   const [password, setPassword] = useState('')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
+  // Logged in (here or already): to the role's home once the profile says which.
   useEffect(() => {
-    if (hydrated && isAuthenticated) router.replace('/admin')
-  }, [hydrated, isAuthenticated, router])
+    if (hydrated && isAuthenticated && role) router.replace(homePathFor(role))
+  }, [hydrated, isAuthenticated, role, router])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setErrorMessage(null)
-    login.mutate(
-      { email, password },
-      {
-        onSuccess: () => {
-          router.replace('/admin')
-        },
-        onError: error => {
-          setErrorMessage(
-            error instanceof ApiError && error.status === 401
-              ? 'Email o contraseña incorrectos.'
-              : 'No se pudo iniciar sesión. Intentá de nuevo.',
-          )
-        },
-      },
-    )
+    login.submitPassword({ email, password })
   }
+
+  // The second step's screen comes with the authenticator work; until then the form says why it stopped.
+  const errorMessage =
+    login.errorMessage ??
+    (login.step.kind === 'two-factor' ? 'Tu cuenta pide el código de tu app de autenticación.' : null)
 
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-canvas px-5 py-16">
@@ -84,7 +81,7 @@ export function LoginForm() {
                 value={email}
                 onChange={e => {
                   setEmail(e.target.value)
-                  setErrorMessage(null)
+                  login.clearError()
                 }}
               />
             </div>
@@ -104,7 +101,7 @@ export function LoginForm() {
                 value={password}
                 onChange={e => {
                   setPassword(e.target.value)
-                  setErrorMessage(null)
+                  login.clearError()
                 }}
               />
               <button
@@ -125,8 +122,8 @@ export function LoginForm() {
             </div>
           )}
 
-          <Button type="submit" disabled={login.isPending} className="mt-2 h-11 w-full text-[14px]">
-            {login.isPending ? (
+          <Button type="submit" disabled={login.isSubmitting} className="mt-2 h-11 w-full text-[14px]">
+            {login.isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" /> Ingresando…
               </>

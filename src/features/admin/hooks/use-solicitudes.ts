@@ -21,13 +21,13 @@ export function useSolicitudes(params: SolicitudesQuery) {
 }
 
 /** Count of NEW (uncontacted) solicitudes, polled for the sidebar alert. */
-export function useNewSolicitudesCount() {
+export function useNewSolicitudesCount(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.solicitudes({ status: 'NEW', pageSize: 1 }),
     queryFn: () => solicitudesService.list({ status: 'NEW', pageSize: 1 }, token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     refetchInterval: 20_000,
     select: page => page.total,
   })

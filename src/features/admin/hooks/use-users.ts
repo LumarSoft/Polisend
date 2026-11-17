@@ -3,12 +3,12 @@ import { usersService } from '@/services/users.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
 import { useAuth } from '../context/auth-context'
 
-export function useUsers() {
+export function useUsers(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.users,
     queryFn: () => usersService.list(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
   })
 }

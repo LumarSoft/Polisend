@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Task, TaskView } from '@/types/api/tasks'
 import { useProfile } from '../hooks/use-profile'
+import { useRole } from '../hooks/use-role'
 import { useTaskActions } from '../hooks/use-task-actions'
 import { useTaskPeople, useTasks, useTaskStats } from '../hooks/use-tasks'
 import { useTaskVisit } from '../hooks/use-task-visit'
@@ -32,10 +33,11 @@ const VIEWS: { key: TaskView; label: string; superAdminOnly?: boolean }[] = [
 
 export function TasksView() {
   const { data: profile } = useProfile()
-  const isSuperAdmin = profile?.role === 'SUPERADMIN'
+  const { canManageOrg, isOwner } = useRole()
+  // An Owner is never assigned tasks of the office: it opens on the whole team.
   const [view, setView] = useUrlTab<TaskView>(
-    isSuperAdmin ? ['mine', 'created', 'all'] : ['mine', 'created'],
-    'mine',
+    canManageOrg ? ['mine', 'created', 'all'] : ['mine', 'created'],
+    isOwner ? 'all' : 'mine',
     'vista',
   )
   const [status, setStatus] = useState<'open' | 'done'>('open')
@@ -84,7 +86,7 @@ export function TasksView() {
       <div className="overflow-hidden rounded-xl border border-line-2 bg-card">
         <div className="flex flex-wrap items-center gap-2 border-b border-line-2 p-3">
           <div className="flex gap-0.5 rounded-lg bg-secondary/70 p-0.5">
-            {VIEWS.filter(item => !item.superAdminOnly || isSuperAdmin).map(item => (
+            {VIEWS.filter(item => !item.superAdminOnly || canManageOrg).map(item => (
               <button
                 key={item.key}
                 type="button"
@@ -175,7 +177,7 @@ export function TasksView() {
                 task={task}
                 isNew={view === 'mine' && (newIds.has(task.id) || task.seenAt === null)}
                 unseenByAssignee={view !== 'mine' && task.seenAt === null && task.assignedTo.id !== profile?.id}
-                canDelete={task.createdBy.id === profile?.id || isSuperAdmin}
+                canDelete={task.createdBy.id === profile?.id || canManageOrg}
                 onEdit={() => setEditing(task)}
                 onDelete={() => setDeleteTarget(task)}
               />

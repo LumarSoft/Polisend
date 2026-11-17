@@ -20,14 +20,14 @@ export function useBillingOverview(period?: string, enabled = true) {
   })
 }
 
-/** The functions the organization's plans include (the Developer gets them all). */
-export function usePlanFeatures() {
+/** The functions the organization's plans include (a tenant route: never for the Developer). */
+export function usePlanFeatures(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.planFeatures,
     queryFn: () => billingService.features(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     staleTime: 5 * 60_000,
   })
 }
@@ -36,8 +36,8 @@ export function usePlanFeatures() {
  * Whether the organization's plans include one function, and the cheapest plan that does. Until it is known, or
  * against an API older than the plan features, the function counts as included: the API has the last word.
  */
-export function usePlanFeature(key: PlanFeatureKey) {
-  const { data } = usePlanFeatures()
+export function usePlanFeature(key: PlanFeatureKey, enabled = true) {
+  const { data } = usePlanFeatures(enabled)
   return {
     included: data?.features[key] ?? true,
     availableIn: data?.availableIn[key] ?? null,

@@ -19,7 +19,7 @@ import type {
 } from '@/types/api/organizations'
 import { useOrganizationMutations } from '../hooks/use-organizations'
 import { numberLabel } from '../lib/number-label'
-import { isPlatformOperator } from '../lib/roles'
+import { ROLES, roleLabel } from '../lib/roles'
 import { MetaPortfolioLine } from './meta-portfolio-line'
 
 // ── helpers ────────────────────────────────────────────────
@@ -277,7 +277,7 @@ export function UsersSection({
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<AssignableRole>('ADMIN')
+  const [role, setRole] = useState<AssignableRole>(ROLES.admin)
   // Codes the new admin will see (a SuperAdmin sees them all, so none is sent).
   const [codeIds, setCodeIds] = useState<number[]>([])
 
@@ -291,7 +291,10 @@ export function UsersSection({
       return
     }
     addUser.mutate(
-      { id: orgId, data: { email: email.trim(), password, role, producerCodeIds: role === 'ADMIN' ? codeIds : [] } },
+      {
+        id: orgId,
+        data: { email: email.trim(), password, role, producerCodeIds: role === ROLES.admin ? codeIds : [] },
+      },
       {
         onSuccess: () => {
           toast.success('Usuario creado')
@@ -343,9 +346,9 @@ export function UsersSection({
             <ShieldCheck className="size-3.5 text-ember-2" />
             <span className="text-[13px] text-ink">{u.email}</span>
             <Badge variant="secondary" className="text-[11px]">
-              {u.role === 'SUPERADMIN' ? 'SuperAdmin' : isPlatformOperator(u.role) ? 'Owner' : 'Admin'}
+              {roleLabel(u.role)}
             </Badge>
-            {u.role === 'ADMIN' &&
+            {u.role === ROLES.admin &&
               u.codes &&
               (u.codes.length > 0 ? (
                 <span className="text-[12px] text-muted-foreground">
@@ -355,16 +358,16 @@ export function UsersSection({
                 <span className="text-[12px] text-amber-600 dark:text-amber-400">Sin códigos: no ve nada</span>
               ))}
 
-            {!isPlatformOperator(u.role) && (
+            {(u.role === ROLES.superAdmin || u.role === ROLES.admin) && (
               <div className="ml-auto flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-7 text-[12px]"
                   disabled={busy}
-                  onClick={() => changeRole(u.id, u.role === 'SUPERADMIN' ? 'ADMIN' : 'SUPERADMIN')}
+                  onClick={() => changeRole(u.id, u.role === ROLES.superAdmin ? ROLES.admin : ROLES.superAdmin)}
                 >
-                  {u.role === 'SUPERADMIN' ? 'Pasar a Admin' : 'Pasar a SuperAdmin'}
+                  {u.role === ROLES.superAdmin ? 'Pasar a Admin' : 'Pasar a SuperAdmin'}
                 </Button>
                 <Button
                   variant="ghost"
@@ -432,8 +435,8 @@ export function UsersSection({
               onChange={e => setRole(e.target.value as AssignableRole)}
               className="h-9 rounded-md border border-line-2 bg-transparent px-2 text-[13px] text-ink"
             >
-              <option value="ADMIN">Admin</option>
-              <option value="SUPERADMIN">SuperAdmin</option>
+              <option value={ROLES.admin}>Admin</option>
+              <option value={ROLES.superAdmin}>SuperAdmin</option>
             </select>
           </div>
           <Button type="submit" size="icon" className="size-9" disabled={busy} aria-label="Crear usuario">
@@ -441,7 +444,7 @@ export function UsersSection({
           </Button>
         </div>
 
-        {role === 'ADMIN' && (
+        {role === ROLES.admin && (
           <div className="flex flex-col gap-1">
             <Label className="text-[11px]">Códigos que ve</Label>
             <div className="max-h-44 overflow-y-auto rounded-md border border-line-2 p-2">

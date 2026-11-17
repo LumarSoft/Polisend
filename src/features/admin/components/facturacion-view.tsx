@@ -767,12 +767,12 @@ function PlatformDashboardTab() {
 type BillingTab = 'consumo' | 'planes' | 'tablero' | 'liquidacion'
 
 export function FacturacionView() {
-  const { isOwner, isSuperAdmin, isAdmin, isLoading: roleLoading } = useRole()
+  const { isDeveloper, canManageOrg, isAdmin, isLoading: roleLoading } = useRole()
   // `?tab=` (the assistant's links) or the role's first tab.
   const [tab, setTab] = useUrlTab<BillingTab | 'auto'>(['consumo', 'planes', 'tablero', 'liquidacion'], 'auto')
-  const current: BillingTab = tab === 'auto' ? (isOwner ? 'tablero' : 'consumo') : tab
+  const current: BillingTab = tab === 'auto' ? (isDeveloper ? 'tablero' : 'consumo') : tab
 
-  if (!roleLoading && !isOwner && !isSuperAdmin && !isAdmin) {
+  if (!roleLoading && !isDeveloper && !canManageOrg && !isAdmin) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">Acceso restringido.</p>
@@ -784,20 +784,20 @@ export function FacturacionView() {
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
       <div className="mb-6">
         <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
-          {isOwner ? 'Plataforma' : 'Planes y consumo'}
+          {isDeveloper ? 'Plataforma' : 'Planes y consumo'}
         </div>
         <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Facturación</h1>
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
-          {isOwner
+          {isDeveloper
             ? 'Lo que se factura a cada organización contra lo que cuestan sus mensajes, cómo se reparte con el socio comercial y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes por mensajes.'
             : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
         </p>
       </div>
 
-      {(isOwner || isSuperAdmin) && (
+      {(isDeveloper || canManageOrg) && (
         <Tabs value={current} onValueChange={v => setTab(v as BillingTab)} className="mb-5">
           <TabsList>
-            {isOwner ? (
+            {isDeveloper ? (
               <>
                 <TabsTrigger value="tablero">Tablero</TabsTrigger>
                 <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
@@ -812,7 +812,7 @@ export function FacturacionView() {
 
       {roleLoading ? (
         <Skeleton className="h-[200px] rounded-xl" />
-      ) : isOwner ? (
+      ) : isDeveloper ? (
         current === 'planes' ? (
           <PlatformPlansTab />
         ) : current === 'liquidacion' ? (
@@ -820,10 +820,10 @@ export function FacturacionView() {
         ) : (
           <PlatformDashboardTab />
         )
-      ) : current === 'planes' && isSuperAdmin ? (
+      ) : current === 'planes' && canManageOrg ? (
         <OfferTab />
       ) : (
-        <ConsumptionTab canAssign={isSuperAdmin} />
+        <ConsumptionTab canAssign={canManageOrg} />
       )}
     </div>
   )

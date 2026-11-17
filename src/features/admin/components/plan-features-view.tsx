@@ -11,11 +11,12 @@ import { useFeatureRoles, usePlatformPlans, usePlanActions, useUpdateFeatureRole
 import { useRole } from '../hooks/use-role'
 import { HEAD } from './billing-ui'
 import { PanelSwitch } from './panel-switch'
+import { ROLES } from '../lib/roles'
 
 /** The roles a function can be turned off for, next to the plans. */
 const ROLE_COLUMNS: Array<{ role: FeatureRoleName; label: string }> = [
-  { role: 'ADMIN', label: 'Administradores' },
-  { role: 'SUPERADMIN', label: 'SuperAdmins' },
+  { role: ROLES.admin, label: 'Administradores' },
+  { role: ROLES.superAdmin, label: 'SuperAdmins' },
 ]
 
 function failed(error: unknown) {
@@ -36,7 +37,7 @@ function PlanFeaturesTable({ features, plans }: { features: PlanFeatureInfo[]; p
       {
         onSuccess: () =>
           toast.success(
-            `${feature.label}: ${on ? 'habilitada' : 'deshabilitada'} para ${role === 'ADMIN' ? 'administradores' : 'SuperAdmins'}`,
+            `${feature.label}: ${on ? 'habilitada' : 'deshabilitada'} para ${role === ROLES.admin ? 'administradores' : 'SuperAdmins'}`,
           ),
         onError: failed,
         onSettled: () => setPending(null),
@@ -125,12 +126,12 @@ function PlanFeaturesTable({ features, plans }: { features: PlanFeatureInfo[]; p
 
 /** "Funciones por plan": the owner's switches of what each plan, and each role, can use. */
 export function PlanFeaturesView() {
-  const { isOwner, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError } = usePlatformPlans(isOwner)
+  const { isDeveloper, isLoading: roleLoading } = useRole()
+  const { data, isLoading, isError } = usePlatformPlans(isDeveloper)
   const plans = data?.plans ?? []
   const features = data?.features ?? []
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">Acceso restringido.</p>

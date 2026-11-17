@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { Suspense, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Activity,
   BanknoteX,
+  BarChart3,
   Bell,
   ListTodo,
   Building2,
@@ -19,6 +20,7 @@ import {
   LogOut,
   Megaphone,
   MessageSquare,
+  Network,
   Palette,
   Phone,
   Settings,
@@ -27,6 +29,7 @@ import {
   ToggleRight,
   TrendingUp,
   UserCog,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -70,20 +73,22 @@ import { useTaskStats } from '../hooks/use-tasks'
 import { useIntegrationStatus } from '../hooks/use-integration-status'
 import { failingNames } from '../lib/integration-status'
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
-import { isPlatformOperator } from '../lib/roles'
+import { roleLabel } from '../lib/roles'
+import { useActingPrincipal } from '../context/acting-principal-context'
+import { useRole } from '../hooks/use-role'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { AppearanceDialog } from './appearance-dialog'
 import { SidebarUsage } from './sidebar-usage'
 
 interface NavItem {
   label: string
+  /** May carry a query (`?tab=`): the item is then active only on that tab. */
   href: string
   icon: LucideIcon
-  // Only visible to SUPERADMIN (org-wide management). OWNER sees these too.
-  superAdminOnly?: boolean
-  // Only visible to the platform OWNER (Lumar): provision organizations.
-  ownerOnly?: boolean
-  // Visible to everyone, the OWNER included (it edits what the others read).
-  everyone?: boolean
+  /** Only for whoever manages the principal (SuperAdmin, or an Owner inside it). */
+  manageOnly?: boolean
+  /** With a `?tab=` href: the item is also active when the screen opens without a tab. */
+  defaultTab?: boolean
 }
 
 /** A block of the menu that opens and closes; closed, it still shows its pending count. */
@@ -96,10 +101,19 @@ interface NavGroup {
 
 type NavEntry = NavItem | NavGroup
 
+/** A labelled part of the menu: the Owner has two ("Mi red" and its acting principal), everyone else one. */
+interface NavSection {
+  key: string
+  label: string
+  entries: NavEntry[]
+}
+
 const isGroup = (entry: NavEntry): entry is NavGroup => 'items' in entry
 
-// What the office uses every day stays at the top; the rest goes in groups.
-const NAV: NavEntry[] = [
+const USERS_HREF = '/admin/usuarios'
+
+/** The office's menu: SuperAdmin, Admin, and an Owner inside its acting principal. What it uses every day goes first. */
+const PRINCIPAL_NAV: NavEntry[] = [
   { label: 'Inicio', href: '/admin', icon: LayoutDashboard },
   { label: 'Asuntos pendientes', href: '/admin/novedades', icon: Bell },
   { label: 'Whatsapp', href: '/admin/inbox', icon: MessageSquare },
@@ -114,11 +128,11 @@ const NAV: NavEntry[] = [
       { label: 'Siniestros', href: '/admin/siniestros', icon: FileWarning },
       { label: 'Cobranzas', href: '/admin/cobranzas', icon: Wallet },
       { label: 'Rechazos', href: '/admin/rechazos', icon: BanknoteX },
-      // The organization's month-end numbers: SuperAdmin only (ADMINs never see it; the OWNER has no cartera).
-      { label: 'Balance mensual', href: '/admin/balance', icon: TrendingUp, superAdminOnly: true },
+      // The principal's month-end numbers: never for an Admin.
+      { label: 'Balance mensual', href: '/admin/balance', icon: TrendingUp, manageOnly: true },
     ],
   },
-  // Each of Nico's campaigns has its own page.
+  // Each campaign has its own page.
   {
     key: 'campanas',
     label: 'Campañas',
@@ -132,14 +146,9 @@ const NAV: NavEntry[] = [
     items: [
       // Admins see each number's messages; managing numbers stays with the SuperAdmin.
       { label: 'Números', href: '/admin/numeros', icon: Phone },
-      { label: 'Usuarios', href: '/admin/usuarios', icon: Users, superAdminOnly: true },
-      // Each number's plan and month; the SuperAdmin assigns plans, the OWNER edits the catalog and sees the platform's month.
-      { label: 'Facturación', href: '/admin/facturacion', icon: CreditCard, everyone: true },
-      // What each plan, and each role, can use: the OWNER's switches.
-      { label: 'Funciones por plan', href: '/admin/funciones', icon: ToggleRight, ownerOnly: true },
-      // Every organization's Meta templates, account by account: the OWNER's view.
-      { label: 'Plantillas', href: '/admin/plantillas', icon: FileText, ownerOnly: true },
-      { label: 'Organizaciones', href: '/admin/organizaciones', icon: Building2, ownerOnly: true },
+      { label: 'Usuarios', href: USERS_HREF, icon: Users, manageOnly: true },
+      // Each number's plan and month, in messages.
+      { label: 'Facturación', href: '/admin/facturacion', icon: CreditCard },
       { label: 'Configuración', href: '/admin/configuracion', icon: UserCog },
     ],
   },
@@ -148,12 +157,59 @@ const NAV: NavEntry[] = [
     label: 'Ayuda',
     icon: LifeBuoy,
     items: [
-      { label: 'Mejoras', href: '/admin/mejoras', icon: Sparkles, everyone: true },
-      // How Triunfo, InfoAuto and the WhatsApp numbers are answering, for everyone.
-      { label: 'Status', href: '/admin/status', icon: Activity, everyone: true },
+      { label: 'Mejoras', href: '/admin/mejoras', icon: Sparkles },
+      // How Triunfo, InfoAuto and the WhatsApp numbers are answering.
+      { label: 'Status', href: '/admin/status', icon: Activity },
     ],
   },
 ]
+
+/** The Developer's menu: the platform, never a cartera (see DEVELOPER_PATHS). */
+const DEVELOPER_NAV: NavEntry[] = [
+  { label: 'Organizaciones', href: '/admin/organizaciones', icon: Building2 },
+  { label: 'Owners y zonas', href: '/admin/owners', icon: Network },
+  { label: 'Usuarios', href: USERS_HREF, icon: Users },
+  {
+    key: 'facturacion',
+    label: 'Facturación',
+    icon: CreditCard,
+    items: [
+      { label: 'Tablero', href: '/admin/facturacion?tab=tablero', icon: CreditCard, defaultTab: true },
+      { label: 'Liquidación', href: '/admin/facturacion?tab=liquidacion', icon: CreditCard },
+      { label: 'Planes', href: '/admin/facturacion?tab=planes', icon: CreditCard },
+    ],
+  },
+  // What each plan, and each role, can use.
+  { label: 'Funciones por plan', href: '/admin/funciones', icon: ToggleRight },
+  // Every organization's Meta templates, account by account.
+  { label: 'Plantillas', href: '/admin/plantillas', icon: FileText },
+  {
+    key: 'ayuda',
+    label: 'Ayuda',
+    icon: LifeBuoy,
+    items: [
+      { label: 'Mejoras', href: '/admin/mejoras', icon: Sparkles },
+      { label: 'Status', href: '/admin/status', icon: Activity },
+    ],
+  },
+  { label: 'Mi cuenta', href: '/admin/cuenta', icon: UserRound },
+]
+
+/** The Owner's network: the whole of it, whatever principal is active. */
+const OWNER_NETWORK_NAV: NavEntry[] = [
+  { label: 'Mi red', href: '/admin/red', icon: Network },
+  { label: 'Usuarios', href: USERS_HREF, icon: Users },
+  { label: 'Consumo de la red', href: '/admin/red/consumo', icon: BarChart3 },
+]
+
+/** Keeps the entries `keep` allows; a group left empty goes too. */
+function filterNav(entries: NavEntry[], keep: (item: NavItem) => boolean): NavEntry[] {
+  return entries.flatMap<NavEntry>(entry => {
+    if (!isGroup(entry)) return keep(entry) ? [entry] : []
+    const items = entry.items.filter(keep)
+    return items.length ? [{ ...entry, items }] : []
+  })
+}
 
 /** Which groups the user left open, per browser. */
 const GROUPS_STORAGE_KEY = 'panel.sidebar.groups'
@@ -198,9 +254,55 @@ const activeClasses =
   'data-[active=true]:bg-ember-soft data-[active=true]:text-ember-2 data-[active=true]:font-semibold ' +
   'data-[active=true]:hover:bg-ember-soft data-[active=true]:hover:text-ember-2'
 
+/** The path of an href, without its query. */
+function pathOf(href: string): string {
+  return href.split('?')[0]
+}
+
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/admin') return pathname === '/admin'
-  return pathname === href || pathname.startsWith(`${href}/`)
+  const path = pathOf(href)
+  if (path === '/admin') return pathname === '/admin'
+  return pathname === path || pathname.startsWith(`${path}/`)
+}
+
+/** The `?tab=` an href points at, or null. */
+function tabOf(href: string): string | null {
+  return new URLSearchParams(href.split('?')[1] ?? '').get('tab')
+}
+
+/** An item with a `?tab=`: active only on its tab (reads the URL, so it renders inside Suspense). */
+function TabAwareActive({
+  item,
+  pathname,
+  children,
+}: {
+  item: NavItem
+  pathname: string
+  children: (active: boolean) => ReactNode
+}) {
+  const current = useSearchParams().get('tab')
+  const tab = tabOf(item.href)
+  return children(isActive(pathname, item.href) && (current === tab || (current === null && !!item.defaultTab)))
+}
+
+/** Whether an item is active: by path, or by path and tab for the items that point at a tab. */
+function ActiveState({
+  item,
+  pathname,
+  children,
+}: {
+  item: NavItem
+  pathname: string
+  children: (active: boolean) => ReactNode
+}) {
+  if (tabOf(item.href) === null) return children(isActive(pathname, item.href))
+  return (
+    <Suspense fallback={children(false)}>
+      <TabAwareActive item={item} pathname={pathname}>
+        {children}
+      </TabAwareActive>
+    </Suspense>
+  )
 }
 
 /** Pulsing count badge (expanded): the ping ring draws the eye from any section so a pending item isn't missed. */
@@ -259,7 +361,7 @@ function NavGroupBlock({
   pathname: string
   alertCount: (href: string) => number
 }) {
-  const total = group.items.reduce((sum, item) => sum + alertCount(item.href), 0)
+  const total = group.items.reduce((sum, item) => sum + alertCount(pathOf(item.href)), 0)
   const containsActive = group.items.some(item => isActive(pathname, item.href))
   return (
     <SidebarMenuItem>
@@ -293,15 +395,19 @@ function NavGroupBlock({
         <div className="min-h-0 overflow-hidden">
           <SidebarMenuSub>
             {group.items.map(item => {
-              const count = alertCount(item.href)
+              const count = alertCount(pathOf(item.href))
               return (
                 <SidebarMenuSubItem key={item.href}>
-                  <SidebarMenuSubButton asChild isActive={isActive(pathname, item.href)} className={activeClasses}>
-                    <Link href={item.href}>
-                      <span>{item.label}</span>
-                      {count > 0 && <CountBadge count={count} small />}
-                    </Link>
-                  </SidebarMenuSubButton>
+                  <ActiveState item={item} pathname={pathname}>
+                    {active => (
+                      <SidebarMenuSubButton asChild isActive={active} className={activeClasses}>
+                        <Link href={item.href}>
+                          <span>{item.label}</span>
+                          {count > 0 && <CountBadge count={count} small />}
+                        </Link>
+                      </SidebarMenuSubButton>
+                    )}
+                  </ActiveState>
                 </SidebarMenuSubItem>
               )
             })}
@@ -312,73 +418,147 @@ function NavGroupBlock({
   )
 }
 
-export function AppSidebar() {
-  const pathname = usePathname()
-  const { logout } = useAuth()
-  const { data: profile } = useProfile()
-  const { data: novedadesStats } = useNovedadesStats()
-  const { data: taskStats } = useTaskStats()
+/** One labelled part of the menu, its groups opening as the user left them. */
+function NavSectionBlock({
+  section,
+  pathname,
+  alertCount,
+  isGroupOpen,
+  toggleGroup,
+}: {
+  section: NavSection
+  pathname: string
+  alertCount: (href: string) => number
+  isGroupOpen: (key: string) => boolean
+  toggleGroup: (key: string) => void
+}) {
+  const { state, isMobile } = useSidebar()
+  // Down to icons, groups can't open: every entry shows as its own icon.
+  const iconsOnly = state === 'collapsed' && !isMobile
+  const leaves = section.entries.flatMap(entry => (isGroup(entry) ? entry.items : [entry]))
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className="truncate text-[10.5px] tracking-[0.14em] uppercase">
+        {section.label}
+      </SidebarGroupLabel>
+      <SidebarMenu className="gap-1">
+        {iconsOnly
+          ? leaves.map(item => (
+              <ActiveState key={item.href} item={item} pathname={pathname}>
+                {active => <NavLink item={item} active={active} count={alertCount(pathOf(item.href))} />}
+              </ActiveState>
+            ))
+          : section.entries.map(entry =>
+              isGroup(entry) ? (
+                <NavGroupBlock
+                  key={entry.key}
+                  group={entry}
+                  open={isGroupOpen(entry.key)}
+                  onToggle={() => toggleGroup(entry.key)}
+                  pathname={pathname}
+                  alertCount={alertCount}
+                />
+              ) : (
+                <ActiveState key={entry.href} item={entry} pathname={pathname}>
+                  {active => <NavLink item={entry} active={active} count={alertCount(pathOf(entry.href))} />}
+                </ActiveState>
+              ),
+            )}
+      </SidebarMenu>
+    </SidebarGroup>
+  )
+}
+
+/** The menu of the role: the Developer's platform, the Owner's network plus its principal, or the office's. */
+function useNavSections(): NavSection[] {
+  const { isDeveloper, isOwner, canManageOrg } = useRole()
+  const { hasPrincipal } = useActingPrincipal()
+  const brand = usePanelBrand()
+  if (isDeveloper) return [{ key: 'platform', label: 'Plataforma', entries: DEVELOPER_NAV }]
+  const office = filterNav(PRINCIPAL_NAV, item => !item.manageOnly || canManageOrg)
+  if (!isOwner) return [{ key: 'office', label: 'Navegación', entries: office }]
+  return [
+    { key: 'network', label: 'Mi red', entries: OWNER_NETWORK_NAV },
+    {
+      key: 'principal',
+      label: hasPrincipal ? brand.name : 'Sin principal elegido',
+      // "Usuarios" is the network's, above.
+      entries: filterNav(office, item => item.href !== USERS_HREF),
+    },
+  ]
+}
+
+/** The pending counts of the menu. Only a principal's office loads them: never the Developer. */
+function useAlertCounts(): (href: string) => number {
+  const { isDeveloper } = useRole()
+  const tenant = useTenantQueriesEnabled()
+  const { data: novedadesStats } = useNovedadesStats({}, tenant)
+  const { data: taskStats } = useTaskStats(tenant)
   // "Pending" conversations = a client asked for a human agent → needs attention.
-  const { data: inboxConversations } = useInboxConversations()
+  const { data: inboxConversations } = useInboxConversations(undefined, undefined, undefined, tenant)
   useInboxMessageSound(inboxConversations)
   const inboxPending = inboxConversations?.filter(c => c.status === 'pending').length ?? 0
-  const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount()
-  const isOwner = isPlatformOperator(profile?.role)
-  // "Mejoras" badge: unseen improvements for the office, new proposals for the OWNER.
-  const { data: improvementsUnseen } = useImprovementsUnseenCount(!!profile && !isOwner)
-  const { data: newProposals } = useNewProposalsCount(isOwner)
-  const { data: integrationStatus } = useIntegrationStatus({ refreshMs: 5 * 60 * 1000 })
-  const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount(tenant)
+  // "Mejoras" badge: unseen improvements for the office, new proposals for the Developer.
+  const { data: improvementsUnseen } = useImprovementsUnseenCount(tenant)
+  const { data: newProposals } = useNewProposalsCount(isDeveloper)
+  // Status: the Developer's global view, or the office's own.
+  const { data: integrationStatus } = useIntegrationStatus({ refreshMs: 5 * 60 * 1000, enabled: isDeveloper || tenant })
 
-  // Count of items needing the advisor's attention, per sidebar section.
-  const alertCount = (href: string): number => {
+  return (href: string): number => {
     if (href === '/admin/novedades') return novedadesStats?.actionableTotal ?? 0
     if (href === '/admin/tareas') return taskStats?.open ?? 0
     if (href === '/admin/solicitudes') return solicitudesNuevas
     if (href === '/admin/inbox') return inboxPending
-    if (href === '/admin/mejoras') return (isOwner ? newProposals?.count : improvementsUnseen?.count) ?? 0
+    if (href === '/admin/mejoras') return (isDeveloper ? newProposals?.count : improvementsUnseen?.count) ?? 0
     if (href === '/admin/status') return integrationStatus ? failingNames(integrationStatus).length : 0
     return 0
   }
+}
 
+/** Under the brand: where the person stands. An Owner always sees its zone and principal. */
+function useHeaderCaption(): string {
+  const { isDeveloper, isOwner } = useRole()
+  const { hasPrincipal, zone, isLoading } = useActingPrincipal()
+  if (isDeveloper) return 'Panel de la plataforma'
+  if (!isOwner) return 'Panel · Polisend'
+  if (isLoading) return 'Cargando tu red…'
+  if (!hasPrincipal) return zone ? `${zone.name} · sin principal elegido` : 'Sin principal elegido'
+  return zone ? `Zona: ${zone.name}` : 'Mi principal'
+}
+
+export function AppSidebar() {
+  const pathname = usePathname()
+  const { logout } = useAuth()
+  const { data: profile } = useProfile()
+  const { role, isDeveloper } = useRole()
+  const tenant = useTenantQueriesEnabled()
+  const sections = useNavSections()
+  const alertCount = useAlertCounts()
   const brand = usePanelBrand()
-  const initials = profile?.email.slice(0, 2).toUpperCase() ?? brand.initials
-  const isSuperAdmin = profile?.role === 'SUPERADMIN'
-  const platformLabel = profile?.role === 'DEVELOPER' ? 'Developer · Lumar' : 'Owner · Lumar'
-  const roleLabel = isOwner ? platformLabel : isSuperAdmin ? 'SuperAdmin' : 'Administrador'
-  // The OWNER's interface is "Organizaciones" plus the "Mejoras" editor. Everyone
-  // else sees their items (SuperAdmin-only hidden for admins). A group left empty is not shown.
-  const visible = (item: NavItem) =>
-    isOwner ? !!(item.ownerOnly || item.everyone) : !item.ownerOnly && (!item.superAdminOnly || isSuperAdmin)
-  const nav: NavEntry[] = NAV.flatMap<NavEntry>(entry => {
-    if (!isGroup(entry)) return visible(entry) ? [entry] : []
-    const items = entry.items.filter(visible)
-    return items.length ? [{ ...entry, items }] : []
-  })
-  const leaves = nav.flatMap(entry => (isGroup(entry) ? entry.items : [entry]))
+  const caption = useHeaderCaption()
+  const [appearanceOpen, setAppearanceOpen] = useState(false)
 
-  // Down to icons, groups can't open: every entry shows as its own icon, as before.
-  const { state, isMobile } = useSidebar()
-  const iconsOnly = state === 'collapsed' && !isMobile
+  const initials = profile?.email.slice(0, 2).toUpperCase() ?? brand.initials
+  const label = roleLabel(role)
 
   // Open groups as the user left them (per browser). The group of the page you are on opens by itself;
   // closing it lasts until you move to another page.
   const storedGroups = useSyncExternalStore(subscribeGroups, groupsSnapshot, () => '{}')
   const openGroups = useMemo(() => parseGroups(storedGroups), [storedGroups])
   const [closedOn, setClosedOn] = useState<string | null>(null)
-  const activeGroup = nav.find(entry => isGroup(entry) && entry.items.some(item => isActive(pathname, item.href)))
-  const activeGroupKey = activeGroup && isGroup(activeGroup) ? activeGroup.key : null
-  const isGroupOpen = (key: string) => (key === activeGroupKey ? closedOn !== pathname : !!openGroups[key])
+  const activeGroup = sections
+    .flatMap(section => section.entries)
+    .find((entry): entry is NavGroup => isGroup(entry) && entry.items.some(item => isActive(pathname, item.href)))
+  const activeKey = activeGroup?.key ?? null
+  const isGroupOpen = (key: string) => (key === activeKey ? closedOn !== pathname : !!openGroups[key])
   const toggleGroup = (key: string) => {
-    if (key === activeGroupKey) {
+    if (key === activeKey) {
       setClosedOn(closedOn === pathname ? null : pathname)
       return
     }
     saveOpenGroups({ ...openGroups, [key]: !openGroups[key] })
-  }
-
-  const handleLogout = () => {
-    logout()
   }
 
   return (
@@ -388,52 +568,27 @@ export function AppSidebar() {
           <OrgMark brand={brand} size={32} className="rounded-lg shadow-sm" />
           <div className="grid flex-1 leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate font-display text-[13.5px] text-sidebar-foreground">{brand.name}</span>
-            <span className="truncate text-[11px] text-muted-foreground">
-              {brand.mark === 'platform' ? 'Panel de la plataforma' : 'Panel · Polisend'}
-            </span>
+            <span className="truncate text-[11px] text-muted-foreground">{caption}</span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10.5px] tracking-[0.14em] uppercase">Navegación</SidebarGroupLabel>
-          <SidebarMenu className="gap-1">
-            {iconsOnly
-              ? leaves.map(item => (
-                  <NavLink
-                    key={item.href}
-                    item={item}
-                    active={isActive(pathname, item.href)}
-                    count={alertCount(item.href)}
-                  />
-                ))
-              : nav.map(entry =>
-                  isGroup(entry) ? (
-                    <NavGroupBlock
-                      key={entry.key}
-                      group={entry}
-                      open={isGroupOpen(entry.key)}
-                      onToggle={() => toggleGroup(entry.key)}
-                      pathname={pathname}
-                      alertCount={alertCount}
-                    />
-                  ) : (
-                    <NavLink
-                      key={entry.href}
-                      item={entry}
-                      active={isActive(pathname, entry.href)}
-                      count={alertCount(entry.href)}
-                    />
-                  ),
-                )}
-          </SidebarMenu>
-        </SidebarGroup>
+        {sections.map(section => (
+          <NavSectionBlock
+            key={section.key}
+            section={section}
+            pathname={pathname}
+            alertCount={alertCount}
+            isGroupOpen={isGroupOpen}
+            toggleGroup={toggleGroup}
+          />
+        ))}
       </SidebarContent>
 
       <SidebarFooter>
-        {/* The owner has no numbers of its own: its billing is the platform's, in Facturación. */}
-        <SidebarUsage enabled={!!profile && !isOwner} />
+        {/* The month of the principal's numbers; the Developer's month is the platform's, in Facturación. */}
+        <SidebarUsage enabled={tenant && !isDeveloper} />
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -452,7 +607,7 @@ export function AppSidebar() {
                     <span className="truncate text-[13px] font-medium text-sidebar-foreground">
                       {profile?.email ?? 'Cargando…'}
                     </span>
-                    <span className="truncate text-[11px] text-muted-foreground">{roleLabel}</span>
+                    <span className="truncate text-[11px] text-muted-foreground">{label}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>
@@ -466,16 +621,22 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="grid leading-tight">
                     <span className="truncate text-[13px] font-medium">{profile?.email}</span>
-                    <span className="truncate text-[11px] text-muted-foreground">{roleLabel}</span>
+                    <span className="truncate text-[11px] text-muted-foreground">{label}</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/cuenta">
+                    <UserRound />
+                    Mi cuenta
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem data-help="usuario-apariencia" onSelect={() => setAppearanceOpen(true)}>
                   <Palette />
                   Apariencia
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                <DropdownMenuItem variant="destructive" onClick={logout}>
                   <LogOut />
                   Cerrar sesión
                 </DropdownMenuItem>

@@ -19,6 +19,7 @@ import type { AdminRole, AdminUser } from '@/types/api/auth'
 import { useCreateUser } from '../hooks/use-create-user'
 import { useUpdateUser } from '../hooks/use-update-user'
 import { useProducerCodes } from '../hooks/use-producer-codes'
+import { ROLES, roleLabel } from '../lib/roles'
 
 interface UserFormDialogProps {
   user: AdminUser | null
@@ -44,7 +45,7 @@ function UserForm({ user, onDone }: { user: AdminUser | null; onDone: () => void
   const [email, setEmail] = useState(user?.email ?? '')
   const [name, setName] = useState(user?.name ?? '')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<AdminRole>(user?.role ?? 'ADMIN')
+  const [role, setRole] = useState<AdminRole>(user?.role ?? ROLES.admin)
   const [codeIds, setCodeIds] = useState<number[]>(user?.producerCodes?.map(pc => pc.producerCode.id) ?? [])
 
   const { data: producerCodes } = useProducerCodes()
@@ -56,7 +57,7 @@ function UserForm({ user, onDone }: { user: AdminUser | null; onDone: () => void
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     // SuperAdmin sees all codes implicitly; only send grants for ADMIN.
-    const producerCodeIds = role === 'ADMIN' ? codeIds : []
+    const producerCodeIds = role === ROLES.admin ? codeIds : []
     if (isEdit) {
       const data = { email, name, role, producerCodeIds, ...(password ? { password } : {}) }
       updateUser.mutate(
@@ -138,7 +139,7 @@ function UserForm({ user, onDone }: { user: AdminUser | null; onDone: () => void
         <div className="flex flex-col gap-2">
           <Label>Rol</Label>
           <div className="grid grid-cols-2 gap-2">
-            {(['ADMIN', 'SUPERADMIN'] as AdminRole[]).map(r => (
+            {([ROLES.admin, ROLES.superAdmin] as AdminRole[]).map(r => (
               <button
                 key={r}
                 type="button"
@@ -149,18 +150,18 @@ function UserForm({ user, onDone }: { user: AdminUser | null; onDone: () => void
                     : 'border-line-2 text-ink-3 hover:bg-secondary'
                 }`}
               >
-                {r === 'SUPERADMIN' ? 'SuperAdmin' : 'Administrador'}
+                {roleLabel(r)}
               </button>
             ))}
           </div>
           <p className="text-[12px] text-muted-foreground">
-            {role === 'SUPERADMIN'
+            {role === ROLES.superAdmin
               ? 'Ve todos los códigos de la organización y administra usuarios.'
               : 'Ve solo los códigos que le asignes abajo.'}
           </p>
         </div>
 
-        {role === 'ADMIN' && (
+        {role === ROLES.admin && (
           <div className="flex flex-col gap-2">
             <Label>Códigos asignados</Label>
             <div className="max-h-44 overflow-y-auto rounded-md border border-line-2 p-2">

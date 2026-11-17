@@ -35,7 +35,7 @@ const PAGE = 'mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10'
  * numbers and codes tables need the whole width to stay readable.
  */
 export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
-  const { isOwner, isLoading: roleLoading } = useRole()
+  const { isDeveloper, isLoading: roleLoading } = useRole()
   const { data: org, isLoading } = useOrganization(Number.isFinite(orgId) ? orgId : null)
   const { addCode, updateCode, setActive } = useOrganizationMutations(orgId)
   const logo = useOrganizationLogo(orgId)
@@ -59,7 +59,7 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
     )
   }
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className={PAGE}>
         <Card className="p-6">

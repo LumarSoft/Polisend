@@ -15,9 +15,8 @@ import type {
   WhatsappNumberStatus,
 } from '@/types/api/status'
 import { useIntegrationStatus } from '../hooks/use-integration-status'
-import { useProfile } from '../hooks/use-profile'
+import { useRole } from '../hooks/use-role'
 import { numberLabel } from '../lib/number-label'
-import { isPlatformOperator } from '../lib/roles'
 import {
   blameLabel,
   COMPONENT_COPY,
@@ -42,8 +41,8 @@ import {
  * is not on our end. Everyone in the office sees it.
  */
 export function StatusView() {
-  const { data: profile } = useProfile()
-  const isOwner = isPlatformOperator(profile?.role)
+  // The Developer reads the platform's global view: every organization, with the raw samples.
+  const { isDeveloper } = useRole()
   const { data, isLoading, isError, refetch, isFetching } = useIntegrationStatus()
 
   return (
@@ -77,19 +76,19 @@ export function StatusView() {
       ) : (
         <div className="flex flex-col gap-6">
           <Summary overview={data} />
-          <TriunfoGroup overview={data} isOwner={isOwner} />
+          <TriunfoGroup overview={data} isDeveloper={isDeveloper} />
           <Group title="InfoAuto" description="El catálogo de vehículos con el que se cotiza.">
             {data.components
               .filter(c => c.key.startsWith('infoauto.'))
               .map(component => (
-                <ComponentRow key={component.key} component={component} isOwner={isOwner} />
+                <ComponentRow key={component.key} component={component} isDeveloper={isDeveloper} />
               ))}
           </Group>
           <Group title="WhatsApp" description="Los números conectados a Meta por los que atienden el bot y la oficina.">
             {data.whatsapp.length === 0 ? (
               <p className="p-4 text-[13px] text-muted-foreground">No hay números para mostrar.</p>
             ) : (
-              data.whatsapp.map(number => <WhatsappRow key={number.id} number={number} isOwner={isOwner} />)
+              data.whatsapp.map(number => <WhatsappRow key={number.id} number={number} isDeveloper={isDeveloper} />)
             )}
           </Group>
           <History incidents={data.incidents} />
@@ -131,13 +130,13 @@ function Summary({ overview }: { overview: StatusOverview }) {
   )
 }
 
-function TriunfoGroup({ overview, isOwner }: { overview: StatusOverview; isOwner: boolean }) {
+function TriunfoGroup({ overview, isDeveloper }: { overview: StatusOverview; isDeveloper: boolean }) {
   const triunfo = usesTriunfo(overview)
   const components = overview.components.filter(c => c.key.startsWith('triunfo.'))
   const downloads = components.filter(c => isDocumentDownload(c.key))
   return (
     <Group title="Triunfo" description="La aseguradora: cotizaciones, documentación de pólizas y cartera.">
-      {isOwner ? (
+      {isDeveloper ? (
         <OrganizationsAccessRow failing={overview.triunfoAccess} />
       ) : (
         overview.triunfoAccess.map(access => <OwnAccessRow key={access.producerId} access={access} />)
@@ -145,9 +144,9 @@ function TriunfoGroup({ overview, isOwner }: { overview: StatusOverview; isOwner
       {triunfo &&
         components.map(component =>
           !isDocumentDownload(component.key) ? (
-            <ComponentRow key={component.key} component={component} isOwner={isOwner} />
+            <ComponentRow key={component.key} component={component} isDeveloper={isDeveloper} />
           ) : component === downloads[0] ? (
-            <DownloadsRow key="downloads" downloads={downloads} isOwner={isOwner} />
+            <DownloadsRow key="downloads" downloads={downloads} isDeveloper={isDeveloper} />
           ) : null,
         )}
     </Group>
@@ -223,7 +222,7 @@ function StatePill({ state, label }: { state: IntegrationState; label?: string }
   )
 }
 
-function ComponentRow({ component, isOwner }: { component: IntegrationComponent; isOwner: boolean }) {
+function ComponentRow({ component, isDeveloper }: { component: IntegrationComponent; isDeveloper: boolean }) {
   const copy = COMPONENT_COPY[component.key]
   const meta =
     component.status === 'unknown'
@@ -234,14 +233,18 @@ function ComponentRow({ component, isOwner }: { component: IntegrationComponent;
   return (
     <Row name={copy.name} description={copy.usedFor} state={component.status} meta={meta}>
       {component.incident && (
-        <IncidentDetail incident={component.incident} isOwner={isOwner} lastSuccessAt={component.lastSuccessAt} />
+        <IncidentDetail
+          incident={component.incident}
+          isDeveloper={isDeveloper}
+          lastSuccessAt={component.lastSuccessAt}
+        />
       )}
     </Row>
   )
 }
 
 /** Every PDF in one row, each document with its own state: one can fail while the rest come down. */
-function DownloadsRow({ downloads, isOwner }: { downloads: IntegrationComponent[]; isOwner: boolean }) {
+function DownloadsRow({ downloads, isDeveloper }: { downloads: IntegrationComponent[]; isDeveloper: boolean }) {
   const failing = downloads.filter(d => d.status === 'failing')
   return (
     <Row
@@ -285,7 +288,7 @@ function DownloadsRow({ downloads, isOwner }: { downloads: IntegrationComponent[
             <IncidentDetail
               key={download.key}
               incident={download.incident}
-              isOwner={isOwner}
+              isDeveloper={isDeveloper}
               lastSuccessAt={download.lastSuccessAt}
             />
           ),
@@ -296,11 +299,11 @@ function DownloadsRow({ downloads, isOwner }: { downloads: IntegrationComponent[
 
 function IncidentDetail({
   incident,
-  isOwner,
+  isDeveloper,
   lastSuccessAt,
 }: {
   incident: IntegrationIncident
-  isOwner: boolean
+  isDeveloper: boolean
   lastSuccessAt: string | null
 }) {
   const copy = COMPONENT_COPY[incident.key]
@@ -343,7 +346,7 @@ function IncidentDetail({
           {incident.message}
           {lastSuccessAt ? ` · funcionó por última vez ${formatWhen(lastSuccessAt)}` : ''}
         </p>
-        {isOwner && incident.sample && (
+        {isDeveloper && incident.sample && (
           <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-card p-2 font-mono text-[11px] break-all whitespace-pre-wrap text-ink">
             {incident.sample}
           </pre>
@@ -443,12 +446,12 @@ function OrganizationsAccessRow({ failing }: { failing: TriunfoAccess[] }) {
   )
 }
 
-function WhatsappRow({ number, isOwner }: { number: WhatsappNumberStatus; isOwner: boolean }) {
+function WhatsappRow({ number, isDeveloper }: { number: WhatsappNumberStatus; isDeveloper: boolean }) {
   const problem = whatsappProblem(number)
   return (
     <Row
       name={numberLabel(number)}
-      description={isOwner ? number.producerName : 'Número de WhatsApp conectado a Meta.'}
+      description={isDeveloper ? number.producerName : 'Número de WhatsApp conectado a Meta.'}
       state={number.status}
       stateLabel={number.status === 'failing' ? 'Desconectado' : undefined}
       meta={

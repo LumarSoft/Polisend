@@ -157,11 +157,11 @@ function CreateOrgForm({ onDone }: { onDone: () => void }) {
 // ── Organization detail (codes + admins) ─────────────────
 // ── Main view ────────────────────────────────────────────
 export function OrganizacionesView() {
-  const { isOwner, isLoading: roleLoading } = useRole()
-  const { data: orgs, isLoading } = useOrganizations(isOwner)
+  const { isDeveloper, isLoading: roleLoading } = useRole()
+  const { data: orgs, isLoading } = useOrganizations(isDeveloper)
   const [createOpen, setCreateOpen] = useState(false)
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center md:px-8">
         <div className="mx-auto flex max-w-md flex-col items-center gap-3">
@@ -169,9 +169,7 @@ export function OrganizacionesView() {
             <KeyRound className="size-5" />
           </div>
           <h1 className="font-display text-[22px] text-ink">Acceso restringido</h1>
-          <p className="text-[14px] text-muted-foreground">
-            Solo el Owner de la plataforma (Lumar) puede gestionar organizaciones.
-          </p>
+          <p className="text-[14px] text-muted-foreground">Solo Developer (Lumar) gestiona las organizaciones.</p>
         </div>
       </div>
     )

@@ -9,12 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,15 +27,17 @@ import { useRole } from '../hooks/use-role'
 import { useDeleteUser } from '../hooks/use-delete-user'
 import { UserFormDialog } from './user-form-dialog'
 import { BranchOnboardingDialog } from './branch-onboarding-dialog'
+import { ROLES, roleLabel } from '../lib/roles'
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 export function UsersView() {
-  const { data: users, isLoading, isError } = useUsers()
+  const { canManageOrg, isLoading: roleLoading } = useRole()
+  // The Developer (and an Admin) never ask for a principal's users here.
+  const { data: users, isLoading, isError } = useUsers(canManageOrg)
   const { data: profile } = useProfile()
-  const { isSuperAdmin, isLoading: roleLoading } = useRole()
   const deleteUser = useDeleteUser()
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -71,7 +68,7 @@ export function UsersView() {
   }
 
   // Org user management is SuperAdmin-only (API enforces it too via RolesGuard).
-  if (!roleLoading && !isSuperAdmin) {
+  if (!roleLoading && !canManageOrg) {
     return (
       <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center md:px-8">
         <div className="mx-auto flex max-w-md flex-col items-center gap-3">
@@ -192,9 +189,9 @@ export function UsersView() {
                     <div className="flex flex-col gap-1">
                       <Badge variant="secondary" className="w-fit gap-1 font-normal text-ink-3">
                         <ShieldCheck className="size-3.5 text-ember-2" />
-                        {user.role === 'SUPERADMIN' ? 'SuperAdmin' : 'Administrador'}
+                        {roleLabel(user.role)}
                       </Badge>
-                      {user.role === 'ADMIN' && (
+                      {user.role === ROLES.admin && (
                         <span className="text-[11.5px] text-muted-foreground">
                           {user.producerCodes && user.producerCodes.length > 0
                             ? `${user.producerCodes.length} código${user.producerCodes.length > 1 ? 's' : ''}`

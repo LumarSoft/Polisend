@@ -289,8 +289,8 @@ function NumberForm({ existing, onDone }: { existing: AdminPhoneNumber | null; o
 }
 
 export function NumerosView() {
-  const { isSuperAdmin, isAdmin, isLoading: roleLoading } = useRole()
-  const canView = isSuperAdmin || isAdmin
+  const { canManageOrg, isAdmin, isLoading: roleLoading } = useRole()
+  const canView = canManageOrg || isAdmin
   const currentMonth = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Cordoba' }).slice(0, 7)
   const [period, setPeriod] = useState(currentMonth)
   const { data: numbers, isLoading, isError } = usePhoneNumbers(canView, period)
@@ -318,7 +318,7 @@ export function NumerosView() {
   // Each number's messages of the month; plans and amounts are in Facturación.
   const totalMessages = (numbers ?? []).reduce((sum, n) => sum + n.usage.messages, 0)
   const disconnected = (numbers ?? []).filter(n => n.disconnectedAt)
-  const columns = isSuperAdmin ? 5 : 4
+  const columns = canManageOrg ? 5 : 4
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
@@ -329,12 +329,12 @@ export function NumerosView() {
             Números y consumo
           </h1>
           <p className="mt-1.5 text-[14px] text-muted-foreground">
-            {isSuperAdmin
+            {canManageOrg
               ? 'Números de WhatsApp, código responsable y consumo del mes: mensajes y uso de la IA.'
               : 'Los números de WhatsApp a tu cargo y los mensajes que enviaron en el mes.'}
           </p>
         </div>
-        {isSuperAdmin && (
+        {canManageOrg && (
           <Button
             onClick={() => {
               setEditing(null)
@@ -366,7 +366,7 @@ export function NumerosView() {
               </p>
             </div>
           )}
-          {isSuperAdmin ? <ConnectNumber dropped={disconnected} /> : <AdminConnect dropped={disconnected} />}
+          {canManageOrg ? <ConnectNumber dropped={disconnected} /> : <AdminConnect dropped={disconnected} />}
         </Card>
       )}
 
@@ -402,7 +402,7 @@ export function NumerosView() {
       )}
       <Card className="mb-4 flex items-center justify-between border-line-2 p-4">
         <span className="text-[13px] text-muted-foreground">
-          Mensajes del mes · {period} ({isSuperAdmin ? 'todos los números' : 'tus números'})
+          Mensajes del mes · {period} ({canManageOrg ? 'todos los números' : 'tus números'})
         </span>
         <span className="font-display text-[20px] text-ink">{numbers && !isError ? int(totalMessages) : '—'}</span>
       </Card>
@@ -420,7 +420,7 @@ export function NumerosView() {
               <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                 Mensajes del mes
               </TableHead>
-              {isSuperAdmin && (
+              {canManageOrg && (
                 <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                   Uso de IA
                 </TableHead>
@@ -448,7 +448,7 @@ export function NumerosView() {
                       <Phone className="size-5" />
                     </div>
                     <p className="text-[14px] text-muted-foreground">
-                      {isSuperAdmin ? 'Todavía no hay números registrados.' : 'Todavía no tenés números a tu cargo.'}
+                      {canManageOrg ? 'Todavía no hay números registrados.' : 'Todavía no tenés números a tu cargo.'}
                     </p>
                   </div>
                 </TableCell>
@@ -528,7 +528,7 @@ export function NumerosView() {
                     {n.usage.upgraded && ' · subió de plan'}
                   </div>
                 </TableCell>
-                {isSuperAdmin && (
+                {canManageOrg && (
                   <TableCell className="text-[13px]">
                     <span className="text-ink">{int(n.usage.openaiCalls ?? 0)} consultas a la IA</span>
                     <div className="text-[11px] text-muted-foreground">respuestas que no resolvieron los menús</div>
@@ -553,7 +553,7 @@ export function NumerosView() {
                     >
                       <Bot className="size-4" /> Asistente
                     </Button>
-                    {isSuperAdmin && (
+                    {canManageOrg && (
                       <>
                         <Button
                           variant="ghost"

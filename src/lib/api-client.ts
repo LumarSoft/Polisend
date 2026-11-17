@@ -1,5 +1,14 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+/** An Owner's acting principal: sent on every request of its session, echoed by the API on each answer. */
+export const ACTING_PRINCIPAL_HEADER = 'X-Acting-Principal'
+
+/** `code` of the 403 the API answers when the Owner no longer reaches the principal it sent. */
+export const ACTING_PRINCIPAL_INVALID = 'ACTING_PRINCIPAL_INVALID'
+
+/** `code` of the 400 an Owner gets without the header on a tenant route (a panel bug: the client always sends it). */
+export const ACTING_PRINCIPAL_REQUIRED = 'ACTING_PRINCIPAL_REQUIRED'
+
 /** A file the API serves (an API-relative path like /uploads/...) as an absolute URL. */
 export function apiAssetUrl(path: string): string {
   return path.startsWith('http') ? path : `${API_URL}${path}`
@@ -9,15 +18,37 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** The API's machine-readable `code` (ACTING_PRINCIPAL_INVALID, EMAIL_RESTORABLE, TWO_FACTOR_LOCKED, …). */
+    public readonly code?: string,
+    /** The whole error body, for the few answers that carry more (e.g. `restorableUserId`). */
+    public readonly body?: unknown,
   ) {
     super(message)
     this.name = 'ApiError'
   }
 }
 
+/**
+ * The answer came back for another principal than the one the request was sent for (or without saying which): it is
+ * dropped instead of showing one principal's data under another's name.
+ */
+export class ActingPrincipalMismatchError extends ApiError {
+  constructor(
+    public readonly sent: number,
+    public readonly received: string | null,
+  ) {
+    super(0, 'La respuesta era de otro principal y se descartó. Probá de nuevo.', 'ACTING_PRINCIPAL_MISMATCH')
+    this.name = 'ActingPrincipalMismatchError'
+  }
+}
+
+// ─── Listeners ─────────────────────────────────────────────────────────────────
+
 type UnauthorizedListener = (token: string) => void
+type ActingPrincipalInvalidListener = (principalId: number) => void
 
 const unauthorizedListeners = new Set<UnauthorizedListener>()
+const actingPrincipalInvalidListeners = new Set<ActingPrincipalInvalidListener>()
 
 /** Hears every request made with a token that the API answered 401 to, with that token. */
 export function onUnauthorized(listener: UnauthorizedListener): () => void {
@@ -27,8 +58,104 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
   }
 }
 
+/** Hears every principal the API refused as an Owner's acting principal (403 ACTING_PRINCIPAL_INVALID or actingInvalid). */
+export function onActingPrincipalInvalid(listener: ActingPrincipalInvalidListener): () => void {
+  actingPrincipalInvalidListeners.add(listener)
+  return () => {
+    actingPrincipalInvalidListeners.delete(listener)
+  }
+}
+
+/** For GET /users/me, which answers a refused principal with `actingInvalid: true` instead of a 403. */
+export function reportActingPrincipalInvalid(principalId: number): void {
+  actingPrincipalInvalidListeners.forEach(listener => listener(principalId))
+}
+
 function notifyUnauthorized(res: Response, token: string | null | undefined): void {
   if (res.status === 401 && token) unauthorizedListeners.forEach(listener => listener(token))
+}
+
+// ─── Acting principal ──────────────────────────────────────────────────────────
+
+interface ActingPrincipalBinding {
+  /** The session that chose it: requests made with any other token never carry it. */
+  token: string
+  principalId: number
+}
+
+let actingPrincipal: ActingPrincipalBinding | null = null
+
+/**
+ * The principal every request of an Owner's session carries in X-Acting-Principal (its choice, or its own principal
+ * when none is chosen). Set by the panel's acting-principal provider for an OWNER only; null for every other role.
+ */
+export function setActingPrincipal(binding: ActingPrincipalBinding | null): void {
+  actingPrincipal = binding
+}
+
+/** The principal a request made with this token would carry, or null. */
+export function actingPrincipalFor(token: string | null | undefined): number | null {
+  return token && actingPrincipal?.token === token ? actingPrincipal.principalId : null
+}
+
+// ─── Requests ──────────────────────────────────────────────────────────────────
+
+interface PreparedRequest {
+  headers: Record<string, string>
+  /** Captured when the request is created: a later change of principal never alters it. */
+  actingPrincipalId: number | null
+}
+
+/** The one header builder of apiRequest, apiStream and apiDownload. */
+function prepareRequest(token: string | null | undefined, headers: Record<string, string> = {}): PreparedRequest {
+  const actingPrincipalId = actingPrincipalFor(token)
+  return {
+    actingPrincipalId,
+    headers: {
+      ...headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(actingPrincipalId !== null ? { [ACTING_PRINCIPAL_HEADER]: String(actingPrincipalId) } : {}),
+    },
+  }
+}
+
+async function readError(res: Response): Promise<ApiError> {
+  let body: unknown
+  try {
+    body = await res.json()
+  } catch {
+    // response had no JSON body — fall through to the generic message
+  }
+  const data = (body && typeof body === 'object' ? body : {}) as { message?: unknown; code?: unknown }
+  const message = Array.isArray(data.message)
+    ? data.message.join(', ')
+    : typeof data.message === 'string'
+      ? data.message
+      : `Request failed with status ${res.status}`
+  return new ApiError(res.status, message, typeof data.code === 'string' ? data.code : undefined, body)
+}
+
+/**
+ * Throws the API's error for a failed answer, and drops an answer that is not of the principal the request was sent
+ * for. `checkPrincipal: false` is only for GET /users/me, which reports a refused principal in its body.
+ */
+async function ensureResponse(
+  res: Response,
+  token: string | null | undefined,
+  { actingPrincipalId }: PreparedRequest,
+  checkPrincipal = true,
+): Promise<void> {
+  if (!res.ok) {
+    notifyUnauthorized(res, token)
+    const error = await readError(res)
+    if (error.code === ACTING_PRINCIPAL_INVALID && actingPrincipalId !== null) {
+      reportActingPrincipalInvalid(actingPrincipalId)
+    }
+    throw error
+  }
+  if (!checkPrincipal || actingPrincipalId === null) return
+  const received = res.headers.get(ACTING_PRINCIPAL_HEADER)
+  if (received !== String(actingPrincipalId)) throw new ActingPrincipalMismatchError(actingPrincipalId, received)
 }
 
 interface RequestOptions {
@@ -37,38 +164,38 @@ interface RequestOptions {
   body?: unknown
 }
 
-async function extractErrorMessage(res: Response): Promise<string> {
-  try {
-    const data = (await res.json()) as { message?: string | string[] }
-    if (Array.isArray(data.message)) return data.message.join(', ')
-    if (typeof data.message === 'string') return data.message
-  } catch {
-    // response had no JSON body — fall through to the generic message
-  }
-  return `Request failed with status ${res.status}`
-}
-
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function send(path: string, options: RequestOptions, checkPrincipal: boolean) {
   const { method = 'GET', token, body } = options
-
   // A FormData body (file uploads) goes as is: the browser sets the multipart
   // Content-Type with its boundary.
   const isForm = body instanceof FormData
+  const prepared = prepareRequest(token, isForm ? {} : { 'Content-Type': 'application/json' })
   const res = await fetch(`${API_URL}${path}`, {
     method,
-    headers: {
-      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: prepared.headers,
     ...(body !== undefined ? { body: isForm ? body : JSON.stringify(body) } : {}),
   })
+  await ensureResponse(res, token, prepared, checkPrincipal)
+  return { res, actingPrincipalId: prepared.actingPrincipalId }
+}
 
-  if (!res.ok) {
-    notifyUnauthorized(res, token)
-    throw new ApiError(res.status, await extractErrorMessage(res))
-  }
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { res } = await send(path, options, true)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
+}
+
+/**
+ * An apiRequest that does not drop an answer without the acting-principal header, and says which principal it was
+ * sent for. Only for GET /users/me: it ignores a refused principal and says so in its body (`actingInvalid`), and its
+ * service checks the principal against the body (`actingProducerId`).
+ */
+export async function apiRequestReportingPrincipal<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ data: T; actingPrincipalId: number | null }> {
+  const { res, actingPrincipalId } = await send(path, options, false)
+  return { data: (await res.json()) as T, actingPrincipalId }
 }
 
 interface StreamOptions {
@@ -87,16 +214,15 @@ export async function apiStream<E extends { event: string; data: unknown }>(
   { token, body, signal }: StreamOptions,
   onEvent: (event: E) => void,
 ): Promise<void> {
+  const prepared = prepareRequest(token, { 'Content-Type': 'application/json', Accept: 'text/event-stream' })
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', Authorization: `Bearer ${token}` },
+    headers: prepared.headers,
     body: JSON.stringify(body),
     signal,
   })
-  if (!res.ok || !res.body) {
-    notifyUnauthorized(res, token)
-    throw new ApiError(res.status, await extractErrorMessage(res))
-  }
+  await ensureResponse(res, token, prepared)
+  if (!res.body) throw new ApiError(res.status, `Request failed with status ${res.status}`)
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -122,10 +248,8 @@ export async function apiStream<E extends { event: string; data: unknown }>(
 
 /** Downloads a file the API serves (a PDF) with the panel's token. */
 export async function apiDownload(path: string, token: string): Promise<Blob> {
-  const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) {
-    notifyUnauthorized(res, token)
-    throw new ApiError(res.status, await extractErrorMessage(res))
-  }
+  const prepared = prepareRequest(token)
+  const res = await fetch(`${API_URL}${path}`, { headers: prepared.headers })
+  await ensureResponse(res, token, prepared)
   return res.blob()
 }

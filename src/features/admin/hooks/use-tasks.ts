@@ -16,12 +16,12 @@ export function useTasks(query: TasksQuery) {
 }
 
 /** Open tasks assigned to me, for the menu badge. */
-export function useTaskStats() {
+export function useTaskStats(enabled = true) {
   const { token } = useAuth()
   return useQuery({
     queryKey: QUERY_KEYS.admin.tasksStats,
     queryFn: () => tasksService.stats(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     refetchInterval: 20_000,
   })
 }

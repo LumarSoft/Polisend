@@ -11,8 +11,8 @@ import { useRole } from '@/features/admin/hooks/use-role'
 import { useUrlTab } from '@/features/admin/hooks/use-panel-link'
 
 export default function MejorasPage() {
-  const { isOwner, isLoading } = useRole()
-  const { data: newProposals } = useNewProposalsCount(isOwner)
+  const { isDeveloper, isLoading } = useRole()
+  const { data: newProposals } = useNewProposalsCount(isDeveloper)
   const [tab, setTab] = useUrlTab(['mejoras', 'propuestas'] as const, 'mejoras')
 
   if (isLoading) {
@@ -36,7 +36,7 @@ export default function MejorasPage() {
           </TabsTrigger>
           <TabsTrigger data-help="mejoras-propuestas" value="propuestas" className="gap-1.5 px-3 py-1.5 text-[13.5px]">
             <Lightbulb className="size-4" /> Propuestas
-            {isOwner && !!newProposals?.count && (
+            {isDeveloper && !!newProposals?.count && (
               <span className="rounded-full bg-ember-2 px-1.5 text-[10.5px] font-semibold text-on-ember">
                 {newProposals.count}
               </span>
@@ -45,10 +45,10 @@ export default function MejorasPage() {
         </TabsList>
         {/* Lumar writes and answers; everyone else reads and proposes. */}
         <TabsContent value="mejoras" className="mt-5">
-          {isOwner ? <MejorasEditorView /> : <MejorasView />}
+          {isDeveloper ? <MejorasEditorView /> : <MejorasView />}
         </TabsContent>
         <TabsContent value="propuestas" className="mt-5">
-          {isOwner ? <PlatformProposalsView /> : <ProposalsBoard />}
+          {isDeveloper ? <PlatformProposalsView /> : <ProposalsBoard />}
         </TabsContent>
       </Tabs>
     </div>

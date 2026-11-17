@@ -118,10 +118,10 @@ function AccountCard({ account }: { account: TemplatesAccount }) {
 
 /** "Plantillas": the owner's view of every organization's Meta templates, account by account. */
 export function TemplatesView() {
-  const { isOwner, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError, isFetching, refetch } = usePlatformTemplates(isOwner)
+  const { isDeveloper, isLoading: roleLoading } = useRole()
+  const { data, isLoading, isError, isFetching, refetch } = usePlatformTemplates(isDeveloper)
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">Acceso restringido.</p>

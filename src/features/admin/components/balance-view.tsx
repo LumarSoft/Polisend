@@ -276,9 +276,9 @@ function BalanceContent() {
 
 /** The monthly balance is the SuperAdmin's alone: an ADMIN gets this notice (and a 403 from the API). */
 export function BalanceView() {
-  const { isSuperAdmin, isLoading } = useRole()
+  const { canManageOrg, isLoading } = useRole()
   if (isLoading) return null
-  if (!isSuperAdmin) {
+  if (!canManageOrg) {
     return (
       <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center md:px-8">
         <div className="mx-auto flex max-w-md flex-col items-center gap-3">
