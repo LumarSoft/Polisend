@@ -1,4 +1,13 @@
-import type { NetworkTree, NetworkTreeCode, NetworkTreePrincipal, NetworkUserRole, Zone } from '@/types/api/hierarchy'
+import type {
+  NetworkTree,
+  NetworkTreeCode,
+  NetworkTreePrincipal,
+  NetworkUser,
+  NetworkUserRole,
+  NetworkUserRow,
+  ReadOnlyNetworkUser,
+  Zone,
+} from '@/types/api/hierarchy'
 import { ROLES, roleLabel } from './roles'
 
 /**
@@ -94,6 +103,23 @@ export function accessSummary({ who, role, principalName, codes, newPrincipal = 
   if (codes.length === 0) return `${person} va a administrar ${principal}`
   const seen = codes.length === 1 ? `su código: ${codes[0]}` : `sus ${codes.length} códigos: ${codeList(codes)}`
   return `${person} va a administrar ${principal} y ver ${seen}`
+}
+
+/** An account the caller manages (every row but the Owner's read-only ones). */
+export function isManagedUser(row: NetworkUserRow): row is NetworkUser {
+  return row.readOnly !== true
+}
+
+/** A row only an Owner gets, that nobody may edit: Lumarsoft's accounts and the other Owners of its zones. */
+export function isReadOnlyUser(row: NetworkUserRow): row is ReadOnlyNetworkUser {
+  return row.readOnly === true
+}
+
+/** Whether a read-only row matches the search box (the managed ones are searched by the API). */
+export function matchesSearch(user: ReadOnlyNetworkUser, search: string): boolean {
+  const needle = search.trim().toLocaleLowerCase('es')
+  if (!needle) return true
+  return [user.name ?? '', user.email].some(text => text.toLocaleLowerCase('es').includes(needle))
 }
 
 export function formatJoinDate(value: string): string {

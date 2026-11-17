@@ -227,6 +227,8 @@ export interface NetworkUser {
   name: string | null
   email: string
   role: NetworkUserRole
+  /** Absent (or false) on every account the caller manages. */
+  readOnly?: false
   createdAt: string
   twoFactorEnabled: boolean
   principal: { id: number; name: string }
@@ -235,6 +237,30 @@ export interface NetworkUser {
   /** The Admin's grants; [] for a SuperAdmin (it sees every code of its principal). */
   codes: HierarchyPrincipalCode[]
 }
+
+/** The roles of the read-only rows: the platform (Lumarsoft) and the other Owners of the caller's zones. */
+export type ReadOnlyUserRole = 'DEVELOPER' | 'OWNER'
+
+/**
+ * A row of `GET /hierarchy/users` that only an OWNER gets (decision of 17/11): the live Developer accounts and the other
+ * Owners that share one of its zones. Nobody may edit it (the API answers 404 on its routes): no principal, zone or
+ * codes, and no actions in the panel.
+ */
+export interface ReadOnlyNetworkUser {
+  id: number
+  name: string | null
+  email: string
+  role: ReadOnlyUserRole
+  readOnly: true
+  createdAt?: string
+  twoFactorEnabled?: boolean
+  principal?: null
+  zone?: null
+  codes?: HierarchyPrincipalCode[]
+}
+
+/** What `GET /hierarchy/users` lists: the accounts the caller manages and, for an Owner, the read-only ones. */
+export type NetworkUserRow = NetworkUser | ReadOnlyNetworkUser
 
 export interface NetworkUsersQuery {
   zoneId?: number

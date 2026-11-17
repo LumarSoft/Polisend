@@ -55,7 +55,7 @@ export function isTenantRole(role: MaybeRole): boolean {
 export function roleLabel(role: MaybeRole): string {
   switch (role) {
     case ROLES.developer:
-      return 'Developer · Lumar'
+      return 'Lumarsoft · Developer'
     case ROLES.owner:
       return 'Owner'
     case ROLES.superAdmin:

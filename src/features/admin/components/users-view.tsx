@@ -20,6 +20,7 @@ import { useProfile } from '../hooks/use-profile'
 import { useRole } from '../hooks/use-role'
 import { NO_ZONE, zoneKeyOf } from '../lib/network'
 import { USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
+import { isManagedUser, isReadOnlyUser, matchesSearch } from '../lib/network-users'
 import { ROLES, roleLabel } from '../lib/roles'
 import { AccountAccessDialog } from './account-access-dialog'
 import { BranchOnboardingDialog } from './branch-onboarding-dialog'
@@ -165,7 +166,7 @@ function UsersScreen() {
     ...(search ? { q: search } : {}),
   }
   const usersQuery = useNetworkUsers(query)
-  const users = narrowUsers(usersQuery.data, filter, principals)
+  const users = narrowUsers(usersQuery.data?.filter(isManagedUser), filter, principals)
   // The SuperAdmin's own principal: its name, its codes (filter and "Productores").
   const tree = useNetworkTree(isSuperAdmin)
   const ownPrincipal = isSuperAdmin ? (principals.find(p => p.isHome) ?? principals[0] ?? null) : null
@@ -176,6 +177,12 @@ function UsersScreen() {
 
   const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
   const emptyText = filtered || role || search ? 'Ningún usuario coincide con los filtros.' : 'Todavía no hay usuarios.'
+  // An Owner's read-only rows (Lumarsoft, the other Owners of its zones) have no principal, zone, codes or managed
+  // role: they show only with no filter but the search.
+  const readOnlyUsers =
+    isOwner && !filtered && !role
+      ? (usersQuery.data ?? []).filter(isReadOnlyUser).filter(user => matchesSearch(user, search))
+      : []
 
   const openCreate = () => {
     setEditing(null)
@@ -204,7 +211,7 @@ function UsersScreen() {
   const subtitle = isDeveloper
     ? 'Los SuperAdmin y Admin de todos los principales. Polisend los invita por correo y nunca elige ni ve sus contraseñas; cada cambio le llega como aviso a su principal.'
     : isOwner
-      ? 'Los SuperAdmin y Admin de los principales de tu red.'
+      ? 'Los SuperAdmin y Admin de los principales de tu red. Al final, de solo lectura, las cuentas de Lumarsoft y de los otros Owner de tus zonas.'
       : `Los SuperAdmin y Admin de ${ownPrincipal?.name ?? 'tu principal'}.`
 
   return (
@@ -308,6 +315,7 @@ function UsersScreen() {
             isLoading={usersQuery.isLoading}
             isError={usersQuery.isError}
             selfId={profile?.id ?? null}
+            readOnlyUsers={readOnlyUsers}
             showPrincipal={!isSuperAdmin}
             emptyText={emptyText}
             onEdit={user => {

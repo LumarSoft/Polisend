@@ -21,6 +21,7 @@ import { useNetworkUsers } from '../hooks/use-hierarchy'
 import { useOrganizations } from '../hooks/use-organizations'
 import { usePlatformOwnerActions } from '../hooks/use-platform-structure'
 import { apiErrorMessage } from '../lib/api-error-message'
+import { isManagedUser } from '../lib/network-users'
 import { roleLabel } from '../lib/roles'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -117,7 +118,8 @@ function NewOwnerForm({ zones, onDone }: { zones: PlatformZone[]; onDone: () => 
   const [submitted, setSubmitted] = useState(false)
 
   const { data: organizations = [], isLoading: orgsLoading } = useOrganizations(mode === 'invite')
-  const { data: users = [], isLoading: usersLoading } = useNetworkUsers({}, mode === 'convert')
+  const { data: rows = [], isLoading: usersLoading } = useNetworkUsers({}, mode === 'convert')
+  const users = rows.filter(isManagedUser)
 
   const errors =
     mode === 'invite'
