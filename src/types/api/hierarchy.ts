@@ -242,9 +242,9 @@ export interface NetworkUser {
 export type ReadOnlyUserRole = 'DEVELOPER' | 'OWNER'
 
 /**
- * A row of `GET /hierarchy/users` that only an OWNER gets (decision of 17/11): the live Developer accounts and the other
- * Owners that share one of its zones. Nobody may edit it (the API answers 404 on its routes): no principal, zone or
- * codes, and no actions in the panel.
+ * A row of `GET /hierarchy/users?includeReadOnly=true` that only an OWNER gets (decision of 17/11): the live Developer
+ * accounts and the other Owners that share one of its zones. Nobody may edit it (the API answers 404 on its routes): no
+ * principal, zone or codes, nothing about its second step, and no actions in the panel.
  */
 export interface ReadOnlyNetworkUser {
   id: number
@@ -252,14 +252,17 @@ export interface ReadOnlyNetworkUser {
   email: string
   role: ReadOnlyUserRole
   readOnly: true
+  /** What the account is, for the Rol column: "Lumarsoft · Developer", "Owner · <shared zone names>". */
+  label?: string
   createdAt?: string
-  twoFactorEnabled?: boolean
+  /** Null: the API says nothing about a read-only account's second step. */
+  twoFactorEnabled?: boolean | null
   principal?: null
   zone?: null
   codes?: HierarchyPrincipalCode[]
 }
 
-/** What `GET /hierarchy/users` lists: the accounts the caller manages and, for an Owner, the read-only ones. */
+/** What `GET /hierarchy/users` lists: the accounts the caller manages and, for an Owner asking, the read-only ones. */
 export type NetworkUserRow = NetworkUser | ReadOnlyNetworkUser
 
 export interface NetworkUsersQuery {
@@ -268,6 +271,11 @@ export interface NetworkUsersQuery {
   role?: NetworkUserRole
   /** Part of the name or the e-mail. */
   q?: string
+  /**
+   * An Owner's Usuarios: also list the read-only rows (Lumarsoft, the other Owners of its zones). Without it the API
+   * sends only the accounts the caller manages; ignored for every other role.
+   */
+  includeReadOnly?: boolean
 }
 
 /** A principal created together with its first SuperAdmin (Owner or Developer only). */

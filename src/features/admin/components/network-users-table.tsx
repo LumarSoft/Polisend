@@ -93,7 +93,7 @@ function UserCell({ user, isSelf = false }: { user: NetworkUser | ReadOnlyNetwor
               Vos
             </Badge>
           )}
-          {user.twoFactorEnabled !== undefined && <TwoFactorBadge enabled={user.twoFactorEnabled} />}
+          {typeof user.twoFactorEnabled === 'boolean' && <TwoFactorBadge enabled={user.twoFactorEnabled} />}
         </div>
         {user.name && <div className="truncate text-[12px] text-muted-foreground">{user.email}</div>}
       </div>
@@ -101,7 +101,10 @@ function UserCell({ user, isSelf = false }: { user: NetworkUser | ReadOnlyNetwor
   )
 }
 
-/** A row nobody may edit: its role, "—" where a managed account has a principal, a zone or codes, and no menu. */
+/**
+ * A row nobody may edit: the API's `label` as its role ("Lumarsoft · Developer", "Owner · <shared zones>"), "—" where a
+ * managed account has a principal, a zone or codes, and no menu.
+ */
 function ReadOnlyRow({ user, showPrincipal }: { user: ReadOnlyNetworkUser; showPrincipal: boolean }) {
   const none = <span className="text-[13px] text-muted-foreground">—</span>
   return (
@@ -110,8 +113,11 @@ function ReadOnlyRow({ user, showPrincipal }: { user: ReadOnlyNetworkUser; showP
         <UserCell user={user} />
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className="border-line-2 font-normal text-ink-3">
-          {roleLabel(user.role)}
+        <Badge
+          variant="outline"
+          className="h-auto max-w-[240px] whitespace-normal rounded-md border-line-2 text-left font-normal text-ink-3"
+        >
+          {user.label || roleLabel(user.role)}
         </Badge>
       </TableCell>
       {showPrincipal && <TableCell>{none}</TableCell>}

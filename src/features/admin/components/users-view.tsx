@@ -158,12 +158,18 @@ function UsersScreen() {
     clearPrincipalLink()
   }
 
+  const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
+  // An Owner's read-only rows (Lumarsoft, the other Owners of its zones) have no principal, zone, codes or managed
+  // role: they show only with no filter but the search, and only then does the panel ask the API for them.
+  const withReadOnly = isOwner && !filtered && !role
+
   const { data: principals = [] } = useHierarchyPrincipals()
   const query: NetworkUsersQuery = {
     ...(typeof filter.zoneKey === 'number' && filter.principalId === null ? { zoneId: filter.zoneKey } : {}),
     ...(filter.principalId !== null ? { producerId: filter.principalId } : {}),
     ...(role ? { role } : {}),
     ...(search ? { q: search } : {}),
+    ...(withReadOnly ? { includeReadOnly: true } : {}),
   }
   const usersQuery = useNetworkUsers(query)
   const users = narrowUsers(usersQuery.data?.filter(isManagedUser), filter, principals)
@@ -175,14 +181,10 @@ function UsersScreen() {
   const [access, setAccess] = useState<{ action: AccountAccessAction; user: NetworkUser } | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
   const emptyText = filtered || role || search ? 'Ningún usuario coincide con los filtros.' : 'Todavía no hay usuarios.'
-  // An Owner's read-only rows (Lumarsoft, the other Owners of its zones) have no principal, zone, codes or managed
-  // role: they show only with no filter but the search.
-  const readOnlyUsers =
-    isOwner && !filtered && !role
-      ? (usersQuery.data ?? []).filter(isReadOnlyUser).filter(user => matchesSearch(user, search))
-      : []
+  const readOnlyUsers = withReadOnly
+    ? (usersQuery.data ?? []).filter(isReadOnlyUser).filter(user => matchesSearch(user, search))
+    : []
 
   const openCreate = () => {
     setEditing(null)

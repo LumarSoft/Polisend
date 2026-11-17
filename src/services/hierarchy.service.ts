@@ -75,7 +75,10 @@ export const hierarchyService = {
       body: data,
     }),
 
-  /** An Owner also gets read-only rows (`readOnly: true`): Lumarsoft's accounts and the Owners of its zones. */
+  /**
+   * With `includeReadOnly`, an Owner also gets read-only rows (`readOnly: true`): Lumarsoft's accounts and the Owners of
+   * its zones.
+   */
   users: (token: string, query: NetworkUsersQuery = {}): Promise<NetworkUserRow[]> =>
     apiRequest<NetworkUserRow[]>(`/hierarchy/users${queryString({ ...query })}`, { token }),
 
