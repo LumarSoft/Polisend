@@ -107,122 +107,124 @@ export function NetworkUsersTable({
 
   return (
     <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className={`h-11 pl-5 ${HEAD}`}>Usuario</TableHead>
-            <TableHead className={HEAD}>Rol</TableHead>
-            {showPrincipal && <TableHead className={HEAD}>Principal</TableHead>}
-            {showPrincipal && <TableHead className={`hidden lg:table-cell ${HEAD}`}>Zona</TableHead>}
-            <TableHead className={`hidden md:table-cell ${HEAD}`}>Códigos</TableHead>
-            <TableHead className={`hidden sm:table-cell ${HEAD}`}>Alta</TableHead>
-            <TableHead className="w-12 pr-5" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading && !users && <LoadingRows columns={columns} />}
-
-          {isError && !users && (
-            <TableRow>
-              <TableCell colSpan={columns} className="py-14 text-center text-[14px] text-destructive">
-                No se pudieron cargar los usuarios.
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={`h-11 pl-5 ${HEAD}`}>Usuario</TableHead>
+              <TableHead className={HEAD}>Rol</TableHead>
+              {showPrincipal && <TableHead className={HEAD}>Principal</TableHead>}
+              {showPrincipal && <TableHead className={`hidden lg:table-cell ${HEAD}`}>Zona</TableHead>}
+              <TableHead className={`hidden md:table-cell ${HEAD}`}>Códigos</TableHead>
+              <TableHead className={`hidden sm:table-cell ${HEAD}`}>Alta</TableHead>
+              <TableHead className="w-12 pr-5" />
             </TableRow>
-          )}
+          </TableHeader>
+          <TableBody>
+            {isLoading && !users && <LoadingRows columns={columns} />}
 
-          {users && users.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={columns} className="py-16 text-center">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                    <UserPlus className="size-5" />
-                  </div>
-                  <p className="text-[14px] text-muted-foreground">{emptyText}</p>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
+            {isError && !users && (
+              <TableRow>
+                <TableCell colSpan={columns} className="py-14 text-center text-[14px] text-destructive">
+                  No se pudieron cargar los usuarios.
+                </TableCell>
+              </TableRow>
+            )}
 
-          {users?.map(user => {
-            const isSelf = user.id === selfId
-            return (
-              <TableRow key={user.id}>
-                <TableCell className="py-3 pl-5">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-9">
-                      <AvatarFallback className="bg-ember-soft text-[12px] font-semibold text-ember-2">
-                        {(user.name || user.email).slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-[14px] font-medium text-ink">{user.name || user.email}</span>
-                        {isSelf && (
-                          <Badge variant="secondary" className="bg-ember-soft text-ember-2">
-                            Vos
-                          </Badge>
-                        )}
-                        <TwoFactorBadge enabled={user.twoFactorEnabled} />
-                      </div>
-                      {user.name && <div className="truncate text-[12px] text-muted-foreground">{user.email}</div>}
+            {users && users.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={columns} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                      <UserPlus className="size-5" />
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="font-normal text-ink-3">
-                    {roleLabel(user.role)}
-                  </Badge>
-                </TableCell>
-                {showPrincipal && <TableCell className="text-[13px] text-ink">{user.principal.name}</TableCell>}
-                {showPrincipal && (
-                  <TableCell className="hidden text-[13px] text-muted-foreground lg:table-cell">
-                    {user.zone?.name ?? 'Sin zona'}
-                  </TableCell>
-                )}
-                <TableCell className="hidden md:table-cell">
-                  <CodesCell user={user} />
-                </TableCell>
-                <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
-                  {formatJoinDate(user.createdAt)}
-                </TableCell>
-                <TableCell className="pr-5">
-                  <div className="flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
-                          <Ellipsis className="size-4" />
-                          <span className="sr-only">Acciones</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-72">
-                        <DropdownMenuItem onClick={() => onEdit(user)}>
-                          <SquarePen />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onSendPasswordLink(user)}>
-                          <Send />
-                          Mandar enlace para elegir contraseña
-                        </DropdownMenuItem>
-                        {canResetTwoFactor && user.twoFactorEnabled && !isSelf && (
-                          <DropdownMenuItem onClick={() => onResetTwoFactor(user)}>
-                            <ShieldOff />
-                            Reiniciar verificación en dos pasos
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" disabled={isSelf} onClick={() => onDelete(user)}>
-                          <Trash2 />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <p className="text-[14px] text-muted-foreground">{emptyText}</p>
                   </div>
                 </TableCell>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+            )}
+
+            {users?.map(user => {
+              const isSelf = user.id === selfId
+              return (
+                <TableRow key={user.id}>
+                  <TableCell className="py-3 pl-5">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="size-9">
+                        <AvatarFallback className="bg-ember-soft text-[12px] font-semibold text-ember-2">
+                          {(user.name || user.email).slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-[14px] font-medium text-ink">{user.name || user.email}</span>
+                          {isSelf && (
+                            <Badge variant="secondary" className="bg-ember-soft text-ember-2">
+                              Vos
+                            </Badge>
+                          )}
+                          <TwoFactorBadge enabled={user.twoFactorEnabled} />
+                        </div>
+                        {user.name && <div className="truncate text-[12px] text-muted-foreground">{user.email}</div>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="font-normal text-ink-3">
+                      {roleLabel(user.role)}
+                    </Badge>
+                  </TableCell>
+                  {showPrincipal && <TableCell className="text-[13px] text-ink">{user.principal.name}</TableCell>}
+                  {showPrincipal && (
+                    <TableCell className="hidden text-[13px] text-muted-foreground lg:table-cell">
+                      {user.zone?.name ?? 'Sin zona'}
+                    </TableCell>
+                  )}
+                  <TableCell className="hidden md:table-cell">
+                    <CodesCell user={user} />
+                  </TableCell>
+                  <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
+                    {formatJoinDate(user.createdAt)}
+                  </TableCell>
+                  <TableCell className="pr-5">
+                    <div className="flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
+                            <Ellipsis className="size-4" />
+                            <span className="sr-only">Acciones</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-72">
+                          <DropdownMenuItem onClick={() => onEdit(user)}>
+                            <SquarePen />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onSendPasswordLink(user)}>
+                            <Send />
+                            Mandar enlace para elegir contraseña
+                          </DropdownMenuItem>
+                          {canResetTwoFactor && user.twoFactorEnabled && !isSelf && (
+                            <DropdownMenuItem onClick={() => onResetTwoFactor(user)}>
+                              <ShieldOff />
+                              Reiniciar verificación en dos pasos
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" disabled={isSelf} onClick={() => onDelete(user)}>
+                            <Trash2 />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </Card>
   )
 }

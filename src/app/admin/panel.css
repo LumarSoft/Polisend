@@ -696,3 +696,9 @@
 .dark .wa ::-webkit-scrollbar-thumb {
   background: rgba(233, 237, 239, 0.16);
 }
+
+/* A table wrapped in an `overflow-x-auto` box scrolls sideways inside it. The table's own container clips (so a page
+   with sticky headers keeps working), which used to cut the last columns (often the row actions) on narrow screens. */
+.overflow-x-auto > [data-slot='table-container'] {
+  overflow-x: visible;
+}
