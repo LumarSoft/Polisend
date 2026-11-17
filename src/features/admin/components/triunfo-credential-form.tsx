@@ -36,7 +36,7 @@ function statusLine(status: TriunfoCredentialStatus, audience: Audience): { ok: 
       ok: false,
       text:
         audience === 'owner'
-          ? 'Sin credenciales propias: cotiza autos y motos con la cuenta principal, de forma provisoria. No sincroniza su cartera ni baja documentos de Triunfo.'
+          ? 'Sin credenciales propias: cotiza autos y motos con la cuenta de Polisend, de forma provisoria. No sincroniza su cartera ni baja documentos de Triunfo.'
           : 'Todavía sin acceso propio: las cotizaciones salen de forma provisoria con otra cuenta. La cartera y los documentos esperan tu acceso.',
     }
   return {

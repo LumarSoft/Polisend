@@ -15,8 +15,8 @@ import { ROLES } from '../lib/roles'
 
 /** The roles a function can be turned off for, next to the plans. */
 const ROLE_COLUMNS: Array<{ role: FeatureRoleName; label: string }> = [
-  { role: ROLES.admin, label: 'Administradores' },
-  { role: ROLES.superAdmin, label: 'SuperAdmins' },
+  { role: ROLES.admin, label: 'Admin' },
+  { role: ROLES.superAdmin, label: 'SuperAdmin' },
 ]
 
 function failed(error: unknown) {
@@ -37,7 +37,7 @@ function PlanFeaturesTable({ features, plans }: { features: PlanFeatureInfo[]; p
       {
         onSuccess: () =>
           toast.success(
-            `${feature.label}: ${on ? 'habilitada' : 'deshabilitada'} para ${role === ROLES.admin ? 'administradores' : 'SuperAdmins'}`,
+            `${feature.label}: ${on ? 'habilitada' : 'deshabilitada'} para los ${role === ROLES.admin ? 'Admin' : 'SuperAdmin'}`,
           ),
         onError: failed,
         onSettled: () => setPending(null),
@@ -149,8 +149,8 @@ export function PlanFeaturesView() {
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
           Qué incluye cada plan además de los mensajes. Una organización puede usar una función si el plan de alguno de
           sus números la incluye; si no, el panel la muestra bloqueada y dice desde qué plan está. Las columnas de roles
-          la apagan para todos los administradores o SuperAdmins, aunque su plan la incluya. Una función nueva arranca
-          apagada en todos los planes.
+          la apagan para todos los Admin o SuperAdmin, aunque su plan la incluya. Una función nueva arranca apagada en
+          todos los planes.
         </p>
       </div>
 

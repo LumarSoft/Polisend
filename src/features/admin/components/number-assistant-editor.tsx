@@ -196,7 +196,7 @@ export function NumberAssistantEditor({
       <div className={cn('px-5 py-5', !inline && 'min-h-0 flex-1 overflow-y-auto')}>
         {!canEdit && (
           <p className="mb-5 rounded-lg border border-line-2 bg-canvas-2 px-3 py-2 text-[12.5px] text-muted-foreground">
-            Solo un SuperAdmin o un administrador del código de este número puede cambiarlo.
+            Solo un SuperAdmin o un Admin del código de este número puede cambiarlo.
           </p>
         )}
         <fieldset disabled={!canEdit} className="flex flex-col gap-8">
