@@ -2,27 +2,34 @@
 
 import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Bot, Check, CheckCircle2, CreditCard, KeyRound, Loader2, Mail, MessageSquare, UserPlus } from 'lucide-react'
+import { Bot, Check, CheckCircle2, CreditCard, Loader2, MessageSquare, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ApiError } from '@/lib/api-client'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type { ProducerCodeOption } from '@/types/api/users'
+import type { PrincipalCode } from '@/types/api/hierarchy'
 import type { OnboardWhatsappResponse } from '@/types/api/whatsapp-onboarding'
-import { useCreateProducerCode } from '../hooks/use-create-producer-code'
-import { useCreateUser } from '../hooks/use-create-user'
 import { useAssignPlan, useBillingOverview } from '../hooks/use-billing'
+import { useNetworkUserActions, usePrincipalCodeActions } from '../hooks/use-hierarchy'
+import { networkErrorMessage, restorableUserIdOf } from '../lib/network-user-errors'
+import { isValidProducerCode, MIN_PASSWORD_LENGTH, PRODUCER_CODE_HINT } from '../lib/network-users'
+import { ROLES } from '../lib/roles'
 import { ConectarWhatsapp } from './conectar-whatsapp'
 import { NumberAssistantSheet } from './number-assistant-sheet'
-import { ROLES } from '../lib/roles'
+import { UserDataFields } from './user-data-fields'
 
-type Step = 'branch' | 'user' | 'number' | 'assistant' | 'plan' | 'done'
+type Step = 'code' | 'user' | 'number' | 'assistant' | 'plan' | 'done'
+
+/** The principal the productor is created in. */
+export interface OnboardingPrincipal {
+  id: number
+  name: string
+}
 
 const STEPS: { key: Step; label: string }[] = [
-  { key: 'branch', label: 'Sucursal' },
+  { key: 'code', label: 'Productor' },
   { key: 'user', label: 'Usuario' },
   { key: 'number', label: 'WhatsApp' },
   { key: 'assistant', label: 'Asistente' },
@@ -30,7 +37,7 @@ const STEPS: { key: Step; label: string }[] = [
 ]
 
 function failed(error: unknown, fallback: string) {
-  toast.error(error instanceof ApiError && error.status < 500 ? error.message : fallback)
+  toast.error(networkErrorMessage(error, fallback))
 }
 
 function Stepper({ current }: { current: Step }) {
@@ -63,75 +70,107 @@ function Stepper({ current }: { current: Step }) {
 
 // ─── Steps ───────────────────────────────────────────────────────────────────────
 
-function BranchStep({ onCreated }: { onCreated: (code: ProducerCodeOption) => void }) {
+function CodeStep({
+  principal,
+  onCreated,
+}: {
+  principal: OnboardingPrincipal
+  onCreated: (code: PrincipalCode) => void
+}) {
   const [code, setCode] = useState('')
   const [holderName, setHolderName] = useState('')
-  const create = useCreateProducerCode()
+  const { createCode } = usePrincipalCodeActions()
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    create.mutate(
-      { code: code.trim(), holderName: holderName.trim() || undefined },
-      { onSuccess: onCreated, onError: error => failed(error, 'No se pudo crear la sucursal') },
+    if (!isValidProducerCode(code)) {
+      toast.error(`El código no es válido. ${PRODUCER_CODE_HINT}`)
+      return
+    }
+    createCode.mutate(
+      {
+        principalId: principal.id,
+        data: { code: code.trim(), ...(holderName.trim() ? { holderName: holderName.trim() } : {}) },
+      },
+      { onSuccess: onCreated, onError: error => failed(error, 'No se pudo crear el productor') },
     )
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <p className="text-[13px] text-muted-foreground">
-        Cada sucursal es un código de productor de Triunfo. Su cartera, su número y su administrador quedan atados a ese
-        código y separados del resto.
+        Cada productor es un código de Triunfo de {principal.name}. Su cartera, su número y su Admin quedan atados a ese
+        código y separados del resto. Si el código ya existía y estaba borrado, vuelve.
       </p>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="branch-code">Código de productor (Triunfo)</Label>
+        <Label htmlFor="onboarding-code">Código de productor (Triunfo)</Label>
         <Input
-          id="branch-code"
+          id="onboarding-code"
           required
           maxLength={20}
-          pattern="[0-9A-Za-z-]+"
           placeholder="14831"
           className="h-10"
           value={code}
           onChange={e => setCode(e.target.value)}
         />
+        <p className="text-[12px] text-muted-foreground">{PRODUCER_CODE_HINT}</p>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="branch-name">
-          Sucursal o titular <span className="text-muted-foreground">(como figura en Triunfo)</span>
+        <Label htmlFor="onboarding-holder">
+          Titular <span className="text-muted-foreground">(como figura en Triunfo)</span>
         </Label>
         <Input
-          id="branch-name"
+          id="onboarding-holder"
           maxLength={120}
-          placeholder="Sucursal Pueblo Esther"
+          placeholder="Productor Pueblo Esther"
           className="h-10"
           value={holderName}
           onChange={e => setHolderName(e.target.value)}
         />
       </div>
       <div className="flex justify-end">
-        <Button type="submit" disabled={create.isPending || !code.trim()}>
-          {create.isPending && <Loader2 className="size-4 animate-spin" />}
-          Crear sucursal
+        <Button type="submit" disabled={createCode.isPending || !code.trim()}>
+          {createCode.isPending && <Loader2 className="size-4 animate-spin" />}
+          Crear productor
         </Button>
       </div>
     </form>
   )
 }
 
-function UserStep({ code, onCreated }: { code: ProducerCodeOption; onCreated: (email: string) => void }) {
+function UserStep({
+  principal,
+  code,
+  onCreated,
+}: {
+  principal: OnboardingPrincipal
+  code: PrincipalCode
+  onCreated: (user: { email: string; invited: boolean }) => void
+}) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const create = useCreateUser()
+  const { createUser } = useNetworkUserActions()
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    create.mutate(
-      { email, name, password, role: ROLES.admin, producerCodeIds: [code.id] },
+    if (password && password.length < MIN_PASSWORD_LENGTH) {
+      toast.error(`La contraseña necesita al menos ${MIN_PASSWORD_LENGTH} caracteres.`)
+      return
+    }
+    createUser.mutate(
       {
-        onSuccess: () => onCreated(email),
+        email: email.trim(),
+        ...(name.trim() ? { name: name.trim() } : {}),
+        ...(password ? { password } : {}),
+        role: ROLES.admin,
+        producerId: principal.id,
+        producerCodeIds: [code.id],
+      },
+      {
+        onSuccess: created => onCreated({ email: created.email, invited: created.invitationSent }),
         onError: error =>
           toast.error(
-            error instanceof ApiError && error.status === 409
-              ? 'Ese correo ya está en uso.'
-              : 'No se pudo crear el usuario',
+            restorableUserIdOf(error) !== null
+              ? 'Ese correo es de un usuario eliminado: usá otro, o restauralo desde "Nuevo usuario" en Usuarios.'
+              : networkErrorMessage(error, 'No se pudo crear el usuario'),
           ),
       },
     )
@@ -139,56 +178,22 @@ function UserStep({ code, onCreated }: { code: ProducerCodeOption; onCreated: (e
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <p className="text-[13px] text-muted-foreground">
-        El administrador de <span className="font-medium text-ink">{code.holderName ?? code.code}</span>. Solo ve los
+        El Admin de <span className="font-medium text-ink">{code.holderName ?? code.code}</span>. Solo ve los
         asegurados, chats y números del código {code.code}.
       </p>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="branch-user-name">
-          Nombre <span className="text-muted-foreground">(como lo llaman en la oficina)</span>
-        </Label>
-        <Input
-          id="branch-user-name"
-          maxLength={80}
-          placeholder="Mili"
-          className="h-10"
-          value={name}
-          onChange={e => setName(e.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="branch-user-email">Correo electrónico</Label>
-        <div className="relative">
-          <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id="branch-user-email"
-            type="email"
-            required
-            placeholder="nombre@gmail.com"
-            className="h-10 pl-9"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-        </div>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="branch-user-password">Contraseña</Label>
-        <div className="relative">
-          <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id="branch-user-password"
-            type="password"
-            required
-            minLength={6}
-            placeholder="Mínimo 6 caracteres"
-            className="h-10 pl-9"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
-        </div>
-      </div>
+      <UserDataFields
+        idPrefix="onboarding-user"
+        name={name}
+        onNameChange={setName}
+        email={email}
+        onEmailChange={setEmail}
+        password={password}
+        onPasswordChange={setPassword}
+        passwordMode="optional"
+      />
       <div className="flex justify-end">
-        <Button type="submit" disabled={create.isPending}>
-          {create.isPending && <Loader2 className="size-4 animate-spin" />}
+        <Button type="submit" disabled={createUser.isPending}>
+          {createUser.isPending && <Loader2 className="size-4 animate-spin" />}
           Crear usuario
         </Button>
       </div>
@@ -201,14 +206,14 @@ function NumberStep({
   onConnected,
   onLater,
 }: {
-  code: ProducerCodeOption
+  code: PrincipalCode
   onConnected: (result: OnboardWhatsappResponse) => void
   onLater: () => void
 }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[13px] text-muted-foreground">
-        El número de WhatsApp de la sucursal, facturado al código {code.code}. Antes de conectarlo, completá el nombre
+        El número de WhatsApp del productor, facturado al código {code.code}. Antes de conectarlo, completá el nombre
         con el que se va a ver en el panel y cómo atiende el bot: su nombre, de quién se presenta como asistente, el
         alias para transferencias, las personas de la oficina y el horario. Son obligatorios: sin ellos el número saluda
         como la casa central. El número tiene que estar activo en la app WhatsApp Business del celular; Meta pide
@@ -223,7 +228,7 @@ function NumberStep({
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-[12px] text-muted-foreground">
-          Sin número, la sucursal queda creada igual: se conecta después desde Números.
+          Sin número, el productor queda creado igual: se conecta después desde Números.
         </span>
         <Button type="button" variant="outline" onClick={onLater} className="border-line-2">
           Conectar más tarde
@@ -346,47 +351,57 @@ function PlanStep({ numberId, onDone }: { numberId: number; onDone: (planName: s
 // ─── Dialog ──────────────────────────────────────────────────────────────────────
 
 interface Summary {
-  code: ProducerCodeOption | null
-  email: string | null
+  code: PrincipalCode | null
+  user: { email: string; invited: boolean } | null
   number: OnboardWhatsappResponse | null
   plan: string | null
 }
 
+const EMPTY_SUMMARY: Summary = { code: null, user: null, number: null, plan: null }
+
 /**
- * The onboarding of a new branch: its code, its administrator, its WhatsApp
- * number and how the bot attends on it, one step at a time. Every step is
- * saved as it goes, so closing early leaves what was done. The last step puts
- * the number on a plan of the catalog (or leaves it on the smallest one).
+ * "Alta guiada de productor en <principal>": a new productor of a principal given explicitly (its code, its Admin, its
+ * WhatsApp number and how the bot attends on it), one step at a time. The code goes through the single code endpoint
+ * and the Admin through POST /hierarchy/users; number, assistant and plan act on the active principal, so an Owner's
+ * caller makes `principal` the active one before opening it. Every step is saved as it goes, so closing early leaves
+ * what was done. The last step puts the number on a plan of the catalog (or leaves it on the smallest one).
  */
 export function BranchOnboardingDialog({
+  principal,
   open,
   onOpenChange,
 }: {
+  principal: OnboardingPrincipal | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const queryClient = useQueryClient()
-  const [step, setStep] = useState<Step>('branch')
-  const [summary, setSummary] = useState<Summary>({ code: null, email: null, number: null, plan: null })
+  const [step, setStep] = useState<Step>('code')
+  const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY)
+  const [wasOpen, setWasOpen] = useState(open)
 
-  const reset = () => {
-    setStep('branch')
-    setSummary({ code: null, email: null, number: null, plan: null })
+  // Starts over each time it opens (not when it closes, so the last step stays while the dialog fades out).
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      setStep('code')
+      setSummary(EMPTY_SUMMARY)
+    }
   }
+
   const close = () => {
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.phoneNumbers })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
     onOpenChange(false)
-    reset()
   }
 
   const titles: Record<Step, string> = {
-    branch: 'Nueva sucursal',
-    user: 'Su administrador',
+    code: `Alta guiada de productor en ${principal?.name ?? ''}`,
+    user: 'Su Admin',
     number: 'Su número de WhatsApp',
     assistant: 'Cómo atiende el bot',
     plan: 'Su plan de mensajes',
-    done: 'Sucursal lista',
+    done: 'Productor listo',
   }
 
   return (
@@ -401,19 +416,21 @@ export function BranchOnboardingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {open && step === 'branch' && (
-          <BranchStep
+        {open && principal && step === 'code' && (
+          <CodeStep
+            principal={principal}
             onCreated={code => {
               setSummary(s => ({ ...s, code }))
               setStep('user')
             }}
           />
         )}
-        {open && step === 'user' && summary.code && (
+        {open && principal && step === 'user' && summary.code && (
           <UserStep
+            principal={principal}
             code={summary.code}
-            onCreated={email => {
-              setSummary(s => ({ ...s, email }))
+            onCreated={user => {
+              setSummary(s => ({ ...s, user }))
               setStep('number')
             }}
           />
@@ -445,13 +462,14 @@ export function BranchOnboardingDialog({
             <ul className="flex flex-col gap-2 text-[13px]">
               <li className="flex items-center gap-2 text-ink">
                 <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
-                Sucursal <span className="font-medium">
+                Productor <span className="font-medium">
                   {summary.code?.holderName ?? summary.code?.code}
-                </span> (código {summary.code?.code})
+                </span> (código {summary.code?.code}) en {principal?.name}
               </li>
               <li className="flex items-center gap-2 text-ink">
                 <UserPlus className="size-4 text-emerald-600 dark:text-emerald-400" />
-                Administrador <span className="font-medium">{summary.email}</span>
+                Admin <span className="font-medium">{summary.user?.email}</span>
+                {summary.user?.invited && <span className="text-muted-foreground">(le llegó el enlace)</span>}
               </li>
               <li className="flex items-center gap-2 text-ink">
                 <MessageSquare

@@ -1,27 +1,11 @@
 import { apiRequest } from '@/lib/api-client'
-import type { AdminUser } from '@/types/api/auth'
-import type {
-  CreateProducerCodeRequest,
-  CreateUserRequest,
-  ProducerCodeOption,
-  UpdateUserRequest,
-} from '@/types/api/users'
+import type { ProducerCodeOption } from '@/types/api/users'
 
+/**
+ * The acting principal's own lists under `/users`. Accounts are managed through `/hierarchy/users`
+ * (hierarchy.service.ts): the old `/users` CRUD is no longer called by the panel.
+ */
 export const usersService = {
-  list: (token: string): Promise<AdminUser[]> => apiRequest<AdminUser[]>('/users', { token }),
-
   listProducerCodes: (token: string): Promise<ProducerCodeOption[]> =>
     apiRequest<ProducerCodeOption[]>('/users/producer-codes', { token }),
-
-  createProducerCode: (token: string, data: CreateProducerCodeRequest): Promise<ProducerCodeOption> =>
-    apiRequest<ProducerCodeOption>('/users/producer-codes', { method: 'POST', token, body: data }),
-
-  create: (token: string, data: CreateUserRequest): Promise<AdminUser> =>
-    apiRequest<AdminUser>('/users', { method: 'POST', token, body: data }),
-
-  update: (token: string, id: number, data: UpdateUserRequest): Promise<AdminUser> =>
-    apiRequest<AdminUser>(`/users/${id}`, { method: 'PATCH', token, body: data }),
-
-  remove: (token: string, id: number): Promise<{ id: number }> =>
-    apiRequest<{ id: number }>(`/users/${id}`, { method: 'DELETE', token }),
 }
