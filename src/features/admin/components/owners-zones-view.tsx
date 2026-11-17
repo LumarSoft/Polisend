@@ -25,6 +25,7 @@ import {
   usePlatformZones,
 } from '../hooks/use-platform-structure'
 import type { AccountAccessAction } from '../hooks/use-account-access'
+import { useOrganizations } from '../hooks/use-organizations'
 import { useRole } from '../hooks/use-role'
 import { apiErrorMessage } from '../lib/api-error-message'
 import { AccountAccessDialog, TwoFactorBadge } from './account-access-dialog'
@@ -48,6 +49,8 @@ export function OwnersZonesView() {
   const { isDeveloper, isLoading: roleLoading } = useRole()
   const owners = usePlatformOwners(isDeveloper)
   const zones = usePlatformZones(isDeveloper)
+  // Principals in no zone (plan §6.4, the "Sin zona" group): only an Owner whose own principal it is reaches one.
+  const organizations = useOrganizations(isDeveloper)
   const ownerActions = usePlatformOwnerActions()
   const zoneActions = usePlatformZoneActions()
 
@@ -67,6 +70,8 @@ export function OwnersZonesView() {
   }
 
   const zoneList = zones.data ?? []
+  const unzoned = (organizations.data ?? []).filter(org => org.zone === null)
+  const unzonedOwners = (owners.data ?? []).filter(owner => unzoned.some(org => org.id === owner.home.id))
 
   const demote = () => {
     if (!demoting) return
@@ -341,6 +346,38 @@ export function OwnersZonesView() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {unzoned.length > 0 && (
+                  <TableRow>
+                    <TableCell className="pl-5">
+                      <span className="text-[14px] font-medium text-ink">Sin zona</span>
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-[13px] text-ink-3">
+                      {unzonedOwners.length > 0 ? (
+                        `${unzonedOwners.map(ownerName).join(', ')} (su principal propio)`
+                      ) : (
+                        <span className="text-muted-foreground">Ningún Owner</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-normal">
+                      <div className="flex flex-wrap gap-1">
+                        {unzoned.map(org => (
+                          <Badge
+                            key={org.id}
+                            variant="outline"
+                            className={`border-line-2 font-normal ${org.isActive ? 'text-ink-3' : 'text-muted-foreground line-through'}`}
+                            asChild
+                          >
+                            <Link href={`/admin/organizaciones/${org.id}`}>{org.name}</Link>
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      {/* Same height as the zone rows' buttons: the group is not edited or deleted here. */}
+                      <div className="h-8" />
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
