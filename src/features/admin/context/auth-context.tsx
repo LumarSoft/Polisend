@@ -16,6 +16,9 @@ import { adminAuthService } from '@/services/admin-auth.service'
 
 const TOKEN_STORAGE_KEY = 'admin_token'
 
+/** One toast for a session that ended (expired, or a password change somewhere): the last reason replaces the first. */
+export const SESSION_ENDED_TOAST_ID = 'session-ended'
+
 const listeners = new Set<() => void>()
 
 function subscribeToken(listener: () => void): () => void {
@@ -90,7 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const expireSession = useEffectEvent((rejected: string) => {
     if (rejected !== getTokenSnapshot()) return
-    toast.info('Tu sesión venció. Volvé a ingresar.')
+    // Also what another session sees after a password change: the API ends every session opened before it.
+    toast.info('Tu sesión terminó. Volvé a ingresar.', {
+      id: SESSION_ENDED_TOAST_ID,
+      description: 'Venció, o se cambió la contraseña de tu cuenta.',
+    })
     switchSession(null)
   })
 
