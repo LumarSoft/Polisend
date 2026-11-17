@@ -491,7 +491,7 @@ function useNavSections(): NavSection[] {
 
 /** The pending counts of the menu. Only a principal's office loads them: never the Developer. */
 function useAlertCounts(): (href: string) => number {
-  const { isDeveloper } = useRole()
+  const { isDeveloper, isOwner } = useRole()
   const tenant = useTenantQueriesEnabled()
   const { data: novedadesStats } = useNovedadesStats({}, tenant)
   const { data: taskStats } = useTaskStats(tenant)
@@ -501,7 +501,8 @@ function useAlertCounts(): (href: string) => number {
   const inboxPending = inboxConversations?.filter(c => c.status === 'pending').length ?? 0
   const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount(tenant)
   // "Mejoras" badge: unseen improvements for the office, new proposals for the Developer.
-  const { data: improvementsUnseen } = useImprovementsUnseenCount(tenant)
+  // Not for an Owner: the "new" marks are per user and would mix its principals.
+  const { data: improvementsUnseen } = useImprovementsUnseenCount(tenant && !isOwner)
   const { data: newProposals } = useNewProposalsCount(isDeveloper)
   // Status: the Developer's global view, or the office's own.
   const { data: integrationStatus } = useIntegrationStatus({ refreshMs: 5 * 60 * 1000, enabled: isDeveloper || tenant })
