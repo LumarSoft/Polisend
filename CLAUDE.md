@@ -79,7 +79,8 @@ pnpm exec tsc --noEmit
   muestra si `/users/me` trae `twoFactorEnabled`. Cambiar la propia contraseña cierra la sesión a propósito
   (`useUpdateProfile`), deja el correo para el login y lo explica; otra sesión cerrada por un cambio de contraseña ve
   «Tu sesión terminó».
-- `/admin/activar` (pública): lee el token en el navegador (`lib/link-token.ts`), lo saca de la URL, cierra cualquier
-  sesión guardada antes de mostrar el formulario y nunca inicia sesión sola. Todo texto de la API va como texto plano.
+- `/admin/activar` (pública): lee el token en el navegador (`lib/link-token.ts`), lo saca de la URL, cierra la
+  sesión que había al abrir la página (una sola vez: un login posterior en otra pestaña queda) y nunca inicia sesión
+  sola. Todo texto de la API va como texto plano.
 - Usuarios y Owners: `<AccountAccessDialog scope="network" | "owner" action="password-setup" | "reset-two-factor">`
   y la insignia `<TwoFactorBadge>` (`account-access-dialog.tsx`), con `useAccountAccess` por debajo.

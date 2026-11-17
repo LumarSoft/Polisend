@@ -30,6 +30,12 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
   is only a filter.
 - `ACTING_PRINCIPAL_INVALID` (or `actingInvalid` on `/users/me`) clears the choice, goes back to the own principal
   and shows «Ya no tenés acceso a ese principal».
+- A dropped response (no echo, or another principal's) asks for `/users/me` again: an Owner the Developer took back
+  to SuperAdmin gets answers without the echo, and only its profile ends the Owner session (the content remounts on
+  its own principal, «Tu cuenta ya no es Owner»).
+- A write created after slow work in the browser (reading an Excel) passes `startedIn: actingPrincipalFor(token)`,
+  taken when the person acted: if the Owner switched principal meanwhile, `apiRequest` does not send it
+  (`ACTING_PRINCIPAL_CHANGED`).
 
 ## Cascading filter
 
@@ -48,9 +54,9 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
 | Route | Who | What |
 |---|---|---|
 | `/admin/red` | Owner | Mi red: zones, principals, productores and their Admins. «Sin SuperAdmin · crear uno», «Entrar», «Ver usuarios». |
-| `/admin/red/consumo` | Owner | Consumo de la red: plan, plan messages, sent and campaign messages. No amount. |
+| `/admin/red/consumo` | Owner | Consumo de la red: plan, plan messages, sent and campaign messages. No amount. Productor = the numbers billed to that code. |
 | `/admin/usuarios` | Developer, Owner, SuperAdmin | One screen and one form for SuperAdmins and Admins. `?principal=<id>` preselects one. |
-| `/admin/owners` | Developer | Owners y zonas: Owners with their zones and «2 pasos» badge; zones. |
+| `/admin/owners` | Developer | Owners y zonas: Owners with their zones and «2 pasos» badge; zones, plus a «Sin zona» row. |
 | `/admin/cuenta` | Every role | Mi cuenta, with «Verificación en dos pasos». The only Configuración screen of the Developer. |
 | `/admin/activar` | Public | Choose a password from a mailed link. Outside `(panel)`. |
 
@@ -101,6 +107,12 @@ Two limits stay, because with either the platform could log in as the person:
 
 Its session still gets 403 on every data route. Each of these acts mails the principal's SuperAdmins and Owners
 («El equipo de Polisend modificó una cuenta de …»); the dialogs say so.
+
+A restore (any role) lands only in the principal the form shows, or changes nothing. The API brings an account back
+in the principal it was deleted from and the 409 does not name it, so its code check decides: an Admin goes back with
+the codes chosen; a SuperAdmin restored by an Owner or the Developer goes back as an Admin with one code of the
+form's principal and is then promoted (two notices for the Developer: restored, role changed). A miss says «Ese
+usuario eliminado era de otro principal».
 
 Any `PLATFORM_*` refusal the API still returns is shown with the API's Spanish message (`apiErrorMessage`).
 Owner and SuperAdmin keep their rules: they may type a password (empty = invitation), edit the e-mail, and never
