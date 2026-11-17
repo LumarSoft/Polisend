@@ -2,8 +2,8 @@ import { useNetworkUserActions } from './use-hierarchy'
 import { usePlatformOwnerActions } from './use-platform-structure'
 
 /**
- * Whose account: 'network' = a SuperAdmin or Admin (`/hierarchy/users/:id/…`, called by its Owner or SuperAdmin; the
- * Developer may send a link but never resets 2FA), 'owner' = an Owner (`/platform/owners/:id/…`, Developer only).
+ * Whose account: 'network' = a SuperAdmin or Admin (`/hierarchy/users/:id/…`, called by its SuperAdmin, its Owner or
+ * the Developer), 'owner' = an Owner (`/platform/owners/:id/…`, Developer only).
  */
 export type AccountAccessScope = 'network' | 'owner'
 

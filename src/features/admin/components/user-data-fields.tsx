@@ -13,9 +13,13 @@ import { copyToClipboard } from '../lib/clipboard'
  * How the form handles the password:
  * - `optional`: a new account; empty = the person gets an invitation by mail to choose it.
  * - `change`: an existing account; empty = it keeps its password.
- * - `invitation`: the Developer, who never chooses a password: there is no field, the account is always invited.
+ * - `invitation`: the Developer creating an account. It never chooses a password: no field, the account is invited.
+ * - `link`: the Developer editing an account. No field either: the person chooses it with a mailed link.
  */
-export type PasswordMode = 'optional' | 'change' | 'invitation'
+export type PasswordMode = 'optional' | 'change' | 'invitation' | 'link'
+
+/** Why the Developer never gets a password field (decision of 17/11). */
+const NO_PASSWORD_REASON = 'Polisend nunca elige ni ve contraseñas; la persona la elige con el enlace.'
 
 interface PasswordFieldProps {
   id: string
@@ -90,10 +94,10 @@ interface UserDataFieldsProps {
   onPasswordChange: (value: string) => void
   passwordMode: PasswordMode
   /**
-   * The Developer editing an account: name and e-mail are shown, not editable (the platform never renames or
-   * re-addresses an account; the person does it in Mi cuenta, or whoever manages its principal).
+   * The Developer editing an account: the e-mail is shown, not editable. With a reset link to an address of its own
+   * the platform could log in as the person; the person changes it in Mi cuenta, or whoever manages its principal.
    */
-  readOnlyIdentity?: boolean
+  emailReadOnly?: boolean
 }
 
 /** "Datos": name, e-mail and password of a SuperAdmin or Admin (the user form and the guided productor onboarding). */
@@ -106,21 +110,8 @@ export function UserDataFields({
   password,
   onPasswordChange,
   passwordMode,
-  readOnlyIdentity = false,
+  emailReadOnly = false,
 }: UserDataFieldsProps) {
-  if (readOnlyIdentity) {
-    return (
-      <div className="flex flex-col gap-2 rounded-lg border border-line-2 bg-secondary/40 p-3.5">
-        <div className="text-[14px] font-medium text-ink">{name || email}</div>
-        {name && <div className="text-[12.5px] text-muted-foreground">{email}</div>}
-        <p className="text-[12px] text-muted-foreground">
-          La plataforma no cambia el nombre, el correo ni la contraseña de una cuenta: los cambia la persona en Mi
-          cuenta, o quien administra su principal. Si no puede entrar, mandale un enlace para elegir su contraseña.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -144,23 +135,33 @@ export function UserDataFields({
             <Input
               id={`${idPrefix}-email`}
               type="email"
-              required
+              required={!emailReadOnly}
+              readOnly={emailReadOnly}
+              aria-describedby={emailReadOnly ? `${idPrefix}-email-note` : undefined}
               autoComplete="off"
               placeholder="nombre@gmail.com"
-              className="h-10 pl-9"
+              className={emailReadOnly ? 'h-10 bg-secondary/40 pl-9 text-muted-foreground' : 'h-10 pl-9'}
               value={email}
               onChange={e => onEmailChange(e.target.value)}
             />
           </div>
+          {emailReadOnly && (
+            <p id={`${idPrefix}-email-note`} className="text-[12px] text-muted-foreground">
+              Polisend no cambia el correo de una cuenta: lo cambia la persona en Mi cuenta, o quien administra su
+              principal.
+            </p>
+          )}
         </div>
       </div>
 
-      {passwordMode === 'invitation' ? (
+      {passwordMode === 'invitation' || passwordMode === 'link' ? (
         <div className="flex items-start gap-2.5 rounded-lg border border-line-2 bg-secondary/40 p-3 text-[12.5px] text-muted-foreground">
           <MailCheck className="mt-0.5 size-4 shrink-0 text-ember-2" />
           <span>
-            La plataforma no elige contraseñas: le llega un correo con un enlace para que elija la suya. El enlace vence
-            en 72 horas y sirve una sola vez.
+            {NO_PASSWORD_REASON}{' '}
+            {passwordMode === 'invitation'
+              ? 'Le llega un correo con un enlace para elegir la suya: vence en 72 horas y sirve una sola vez.'
+              : 'Si no puede entrar, mandale un enlace para elegir una contraseña nueva.'}
           </span>
         </div>
       ) : (

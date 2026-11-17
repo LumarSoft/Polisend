@@ -272,27 +272,38 @@ export interface CreateNetworkUserResponse extends NetworkUser {
   invitationSent: boolean
 }
 
-/** `PATCH /hierarchy/users/:id`. The principal never changes. */
+/**
+ * `PATCH /hierarchy/users/:id`. Owner and SuperAdmin never change a user's principal; the Developer may (decision of
+ * 17/11), but never its e-mail or password.
+ */
 export interface UpdateNetworkUserRequest {
-  /** `""` clears it. The Developer may only send the current one. */
+  /** `""` clears it. */
   name?: string
-  /** The Developer may only send the current one. */
+  /** Never a different one from the Developer (403 PLATFORM_CANNOT_SET_CREDENTIALS). */
   email?: string
   /** Never from the Developer. Ends the account's sessions. */
   password?: string
   /** Not your own. */
   role?: NetworkUserRole
-  /** Required when the role becomes ADMIN; replaces the grants. */
+  /** Developer only: moves the account to another principal (its grants go; an ADMIN sends the new codes). */
+  producerId?: number
+  /** Required when the role becomes ADMIN or the principal changes; replaces the grants. */
   producerCodeIds?: number[]
 }
 
-/** `POST /hierarchy/users/:id/restore` (Owner, SuperAdmin; never the Developer). */
+/** `POST /hierarchy/users/:id/restore` (Developer, Owner, SuperAdmin). */
 export interface RestoreNetworkUserRequest {
-  password: string
+  /** At least 6. Absent = the account is invited again (a mailed link). Never sent by the Developer. */
+  password?: string
   role: NetworkUserRole
   name?: string
   /** ADMIN: ≥ 1. */
   producerCodeIds?: number[]
+}
+
+export interface RestoreNetworkUserResponse extends NetworkUser {
+  /** True when no password was sent: the account got a link to choose one. */
+  invitationSent?: boolean
 }
 
 export interface DeleteNetworkUserResponse {
@@ -307,10 +318,9 @@ export interface EmailRestorableError {
   restorableUserId: number
 }
 
-/** `code` of the 403s the Developer gets when it tries what only an account's manager may do. */
-export type PlatformRestrictionCode =
-  | 'PLATFORM_CANNOT_SET_CREDENTIALS'
-  | 'PLATFORM_CANNOT_RESTORE_USERS'
-  | 'PLATFORM_CANNOT_ADD_USERS_HERE'
-  | 'PLATFORM_CANNOT_EMPTY_PRINCIPAL'
-  | 'PLATFORM_CANNOT_RENAME_ACCOUNTS'
+/**
+ * `code` of the 403 the Developer gets when it sends a password or a different e-mail: the platform never holds a
+ * credential of an account that reaches a cartera. An older API may still answer other `PLATFORM_CANNOT_*` codes; the
+ * panel shows the API's Spanish message for any of them.
+ */
+export type PlatformRestrictionCode = 'PLATFORM_CANNOT_SET_CREDENTIALS'

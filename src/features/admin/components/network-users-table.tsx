@@ -30,8 +30,6 @@ interface NetworkUsersTableProps {
   selfId: number | null
   /** Principal and Zona columns: hidden for a SuperAdmin (every row is of its principal). */
   showPrincipal: boolean
-  /** Owner and SuperAdmin reset a lost second step; the platform does not. */
-  canResetTwoFactor: boolean
   emptyText: string
   onEdit: (user: NetworkUser) => void
   onSendPasswordLink: (user: NetworkUser) => void
@@ -96,7 +94,6 @@ export function NetworkUsersTable({
   isError,
   selfId,
   showPrincipal,
-  canResetTwoFactor,
   emptyText,
   onEdit,
   onSendPasswordLink,
@@ -204,7 +201,7 @@ export function NetworkUsersTable({
                             <Send />
                             Mandar enlace para elegir contraseña
                           </DropdownMenuItem>
-                          {canResetTwoFactor && user.twoFactorEnabled && !isSelf && (
+                          {user.twoFactorEnabled && !isSelf && (
                             <DropdownMenuItem onClick={() => onResetTwoFactor(user)}>
                               <ShieldOff />
                               Reiniciar verificación en dos pasos

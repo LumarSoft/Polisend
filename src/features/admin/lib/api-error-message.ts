@@ -21,6 +21,8 @@ const SPANISH: Array<[RegExp, string]> = [
   [/^Owner \d+ not found$/, 'Ese Owner ya no existe.'],
   [/^User( with id)? \d+ not found$/, 'Ese usuario ya no existe o no está a tu alcance.'],
   [/^Code \d+ not found/, 'Ese código ya no existe.'],
+  // An API without the Developer's move of an account to another principal (decision of 17/11).
+  [/\bproperty producerId should not exist\b/, 'Este servidor todavía no permite pasar un usuario a otro principal.'],
   // A route the API in production does not have yet (the panel can ship first).
   [/^Cannot (GET|POST|PUT|PATCH|DELETE) \//, 'Esta acción todavía no está disponible. Probá más tarde.'],
 ]

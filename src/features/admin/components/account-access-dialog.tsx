@@ -46,18 +46,19 @@ function whoOf(account: AccountAccessTarget): string {
  *   <AccountAccessDialog scope="network" action={target?.action ?? 'password-setup'} account={target?.account ?? null}
  *     onClose={() => setTarget(null)} />
  *
- * Offer «Reiniciar…» only for an account with `twoFactorEnabled` (the Developer never resets a principal's account:
- * the API answers 403 PLATFORM_CANNOT_RESET_TWO_FACTOR) and never for one's own account (that is Mi cuenta).
+ * Offer «Reiniciar…» only for an account with `twoFactorEnabled` and never for one's own account (that is Mi cuenta).
+ * Whoever manages the account may: its SuperAdmin, its Owner and the Developer (Owners: only the Developer).
  */
 export function AccountAccessDialog({ scope, action, account, onClose }: AccountAccessDialogProps) {
   const mutation = useAccountAccess(scope, action)
   const { isDeveloper } = useRole()
-  // What the platform does to an account is mailed to the principals concerned (contract addendum, "Notices").
+  // What the platform does to an account is mailed to the principals concerned (contract addendum, "Notices", and the
+  // decision of 17/11 for the accounts of a principal).
   const notice =
     scope === 'owner'
       ? ' Los principales que ve reciben un aviso.'
       : isDeveloper
-        ? ' Los SuperAdmin de su principal reciben un aviso de la plataforma.'
+        ? ' Los SuperAdmin y los Owners de su principal reciben un aviso.'
         : ''
 
   const confirm = () => {
@@ -92,7 +93,7 @@ export function AccountAccessDialog({ scope, action, account, onClose }: Account
                 <>
                   <span className="font-medium text-foreground">{whoOf(account)}</span> va a entrar solo con su
                   contraseña hasta que vuelva a activar la verificación desde Mi cuenta. Hacelo si perdió el teléfono y
-                  no tiene sus códigos de recuperación. Le avisamos por correo.
+                  no tiene sus códigos de recuperación. Le avisamos por correo.{notice}
                 </>
               ))}
           </AlertDialogDescription>

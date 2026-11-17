@@ -7,7 +7,7 @@ import type {
   UpdateNetworkUserRequest,
 } from '@/types/api/hierarchy'
 import { apiErrorMessage, restorableUserIdOf } from '../lib/api-error-message'
-import { accessSummary, generatePassword, MIN_PASSWORD_LENGTH, type FormPrincipal } from '../lib/network-users'
+import { accessSummary, MIN_PASSWORD_LENGTH, type FormPrincipal } from '../lib/network-users'
 import { isValidCode } from '../lib/producer-code'
 import { ROLES } from '../lib/roles'
 import { useNetworkUserActions, usePrincipalCodeActions } from './use-hierarchy'
@@ -18,6 +18,11 @@ import { useUserFormOptions } from './use-user-form-options'
 /**
  * The one user form of plan §6.3 (create and edit, for the Developer, the Owner and the SuperAdmin): its state, what it
  * may offer each role, the summary before saving and the calls to `/hierarchy/users`. The component only renders.
+ *
+ * The Developer (decision of 17/11) manages the SuperAdmins and Admins of every principal: it creates and restores them
+ * by invitation, changes their name, role, codes and principal, deletes them (the last one of a principal too), sends
+ * password links and resets their two-step verification. It never chooses a password and never changes the e-mail of
+ * an existing account: with either it could log in as the person and see the cartera.
  */
 
 export type PrincipalMode = 'existing' | 'new'
@@ -94,15 +99,17 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
   const [restoreUserId, setRestoreUserId] = useState<number | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  /** Where a new account may go: the SuperAdmin's own principal; for the Developer, only principals with nobody. */
-  const selectablePrincipals = isDeveloper ? options.principals.filter(options.platformMayAddTo) : options.principals
-  /** The SuperAdmin never chooses (its own principal); nobody changes an existing user's principal. */
-  const principalFixed = isEdit || isSuperAdmin
-  const principal = isEdit
-    ? (options.principals.find(p => p.id === user.principal.id) ?? null)
-    : isSuperAdmin
-      ? (options.principals[0] ?? null)
+  /** Every principal the caller reaches (all of them for the Developer). */
+  const selectablePrincipals = options.principals
+  /** The SuperAdmin never chooses (its own principal); only the Developer moves an existing user to another one. */
+  const principalFixed = isSuperAdmin || (isEdit && !isDeveloper)
+  const principal = isSuperAdmin
+    ? (options.principals[0] ?? null)
+    : isEdit && !isDeveloper
+      ? (options.principals.find(p => p.id === user.principal.id) ?? null)
       : (selectablePrincipals.find(p => p.id === principalId) ?? null)
+  /** The Developer moved an existing user to another principal. */
+  const movedFrom = isEdit && principal !== null && principal.id !== user.principal.id ? user.principal : null
 
   /** Only the Owner (in its zones) and the Developer create a principal, with its first SuperAdmin. */
   const canCreatePrincipal = !isEdit && (isOwner || isDeveloper) && role === ROLES.superAdmin
@@ -167,6 +174,9 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
     : isDeveloper || !password
       ? invitation
       : 'Va a entrar con la contraseña que le pases.'
+  const moveNote = movedFrom
+    ? `Pasa de ${movedFrom.name} a ${principal?.name}: deja de ver lo de ${movedFrom.name} y pierde los códigos que tenía ahí.`
+    : null
 
   const problems: string[] = []
   if (!(isEdit && isDeveloper) && !email.trim()) problems.push('Falta el correo.')
@@ -198,6 +208,11 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
       .map(row => ({ code: row.code.trim(), ...(row.holderName.trim() ? { holderName: row.holderName.trim() } : {}) })),
   })
 
+  /** What the platform does to an account is mailed to the principal concerned (decision of 17/11). */
+  const platformNotice = isDeveloper
+    ? 'Los SuperAdmin y los Owners del principal reciben un aviso de que el equipo de Polisend tocó la cuenta.'
+    : undefined
+
   const create = () => {
     const body: CreateNetworkUserRequest = {
       email: email.trim(),
@@ -220,12 +235,10 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
         const restorable = restorableUserIdOf(error)
         if (restorable === null) {
           setErrorMessage(apiErrorMessage(error, 'No se pudo crear el usuario. Probá de nuevo.'))
-        } else if (usingNewPrincipal || isDeveloper) {
-          // A restore brings the account back in its old principal, never in a new one; the platform never restores.
+        } else if (usingNewPrincipal) {
+          // A restore brings the account back in its old principal, never in a new one.
           setErrorMessage(
-            isDeveloper
-              ? 'Ese correo es de un usuario eliminado. La plataforma no restaura cuentas: lo restaura el SuperAdmin o el Owner de su principal.'
-              : 'Ese correo es de un usuario eliminado. Usá otro correo para el principal nuevo, o restaurá ese usuario eligiendo un principal existente.',
+            'Ese correo es de un usuario eliminado. Usá otro correo para el principal nuevo, o restaurá ese usuario eligiendo un principal existente.',
           )
         } else {
           setRestoreUserId(restorable)
@@ -235,10 +248,15 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
   }
 
   const update = (current: NetworkUser) => {
-    // Never one's own role; the platform never renames, re-addresses or sets a password (it sends a link instead).
-    const access = { ...(isSelf ? {} : { role }), ...codesBody }
+    // Never one's own role. The platform never re-addresses an account nor sets a password (it sends a link instead),
+    // and is the only one that moves an account to another principal.
+    const access = {
+      ...(isSelf ? {} : { role }),
+      ...(movedFrom && principal ? { producerId: principal.id } : {}),
+      ...codesBody,
+    }
     const data: UpdateNetworkUserRequest = isDeveloper
-      ? access
+      ? { name: name.trim(), ...access }
       : { name: name.trim(), email: email.trim(), ...(password ? { password } : {}), ...access }
     actions.updateUser.mutate(
       { id: current.id, data },
@@ -246,7 +264,11 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
         onSuccess: () =>
           onSaved({
             title: 'Usuario actualizado',
-            description: password ? 'Sus sesiones abiertas se cerraron: entra con la contraseña nueva.' : undefined,
+            description: password
+              ? 'Sus sesiones abiertas se cerraron: entra con la contraseña nueva.'
+              : movedFrom
+                ? `Ahora es de ${principal?.name}.`
+                : undefined,
           }),
         onError: error => setErrorMessage(apiErrorMessage(error, 'No se pudo guardar. Probá de nuevo.')),
       },
@@ -264,17 +286,17 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
   }
 
   /**
-   * Brings back the deleted user the 409 offered, with the role and codes chosen now. Without a password typed, it is
-   * restored with one nobody knows and gets a link to choose its own (as a new account would be invited).
+   * Brings back the deleted user the 409 offered, with the role and codes chosen now. Without a password typed (always,
+   * for the Developer) the API mails it a link to choose its own, as a new account is invited.
    */
   const restore = () => {
     if (restoreUserId === null) return
-    const chosen = password
+    const chosen = isDeveloper ? '' : password
     actions.restoreUser.mutate(
       {
         id: restoreUserId,
         data: {
-          password: chosen || generatePassword(24),
+          ...(chosen ? { password: chosen } : {}),
           role,
           ...(name.trim() ? { name: name.trim() } : {}),
           ...codesBody,
@@ -283,21 +305,11 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
       {
         onSuccess: restored => {
           const where = `Vuelve en ${restored.principal.name}`
-          if (chosen) {
-            onSaved({ title: 'Usuario restaurado', description: `${where}, con la contraseña que elegiste.` })
-            return
-          }
-          actions.sendPasswordSetup.mutate(restored.id, {
-            onSuccess: () =>
-              onSaved({
-                title: 'Usuario restaurado',
-                description: `${where}. Le mandamos a ${restored.email} un enlace para elegir su contraseña.`,
-              }),
-            onError: () =>
-              onSaved({
-                title: 'Usuario restaurado',
-                description: `${where}, pero no se pudo mandar el enlace: mandáselo desde la lista.`,
-              }),
+          onSaved({
+            title: 'Usuario restaurado',
+            description: chosen
+              ? `${where}, con la contraseña que elegiste.`
+              : `${where}. Le mandamos a ${restored.email} un enlace para elegir su contraseña.`,
           })
         },
         onError: error => {
@@ -338,6 +350,9 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
     creatingCode: codeActions.createCode.isPending,
     summary,
     credentialsNote,
+    moveNote,
+    movedFrom,
+    platformNotice,
     newPrincipalCodes,
     problems,
     errorMessage,
@@ -346,7 +361,7 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
     restoreUserId,
     cancelRestore: () => setRestoreUserId(null),
     restore,
-    restoring: actions.restoreUser.isPending || actions.sendPasswordSetup.isPending,
+    restoring: actions.restoreUser.isPending,
   }
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { Info, Loader2, MailCheck, Send } from 'lucide-react'
+import { ArrowRightLeft, Info, Loader2, MailCheck, Send, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -27,6 +27,7 @@ import {
   PrincipalPicker,
   RoleCards,
 } from './user-access-fields'
+import type { AccountAccessAction } from '../hooks/use-account-access'
 import { AccountAccessDialog } from './account-access-dialog'
 import { UserDataFields } from './user-data-fields'
 
@@ -70,19 +71,15 @@ function PrincipalSection({ form }: { form: NetworkUserFormState }) {
     return (
       <FixedPrincipal
         principal={principal}
-        note={form.isEdit ? 'El principal de un usuario no cambia' : 'Tu principal'}
+        note={form.isEdit ? 'Solo el equipo de Polisend pasa un usuario a otro principal' : 'Tu principal'}
       />
     )
   }
 
-  const noPlace = form.isDeveloper && form.selectablePrincipals.length === 0
   return (
     <div className="flex flex-col gap-3">
-      {form.isDeveloper && (
-        <Note>
-          La plataforma solo crea la primera cuenta de un principal sin usuarios, o la de un principal nuevo. Las demás
-          las crean su SuperAdmin o su Owner, y siempre por invitación.
-        </Note>
+      {form.isEdit && (
+        <Note>Si lo pasás a otro principal, deja de ver el anterior y pierde los códigos que tenía ahí.</Note>
       )}
       {form.canCreatePrincipal && <PrincipalModeSwitch value={fields.principalMode} onChange={form.setPrincipalMode} />}
       {form.usingNewPrincipal ? (
@@ -92,11 +89,6 @@ function PrincipalSection({ form }: { form: NetworkUserFormState }) {
           zones={form.zones}
           zoneRequired={form.isOwner}
         />
-      ) : noPlace ? (
-        <p className="rounded-lg border border-line-2 bg-secondary/40 p-3 text-[12.5px] text-muted-foreground">
-          Todos los principales ya tienen usuarios o son el principal propio de un Owner.
-          {isAdminRole ? ' Elegí SuperAdmin para dar de alta un principal nuevo.' : ' Creá un principal nuevo.'}
-        </p>
       ) : (
         <PrincipalPicker
           principals={form.selectablePrincipals}
@@ -158,10 +150,11 @@ function RestoreDialog({ form }: { form: NetworkUserFormState }) {
                 estaba; no recupera nada de antes: ni el rol, ni los códigos, ni la verificación en dos pasos.
               </span>
               <span>
-                {fields.password
+                {fields.password && !form.isDeveloper
                   ? 'Va a entrar con la contraseña que escribiste.'
-                  : 'Le mandamos un enlace a su correo para que elija la contraseña.'}
+                  : 'No le ponemos contraseña: le mandamos un enlace a su correo para que elija la suya.'}
               </span>
+              {form.platformNotice && <span>{form.platformNotice}</span>}
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -200,7 +193,7 @@ function UserForm({
     onDone()
   }
   const form = useNetworkUserForm({ user, defaultPrincipalId, defaultRole, onSaved: saved })
-  const [linkOpen, setLinkOpen] = useState(false)
+  const [accessAction, setAccessAction] = useState<AccountAccessAction | null>(null)
   const { fields } = form
 
   const handleSubmit = (e: FormEvent) => {
@@ -219,7 +212,7 @@ function UserForm({
     return <p className="p-6 text-center text-[14px] text-destructive">No se pudo cargar tu red. Probá de nuevo.</p>
   }
 
-  const passwordMode = form.isDeveloper ? 'invitation' : form.isEdit ? 'change' : 'optional'
+  const passwordMode = form.isDeveloper ? (form.isEdit ? 'link' : 'invitation') : form.isEdit ? 'change' : 'optional'
 
   return (
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
@@ -234,15 +227,31 @@ function UserForm({
             password={fields.password}
             onPasswordChange={form.setPassword}
             passwordMode={passwordMode}
-            readOnlyIdentity={form.isEdit && form.isDeveloper}
+            emailReadOnly={form.isEdit && form.isDeveloper}
           />
           {user && (
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" variant="outline" className="h-9 border-line-2" onClick={() => setLinkOpen(true)}>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 border-line-2"
+                onClick={() => setAccessAction('password-setup')}
+              >
                 <Send className="size-4" />
                 Mandar enlace para elegir contraseña
               </Button>
-              <span className="text-[12px] text-muted-foreground">Le llega a su correo actual.</span>
+              {user.twoFactorEnabled && !form.isSelf && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 border-line-2"
+                  onClick={() => setAccessAction('reset-two-factor')}
+                >
+                  <ShieldOff className="size-4" />
+                  Reiniciar verificación en dos pasos
+                </Button>
+              )}
+              <span className="text-[12px] text-muted-foreground">El enlace le llega a su correo actual.</span>
             </div>
           )}
         </Section>
@@ -261,15 +270,22 @@ function UserForm({
 
         <CodesSection form={form} onEditCodes={onEditCodes} />
 
-        {(form.summary || form.credentialsNote) && (
+        {(form.summary || form.credentialsNote || form.moveNote) && (
           <div className="flex flex-col gap-1.5 rounded-lg border border-ember-2/30 bg-ember-soft/50 p-3.5">
             {form.summary && <p className="text-[13.5px] font-medium text-ink">{form.summary}</p>}
+            {form.moveNote && (
+              <p className="flex items-start gap-2 text-[12.5px] text-ink-3">
+                <ArrowRightLeft className="mt-0.5 size-3.5 shrink-0" />
+                {form.moveNote}
+              </p>
+            )}
             {form.credentialsNote && (
               <p className="flex items-start gap-2 text-[12.5px] text-ink-3">
                 <MailCheck className="mt-0.5 size-3.5 shrink-0" />
                 {form.credentialsNote}
               </p>
             )}
+            {form.platformNotice && <p className="text-[12px] text-muted-foreground">{form.platformNotice}</p>}
           </div>
         )}
 
@@ -294,9 +310,9 @@ function UserForm({
       {user && (
         <AccountAccessDialog
           scope="network"
-          action="password-setup"
-          account={linkOpen ? user : null}
-          onClose={() => setLinkOpen(false)}
+          action={accessAction ?? 'password-setup'}
+          account={accessAction ? user : null}
+          onClose={() => setAccessAction(null)}
         />
       )}
     </form>

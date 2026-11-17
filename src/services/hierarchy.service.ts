@@ -15,6 +15,7 @@ import type {
   NetworkUsersQuery,
   PrincipalCode,
   RestoreNetworkUserRequest,
+  RestoreNetworkUserResponse,
   UpdateNetworkUserRequest,
   UpdatePrincipalCodeRequest,
   UpdatePrincipalRequest,
@@ -86,8 +87,9 @@ export const hierarchyService = {
   removeUser: (token: string, id: number): Promise<DeleteNetworkUserResponse> =>
     apiRequest<DeleteNetworkUserResponse>(`/hierarchy/users/${id}`, { method: 'DELETE', token }),
 
-  restoreUser: (token: string, id: number, data: RestoreNetworkUserRequest): Promise<NetworkUser> =>
-    apiRequest<NetworkUser>(`/hierarchy/users/${id}/restore`, { method: 'POST', token, body: data }),
+  /** Without a password the API mails the account a link to choose one (`invitationSent`). */
+  restoreUser: (token: string, id: number, data: RestoreNetworkUserRequest): Promise<RestoreNetworkUserResponse> =>
+    apiRequest<RestoreNetworkUserResponse>(`/hierarchy/users/${id}/restore`, { method: 'POST', token, body: data }),
 
   /** Mails the account a link to choose a new password (204; the link never comes back). */
   sendPasswordSetup: (token: string, id: number): Promise<void> =>

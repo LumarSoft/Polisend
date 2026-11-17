@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { NetworkUser } from '@/types/api/hierarchy'
 import { useNetworkUserActions } from '../hooks/use-hierarchy'
+import { useRole } from '../hooks/use-role'
 import { apiErrorMessage } from '../lib/api-error-message'
 import { roleLabel } from '../lib/roles'
 
@@ -25,16 +26,10 @@ function who(user: NetworkUser | null) {
   return <span className="font-medium text-ink">{user ? user.name || user.email : ''}</span>
 }
 
-/** "Eliminar": its own dialog (no window.confirm). */
-export function DeleteUserDialog({
-  user,
-  onClose,
-  canRestore,
-}: TargetDialogProps & {
-  /** Owner and SuperAdmin may restore it later; the platform may not. */
-  canRestore: boolean
-}) {
+/** "Eliminar": its own dialog (no window.confirm). Whoever deletes may restore it later (the Developer too). */
+export function DeleteUserDialog({ user, onClose }: TargetDialogProps) {
   const { removeUser } = useNetworkUserActions()
+  const { isDeveloper } = useRole()
   const deleting = removeUser.isPending
   const deleteUser = (target: NetworkUser) =>
     removeUser.mutate(target.id, {
@@ -51,10 +46,8 @@ export function DeleteUserDialog({
           <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
           <AlertDialogDescription>
             {who(user)} ({user ? `${roleLabel(user.role)} de ${user.principal.name}` : ''}) deja de entrar al panel en
-            el acto.{' '}
-            {canRestore
-              ? 'Si después lo volvés a dar de alta con el mismo correo, te vamos a ofrecer restaurarlo.'
-              : 'Después solo lo puede restaurar su SuperAdmin o su Owner.'}
+            el acto. Si después lo volvés a dar de alta con el mismo correo, te vamos a ofrecer restaurarlo.
+            {isDeveloper && ' Los SuperAdmin y los Owners de su principal reciben un aviso.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

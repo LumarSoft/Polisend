@@ -202,7 +202,7 @@ function UsersScreen() {
   }
 
   const subtitle = isDeveloper
-    ? 'Los SuperAdmin y Admin de todos los principales. Las cuentas que crea la plataforma siempre reciben una invitación por correo.'
+    ? 'Los SuperAdmin y Admin de todos los principales. Polisend los invita por correo y nunca elige ni ve sus contraseñas; cada cambio le llega como aviso a su principal.'
     : isOwner
       ? 'Los SuperAdmin y Admin de los principales de tu red.'
       : `Los SuperAdmin y Admin de ${ownPrincipal?.name ?? 'tu principal'}.`
@@ -309,7 +309,6 @@ function UsersScreen() {
             isError={usersQuery.isError}
             selfId={profile?.id ?? null}
             showPrincipal={!isSuperAdmin}
-            canResetTwoFactor={isOwner || isSuperAdmin}
             emptyText={emptyText}
             onEdit={user => {
               setEditing(user)
@@ -330,7 +329,7 @@ function UsersScreen() {
         defaultRole={linkedRole}
         onEditCodes={isSuperAdmin ? () => setTab('productores') : undefined}
       />
-      <DeleteUserDialog user={deleteTarget} onClose={() => setDeleteTarget(null)} canRestore={!isDeveloper} />
+      <DeleteUserDialog user={deleteTarget} onClose={() => setDeleteTarget(null)} />
       <AccountAccessDialog
         scope="network"
         action={access?.action ?? 'password-setup'}
