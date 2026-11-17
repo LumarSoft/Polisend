@@ -1,8 +1,8 @@
 import type { RiskType } from './clients'
-import type { CobranzasScopeQuery } from './cobranzas'
+import type { CobranzaSort, CobranzasScopeQuery } from './cobranzas'
 
-/** `oldest`: longest expired first (default). `recent`: most recently expired first. */
-export type ExpiredPolicySort = 'oldest' | 'recent'
+/** `recent`: most recently expired first. `oldest`: longest expired first (the API's default). */
+export type ExpiredPolicySort = CobranzaSort
 
 /** A policy that ran out and was not renewed, from the cobranzas "pólizas vencidas" worklist. */
 export interface ExpiredPolicy {

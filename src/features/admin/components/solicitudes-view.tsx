@@ -165,16 +165,16 @@ export function SolicitudesView() {
 
       <RequirePrincipal showFilter={false}>
         <div className="overflow-hidden rounded-xl border border-line-2 bg-card">
-          {/* Toolbar */}
-          <div className="flex flex-col gap-3 border-b border-line-2 p-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid grid-cols-4 gap-1 rounded-lg bg-secondary/60 p-1 lg:w-auto">
+          {/* Toolbar: the tabs keep their width and the filters wrap below them when both do not fit in a row. */}
+          <div className="flex flex-col gap-3 border-b border-line-2 p-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary/60 p-1 sm:grid-cols-4 lg:flex lg:shrink-0">
               {STATUS_TABS.map(t => (
                 <button
                   key={t.value}
                   type="button"
                   onClick={() => setTab(t.value)}
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors lg:px-4',
+                    'whitespace-nowrap rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors lg:px-4',
                     tab === t.value
                       ? 'bg-card text-ink shadow-sm dark:bg-canvas-3'
                       : 'text-muted-foreground hover:text-ink',
@@ -185,7 +185,7 @@ export function SolicitudesView() {
               ))}
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
               <div className="relative sm:w-64">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
