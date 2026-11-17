@@ -197,8 +197,19 @@ export interface PlatformBillingOrganization {
   id: number
   name: string
   isActive: boolean
+  /** Where it sits today; null without a live zone. Missing from an API older than the zones. */
+  zone?: { id: number; name: string } | null
   numbers: PlatformBillingNumber[]
   totals: PlatformBillingTotals
+}
+
+/** The month of one zone (or "Sin zona", id null), with its Owners and the sum of its organizations. */
+export interface PlatformBillingZone {
+  id: number | null
+  name: string
+  owners: Array<{ id: number; name: string | null; email: string }>
+  organizationIds: number[]
+  totals: PlatformBillingTotals & { organizations: number }
 }
 
 export interface PlatformBilling {
@@ -211,6 +222,11 @@ export interface PlatformBilling {
   /** What a message costs; null when the rate is not configured in the API. Missing from an older API. */
   messageCost?: { messageUsd: number; campaignMessageUsd: number } | null
   organizations: PlatformBillingOrganization[]
+  /**
+   * The same organizations by zone, ordered by name, "Sin zona" last (a closed month is grouped by today's zones).
+   * Missing from an API older than the zones.
+   */
+  zones?: PlatformBillingZone[]
   totals: PlatformBillingTotals & {
     organizations: number
     activeNumbers: number

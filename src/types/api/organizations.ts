@@ -71,8 +71,16 @@ export interface OrganizationUser {
   email: string
   role: AdminRole
   createdAt: string
+  /** The legacy create routes answer it: true when the account was invited instead of getting the password sent. */
+  invitationSent?: boolean
   /** Codes granted to an ADMIN (empty for a SUPERADMIN, who sees them all); absent on older APIs. */
   codes?: Array<{ id: number; code: string; holderName: string | null }>
+}
+
+/** The zone an organization sits in today; null = none (or its zone was deleted). */
+export interface OrganizationZone {
+  id: number
+  name: string
 }
 
 export interface OrganizationSummary {
@@ -84,6 +92,7 @@ export interface OrganizationSummary {
   logoUrl?: string | null
   isActive: boolean
   createdAt: string
+  zone: OrganizationZone | null
   counts: {
     codes: number
     users: number
@@ -101,6 +110,7 @@ export interface OrganizationDetail {
   logoUrl?: string | null
   isActive: boolean
   createdAt: string
+  zone: OrganizationZone | null
   /** The plan the Developer put the organization on, or null (automatic). Missing from an older API. */
   planId?: number | null
   /** The plan in effect with no number and for its next number: the chosen one, or the automatic one. */
@@ -124,13 +134,37 @@ export interface SetOrganizationPlanResponse {
   startingPlan: OrganizationStartingPlan | null
 }
 
+/** `POST /platform/organizations`: the platform never sends a password; the first SuperAdmin, if any, is invited. */
 export interface CreateOrganizationRequest {
   name: string
   masterCode?: string
   botName?: string
-  adminEmail: string
-  adminPassword: string
+  /** The first SuperAdmin, invited by a mailed link. Absent = an organization with no users yet. */
+  adminEmail?: string
+  /** Ignored by the API (the platform never chooses a password); kept only for the old form. */
+  adminPassword?: string
+  /** A live zone; null or absent = none. */
+  zoneId?: number | null
   codes?: Array<{ code: string; holderName?: string }>
+}
+
+export interface CreateOrganizationResponse extends OrganizationDetail {
+  /** True when `adminEmail` came: that account got its invitation. */
+  invitationSent: boolean
+}
+
+/** `PATCH /platform/organizations/:id`. */
+export interface UpdateOrganizationRequest {
+  isActive?: boolean
+  /** A live zone, or null for none. */
+  zoneId?: number | null
+}
+
+export interface UpdateOrganizationResponse {
+  id: number
+  name: string
+  isActive: boolean
+  zoneId: number | null
 }
 
 export interface CreateProducerCodeRequest {

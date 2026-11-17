@@ -3,6 +3,7 @@ import type { BalanceQuery } from '@/types/api/balance'
 import type { AdminClientsQuery } from '@/types/api/clients'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
 import type { ExpiredPoliciesQuery } from '@/types/api/expired-policies'
+import type { NetworkUsersQuery } from '@/types/api/hierarchy'
 import type {
   ImprovementsQuery,
   PlatformImprovementsQuery,
@@ -98,5 +99,22 @@ export const QUERY_KEYS = {
     proposals: (params?: PlatformProposalsQuery) =>
       ['platform', 'improvement-proposals', 'list', params ?? {}] as const,
     proposalsNew: ['platform', 'improvement-proposals', 'new'] as const,
+    zones: ['platform', 'zones'] as const,
+    owners: ['platform', 'owners'] as const,
+  },
+  /** The network (/hierarchy/*): not tied to the acting principal. */
+  hierarchy: {
+    all: ['hierarchy'] as const,
+    /** The cascading filter's list. The acting-principal provider keeps its own copy outside each principal's cache. */
+    principals: ['hierarchy', 'principals'] as const,
+    tree: ['hierarchy', 'tree'] as const,
+    usageAll: ['hierarchy', 'usage'] as const,
+    usage: (period?: string) => ['hierarchy', 'usage', period ?? 'current'] as const,
+    usersAll: ['hierarchy', 'users'] as const,
+    users: (query?: NetworkUsersQuery) => ['hierarchy', 'users', 'list', query ?? {}] as const,
+  },
+  auth: {
+    /** The public /admin/activar page (the token itself never goes in a key). */
+    passwordSetup: ['auth', 'password-setup'] as const,
   },
 } as const

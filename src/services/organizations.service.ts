@@ -1,6 +1,7 @@
 import { apiRequest } from '@/lib/api-client'
 import type {
   CreateOrganizationRequest,
+  CreateOrganizationResponse,
   CreateProducerCodeRequest,
   CreateOrgUserRequest,
   CreateSuperAdminRequest,
@@ -9,6 +10,8 @@ import type {
   OrganizationSummary,
   OrganizationUser,
   SetOrganizationPlanResponse,
+  UpdateOrganizationRequest,
+  UpdateOrganizationResponse,
   UpdateOrgUserRequest,
   UpdateProducerCodeRequest,
 } from '@/types/api/organizations'
@@ -29,11 +32,16 @@ export const organizationsService = {
   removeLogo: (token: string, id: number): Promise<{ logoUrl: null }> =>
     apiRequest<{ logoUrl: null }>(`/platform/organizations/${id}/logo`, { method: 'DELETE', token }),
 
-  create: (token: string, data: CreateOrganizationRequest): Promise<OrganizationDetail> =>
-    apiRequest<OrganizationDetail>('/platform/organizations', { method: 'POST', token, body: data }),
+  /** The first SuperAdmin, if `adminEmail` comes, is invited by a mailed link (`invitationSent`). */
+  create: (token: string, data: CreateOrganizationRequest): Promise<CreateOrganizationResponse> =>
+    apiRequest<CreateOrganizationResponse>('/platform/organizations', { method: 'POST', token, body: data }),
 
-  setActive: (token: string, id: number, isActive: boolean): Promise<{ id: number; isActive: boolean }> =>
-    apiRequest<{ id: number; isActive: boolean }>(`/platform/organizations/${id}`, {
+  /** Switches it on or off and moves it between zones. */
+  update: (token: string, id: number, data: UpdateOrganizationRequest): Promise<UpdateOrganizationResponse> =>
+    apiRequest<UpdateOrganizationResponse>(`/platform/organizations/${id}`, { method: 'PATCH', token, body: data }),
+
+  setActive: (token: string, id: number, isActive: boolean): Promise<UpdateOrganizationResponse> =>
+    apiRequest<UpdateOrganizationResponse>(`/platform/organizations/${id}`, {
       method: 'PATCH',
       token,
       body: { isActive },

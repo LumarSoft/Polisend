@@ -6,6 +6,7 @@ import type {
   CreateProducerCodeRequest,
   CreateOrgUserRequest,
   CreateSuperAdminRequest,
+  UpdateOrganizationRequest,
   UpdateOrgUserRequest,
   UpdateProducerCodeRequest,
 } from '@/types/api/organizations'
@@ -40,6 +41,16 @@ export function useOrganizationMutations(orgId?: number) {
   const create = useMutation({
     mutationFn: (data: CreateOrganizationRequest) => organizationsService.create(token as string, data),
     onSuccess: invalidate,
+  })
+  /** Switch on or off, or move between zones (Developer). */
+  const update = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateOrganizationRequest }) =>
+      organizationsService.update(token as string, id, data),
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.all })
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.zones })
+    },
   })
   const setActive = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
@@ -83,5 +94,5 @@ export function useOrganizationMutations(orgId?: number) {
     onSuccess: invalidate,
   })
 
-  return { create, setActive, setPlan, addCode, updateCode, addSuperAdmin, addUser, updateUser, removeUser }
+  return { create, update, setActive, setPlan, addCode, updateCode, addSuperAdmin, addUser, updateUser, removeUser }
 }
