@@ -6,7 +6,7 @@ export const TERMS: LegalDocument = {
   highlight: "servicio.",
   intro:
     "Las reglas del servicio entre Lumarsoft y cada productora que contrata Polisend: qué incluye, cómo se factura y qué esperamos de cada parte.",
-  updated: "30 de octubre de 2026",
+  updated: "17 de noviembre de 2026",
   sections: [
     {
       id: "servicio",
@@ -35,14 +35,14 @@ export const TERMS: LegalDocument = {
     },
     {
       id: "planes",
-      title: "4. Planes, precios y facturación",
+      title: "4. Planes y facturación",
       list: [
-        "Cada número tiene un plan de mensajes por mes, del catálogo publicado en este sitio. Cuenta cada mensaje que envía el asistente, el equipo desde el panel o un aviso automático; no cuentan los mensajes que escriben los clientes ni los que se mandan desde la app del celular.",
-        "Los planes incluyen el costo de WhatsApp de esos mensajes. Las campañas de marketing por plantilla no están incluidas y se cotizan aparte.",
-        "Cuando un número llega a los mensajes que incluye su plan, su asistente deja de responder automáticamente y la productora recibe un aviso. Puede elegir pasarlo al plan siguiente, que se cobra desde ese mes, o dejarlo en pausa hasta el mes siguiente. Los mensajes se siguen recibiendo y la oficina puede contestarlos desde el panel.",
+        "Cada número tiene un plan de tokens por mes, del catálogo publicado en este sitio. Cada mensaje que envía el asistente, el equipo desde el panel o un aviso automático usa 1 token, y cada mensaje de una campaña de marketing por plantilla, 2. No cuentan los mensajes que escriben los clientes ni los que se mandan desde la app del celular.",
+        "Los planes incluyen el costo de WhatsApp de esos mensajes, también el de las campañas.",
+        "Cuando un número usa los tokens que incluye su plan, su asistente deja de responder automáticamente y la productora recibe un aviso. Puede elegir pasarlo al plan siguiente, que se cobra desde ese mes, o dejarlo en pausa hasta el mes siguiente. Los mensajes se siguen recibiendo y la oficina puede contestarlos desde el panel.",
         "El primer mes de un número de una cuenta nueva puede incluir un plan de prueba gratuito, si está publicado.",
-        "Se factura a mes vencido, en dólares estadounidenses, dentro de los primeros días del mes siguiente. Un número activo paga su plan aunque no envíe mensajes.",
-        "Podemos cambiar los planes y sus precios avisando con al menos 30 días de anticipación.",
+        "Se factura a mes vencido, dentro de los primeros días del mes siguiente. Un número activo paga su plan aunque no use tokens.",
+        "Podemos cambiar los planes y sus condiciones avisando con al menos 30 días de anticipación.",
       ],
     },
     {
