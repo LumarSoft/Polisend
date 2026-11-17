@@ -37,11 +37,10 @@ export function Pricing({ catalog }: { catalog: PlanCatalog }) {
             {from && (
               <>
                 <p className="text-[14px] font-semibold tracking-[0.18em] text-on-brand/70 uppercase">Desde</p>
-                <p className="mt-2 flex items-end font-display leading-[0.8] font-bold tracking-[-0.05em]">
-                  <span className="text-[clamp(5rem,13vw,9.5rem)]">{int(from.tokens)}</span>
-                  <span className="mb-2 ml-2 text-[clamp(1.2rem,2.2vw,1.8rem)] tracking-tight">tokens/mes</span>
+                <p className="mt-2 font-display text-[clamp(4.5rem,10vw,8rem)] leading-[0.8] font-bold tracking-[-0.05em]">
+                  {int(from.tokens)}
                 </p>
-                <p className="mt-4 text-[20px] font-semibold tracking-tight">por número de WhatsApp</p>
+                <p className="mt-4 text-[20px] font-semibold tracking-tight">tokens por mes, por número de WhatsApp</p>
               </>
             )}
             <ul className="relative mt-8 divide-y divide-on-brand/15 border-y border-on-brand/15">
