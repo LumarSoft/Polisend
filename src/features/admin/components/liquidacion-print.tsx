@@ -1,18 +1,15 @@
 import type { SettlementAmounts, SettlementMonth } from '@/types/api/billing'
-import { capitalized, monthLabel, shareLabel } from '../lib/settlement-format'
+import { capitalized, monthLabel, settledTokensOf, shareLabel } from '../lib/settlement-format'
 import { int, usd } from './billing-ui'
 
-const COLUMNS: Array<[string, keyof SettlementAmounts]> = [
-  ['Mensajes', 'consumedMessages'],
-  ['Facturado', 'billedUsd'],
-  ['Costo', 'serviceCostUsd'],
-  ['Remanente', 'remainderUsd'],
-  ['Plataforma', 'ownerShareUsd'],
-  ['Socio', 'partnerShareUsd'],
+const COLUMNS: Array<[string, (amounts: SettlementAmounts) => string]> = [
+  ['Tokens', a => int(settledTokensOf(a))],
+  ['Facturado', a => usd(a.billedUsd)],
+  ['Costo', a => usd(a.serviceCostUsd)],
+  ['Remanente', a => usd(a.remainderUsd)],
+  ['Plataforma', a => usd(a.ownerShareUsd)],
+  ['Socio', a => usd(a.partnerShareUsd)],
 ]
-
-const value = (amounts: SettlementAmounts, key: keyof SettlementAmounts) =>
-  key === 'consumedMessages' ? int(amounts[key]) : usd(amounts[key])
 
 /** The month's settlement on paper: plain tables, no colours, every number listed. */
 export function SettlementPrint({ month }: { month: SettlementMonth }) {
@@ -67,9 +64,9 @@ export function SettlementPrint({ month }: { month: SettlementMonth }) {
               <td className="py-1" colSpan={2}>
                 {org.name}
               </td>
-              {COLUMNS.map(([label, key]) => (
+              {COLUMNS.map(([label, render]) => (
                 <td key={label} className="py-1 text-right">
-                  {value(org.totals, key)}
+                  {render(org.totals)}
                 </td>
               ))}
             </tr>,
@@ -77,9 +74,9 @@ export function SettlementPrint({ month }: { month: SettlementMonth }) {
               <tr key={n.id} className="border-b">
                 <td className="py-1 pl-3 font-mono">{n.number}</td>
                 <td className="py-1">{n.plan.name}</td>
-                {COLUMNS.map(([label, key]) => (
+                {COLUMNS.map(([label, render]) => (
                   <td key={label} className="py-1 text-right">
-                    {value(n, key)}
+                    {render(n)}
                   </td>
                 ))}
               </tr>

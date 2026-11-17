@@ -221,7 +221,7 @@ export interface OwnerBilling {
 
 // ─── Liquidación (owner) ─────────────────────────────────────────────────────
 
-/** How a month splits: the platform's cost per consumed message and the partner's share of what is left. */
+/** How a month splits: the platform's cost per settled token and the partner's share of what is left. */
 export interface SettlementTerms {
   costPerMessageUsd: number
   /** 0–1. */
@@ -229,9 +229,17 @@ export interface SettlementTerms {
 }
 
 export interface SettlementAmounts {
+  /** The client's plan consumption (what its plan, bars and limits count); not what the service cost charges. */
   consumedMessages: number
+  /** Of the messages sent, the campaign (marketing) ones. Missing on an API older than 2026-11-16. */
+  campaignMessages?: number
+  /**
+   * The tokens the service cost charges: 1 per message sent and 2 per campaign message, in every month. Missing on an
+   * API older than 2026-11-16 (read it with settledTokensOf).
+   */
+  settledTokens?: number
   billedUsd: number
-  /** consumed messages × cost per message. */
+  /** settled tokens × cost per token. */
   serviceCostUsd: number
   /** billed − service cost (negative when a trial costs and bills nothing). */
   remainderUsd: number

@@ -33,14 +33,20 @@ function cell(value: string | number): string {
   return /[;"\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 
-const MONEY_COLUMNS: Array<[string, keyof SettlementAmounts]> = [
-  ['Mensajes consumidos', 'consumedMessages'],
-  ['Facturado USD', 'billedUsd'],
-  ['Costo de servicio USD', 'serviceCostUsd'],
-  ['Remanente USD', 'remainderUsd'],
-  ['Parte plataforma USD', 'ownerShareUsd'],
-  ['Parte socio comercial USD', 'partnerShareUsd'],
-  ['Total plataforma USD', 'ownerTotalUsd'],
+/**
+ * The tokens a month's service cost charges: 1 per message sent and 2 per campaign message, in every month. An API
+ * older than 2026-11-16 does not send them and charged the plan consumption, so that is the fallback.
+ */
+export const settledTokensOf = (amounts: SettlementAmounts): number => amounts.settledTokens ?? amounts.consumedMessages
+
+const MONEY_COLUMNS: Array<[string, (amounts: SettlementAmounts) => number]> = [
+  ['Tokens', settledTokensOf],
+  ['Facturado USD', a => a.billedUsd],
+  ['Costo de servicio USD', a => a.serviceCostUsd],
+  ['Remanente USD', a => a.remainderUsd],
+  ['Parte plataforma USD', a => a.ownerShareUsd],
+  ['Parte socio comercial USD', a => a.partnerShareUsd],
+  ['Total plataforma USD', a => a.ownerTotalUsd],
 ]
 
 /**
@@ -49,7 +55,7 @@ const MONEY_COLUMNS: Array<[string, keyof SettlementAmounts]> = [
  */
 export function settlementCsv(month: SettlementMonth): string {
   const header = ['Mes', 'Organización', 'Número', 'Plan', 'Prueba', 'Plantillas', ...MONEY_COLUMNS.map(([l]) => l)]
-  const money = (amounts: SettlementAmounts) => MONEY_COLUMNS.map(([, key]) => amounts[key])
+  const money = (amounts: SettlementAmounts) => MONEY_COLUMNS.map(([, read]) => read(amounts))
   const rows: Array<Array<string | number>> = [header]
   for (const org of month.organizations) {
     for (const n of org.numbers)
