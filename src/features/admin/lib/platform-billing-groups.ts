@@ -17,33 +17,37 @@ export interface BillingOwnerGroup {
   /** "Sin zona": its organizations go right under it, with no zone row. */
   flat: boolean
   zones: PlatformBillingZone[]
-  totals: PlatformBillingTotals & { organizations: number }
+  totals: GroupTotals
 }
 
-/** The numeric fields of a month's totals (the optional ones count as 0 when an older API leaves them out). */
-type SummedKey = {
-  [K in keyof PlatformBillingTotals]-?: NonNullable<PlatformBillingTotals[K]> extends number ? K : never
-}[keyof PlatformBillingTotals]
+type GroupTotals = PlatformBillingTotals & { organizations: number }
 
-/** The sum of several totals (zones of one Owner). */
-export function sumBillingTotals(
-  list: Array<PlatformBillingTotals & { organizations: number }>,
-): PlatformBillingTotals & { organizations: number } {
-  const sum = (key: SummedKey) => list.reduce((acc, totals) => acc + (totals[key] ?? 0), 0)
+const round2 = (n: number): number => Math.round(n * 100) / 100
+
+/**
+ * The sum of several totals (zones of one Owner), with the API's rule (`sumFigures`): an amount the API could not
+ * compute (null: no cost rate or no partner terms) makes the group's amount null as soon as one part has it null, so a
+ * partial sum never passes for the whole; an empty group sums to 0. Amounts are rounded to cents like the API's.
+ */
+export function sumBillingTotals(list: GroupTotals[]): GroupTotals {
+  const sum = (read: (totals: GroupTotals) => number | null | undefined) =>
+    list.reduce((acc, totals) => acc + (read(totals) ?? 0), 0)
+  const sumAll = (read: (totals: GroupTotals) => number | null) =>
+    list.some(totals => (read(totals) ?? null) === null) ? null : round2(sum(read))
   return {
-    organizations: list.reduce((acc, totals) => acc + totals.organizations, 0),
-    messages: sum('messages'),
-    sentMessages: sum('sentMessages'),
-    templateMessages: sum('templateMessages'),
-    botMessages: sum('botMessages'),
-    campaignMessages: sum('campaignMessages'),
-    metaBillableMessages: sum('metaBillableMessages'),
-    billedUsd: sum('billedUsd'),
-    messageCostUsd: sum('messageCostUsd'),
-    marginUsd: sum('marginUsd'),
-    metaCostUsd: sum('metaCostUsd'),
-    openaiCostUsd: sum('openaiCostUsd'),
-    profitUsd: sum('profitUsd'),
+    organizations: sum(t => t.organizations),
+    messages: sum(t => t.messages),
+    sentMessages: sum(t => t.sentMessages),
+    templateMessages: sum(t => t.templateMessages),
+    botMessages: sum(t => t.botMessages),
+    campaignMessages: sum(t => t.campaignMessages),
+    settledTokens: sum(t => t.settledTokens),
+    planTokens: sum(t => t.planTokens),
+    billedUsd: round2(sum(t => t.billedUsd)),
+    costUsd: sumAll(t => t.costUsd),
+    marginUsd: sumAll(t => t.marginUsd),
+    lumarsoftMarginUsd: sumAll(t => t.lumarsoftMarginUsd),
+    nicoMarginUsd: sumAll(t => t.nicoMarginUsd),
   }
 }
 

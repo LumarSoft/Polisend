@@ -133,7 +133,7 @@ function MonthStatus({ month }: { month: SettlementMonth }) {
   )
 }
 
-/** "Liquidación" (owner): how each month's billing splits between the platform and its commercial partner. */
+/** "Liquidación" (Developer): how each month's margin splits between Lumarsoft and its commercial partner (Nico). */
 export function LiquidacionTab() {
   const [period, setPeriod] = useState(thisMonth)
   const { data, isLoading, isError, error } = useSettlement(period, period === thisMonth())
@@ -146,8 +146,8 @@ export function LiquidacionTab() {
       <Card className="border-line-2 p-6 text-[14px] shadow-sm">
         <p className="font-medium text-ink">La liquidación no está configurada en el servidor.</p>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Faltan el costo de servicio por mensaje y la parte del socio comercial en la configuración de la API. Mientras
-          tanto, los meses se siguen cerrando y la liquidación se calcula cuando se carguen.
+          Faltan el costo Lumarsoft por token y la parte de Nico en la configuración de la API. Mientras tanto, los
+          meses se siguen cerrando y la liquidación se calcula cuando se carguen.
         </p>
       </Card>
     )
@@ -184,10 +184,10 @@ export function LiquidacionTab() {
         {data && <MonthStatus month={data} />}
         {data && (
           <p className="max-w-3xl text-[12.5px] text-muted-foreground">
-            Por cada número: el costo de servicio es {usd(data.terms.costPerMessageUsd)} por mensaje consumido del plan;
-            lo que queda de lo facturado se reparte {shareLabel(ownerShare)} para la plataforma y{' '}
-            {shareLabel(data.terms.partnerShare)} para el socio comercial. Un número en prueba no factura, así que su
-            costo sale del reparto.
+            Por cada número: el costo Lumarsoft es {usd(data.terms.costPerMessageUsd)} por token (1 por mensaje, 2 por
+            mensaje de campaña); el margen de ganancia, lo facturado menos ese costo, se reparte{' '}
+            {shareLabel(ownerShare)} para Lumarsoft y {shareLabel(data.terms.partnerShare)} para Nico. Un número en
+            prueba no factura, así que su costo sale del reparto.
           </p>
         )}
       </div>
@@ -204,32 +204,32 @@ export function LiquidacionTab() {
               hint={`${int(totals.numbers)} ${totals.numbers === 1 ? 'número' : 'números'}${totals.trialNumbers > 0 ? ` · ${int(totals.trialNumbers)} en prueba` : ''}`}
             />
             <Kpi
-              label="Costo de servicio"
+              label="Costo Lumarsoft"
               value={usd(totals.serviceCostUsd)}
               hint={`${int(settledTokensOf(totals))} tokens consumidos`}
             />
             <Kpi
-              label="Remanente"
+              label="Margen de ganancia"
               value={usd(totals.remainderUsd)}
-              hint="Facturado menos el costo"
+              hint="Facturado menos el costo Lumarsoft"
               tone={totals.remainderUsd < 0 ? 'bad' : undefined}
             />
             <Kpi
-              label="Parte plataforma"
+              label="Margen Lumarsoft"
               value={usd(totals.ownerShareUsd)}
-              hint={`${shareLabel(ownerShare)} del remanente`}
+              hint={`${shareLabel(ownerShare)} del margen de ganancia`}
               tone={totals.ownerShareUsd < 0 ? 'bad' : undefined}
             />
             <Kpi
-              label="Socio comercial"
+              label="Margen Nico"
               value={usd(totals.partnerShareUsd)}
-              hint={`${shareLabel(data.terms.partnerShare)} del remanente`}
+              hint={`${shareLabel(data.terms.partnerShare)} del margen de ganancia`}
               tone={totals.partnerShareUsd < 0 ? 'bad' : undefined}
             />
             <Kpi
-              label="Total plataforma"
+              label="Total Lumarsoft"
               value={usd(totals.ownerTotalUsd)}
-              hint="Costo de servicio más su parte"
+              hint="Costo Lumarsoft más su margen"
               tone="good"
             />
           </>
@@ -244,10 +244,10 @@ export function LiquidacionTab() {
               <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Números</TableHead>
               <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Tokens</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Facturado</TableHead>
-              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Costo</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Remanente</TableHead>
-              <TableHead className={`hidden text-right lg:table-cell ${HEAD}`}>Plataforma</TableHead>
-              <TableHead className={`hidden pr-5 text-right lg:table-cell ${HEAD}`}>Socio</TableHead>
+              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Costo Lumarsoft</TableHead>
+              <TableHead className={`text-right ${HEAD}`}>Margen de ganancia</TableHead>
+              <TableHead className={`hidden text-right lg:table-cell ${HEAD}`}>Margen Lumarsoft</TableHead>
+              <TableHead className={`hidden pr-5 text-right lg:table-cell ${HEAD}`}>Margen Nico</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -261,7 +261,7 @@ export function LiquidacionTab() {
             {data?.organizations.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="py-12 text-center text-[14px] text-muted-foreground">
-                  Ningún número facturó ni consumió mensajes en {monthLabel(data.period)}.
+                  Ningún número facturó ni consumió tokens en {monthLabel(data.period)}.
                 </TableCell>
               </TableRow>
             )}

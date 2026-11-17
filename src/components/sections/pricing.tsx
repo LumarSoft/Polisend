@@ -1,7 +1,7 @@
 import { Check } from "@phosphor-icons/react/ssr";
 import { LogoMark } from "@/components/brand/logo";
 import { CtaButton, Eyebrow, SplitReveal } from "@/components/ui/primitives";
-import { int, paidPlans, trialPlan, usd, type PlanCatalog } from "@/lib/plan-format";
+import { int, paidPlans, PLANS_INQUIRY, TOKENS_RULE, trialPlan, type PlanCatalog } from "@/lib/plan-format";
 
 const INCLUDED = [
   "Bot de WhatsApp con IA, 24 h, 7 días",
@@ -24,7 +24,7 @@ export function Pricing({ catalog }: { catalog: PlanCatalog }) {
       <div className="absolute inset-x-0 top-1/3 -z-10 mx-auto h-[520px] max-w-[1100px] rounded-full bg-[radial-gradient(ellipse,rgb(31_79_224/0.12),transparent_65%)] blur-2xl" />
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-[860px] text-center">
-          <Eyebrow>Precio de Polisend</Eyebrow>
+          <Eyebrow>Planes de Polisend</Eyebrow>
           <SplitReveal className="mt-5 font-display text-[clamp(2.4rem,5.6vw,5.2rem)] leading-[0.93] font-bold tracking-[-0.04em]">
             Menos de lo que cuesta{" "}
             <span className="font-serif font-normal tracking-[-0.02em] text-brand italic">no contestar.</span>
@@ -37,12 +37,10 @@ export function Pricing({ catalog }: { catalog: PlanCatalog }) {
             {from && (
               <>
                 <p className="text-[14px] font-semibold tracking-[0.18em] text-on-brand/70 uppercase">Desde</p>
-                <p className="mt-2 flex items-start font-display leading-[0.8] font-bold tracking-[-0.05em]">
-                  <span className="mt-3 mr-1 text-[clamp(1.6rem,3vw,2.4rem)] tracking-tight">USD</span>
-                  <span className="text-[clamp(6rem,15vw,11rem)]">{int(from.priceUsd)}</span>
-                  <span className="mt-auto mb-2 ml-1 text-[clamp(1.2rem,2.2vw,1.8rem)] tracking-tight">/mes</span>
+                <p className="mt-2 font-display text-[clamp(4.5rem,10vw,8rem)] leading-[0.8] font-bold tracking-[-0.05em]">
+                  {int(from.tokens)}
                 </p>
-                <p className="mt-4 text-[20px] font-semibold tracking-tight">por número de WhatsApp</p>
+                <p className="mt-4 text-[20px] font-semibold tracking-tight">tokens por mes, por número de WhatsApp</p>
               </>
             )}
             <ul className="relative mt-8 divide-y divide-on-brand/15 border-y border-on-brand/15">
@@ -51,22 +49,22 @@ export function Pricing({ catalog }: { catalog: PlanCatalog }) {
                   <span className="text-[16px] font-semibold">
                     {plan.name}
                     <span className="ml-2 text-[14px] font-normal text-on-brand/70">
-                      {int(plan.messages)} mensajes{plan.isTrial ? " · primer mes" : " por mes"}
+                      {plan.isTrial ? "gratis el primer mes" : "por mes"}
                     </span>
                   </span>
                   <span className="shrink-0 font-display text-[22px] font-bold tracking-tight whitespace-nowrap">
-                    {plan.priceUsd === 0 ? "Gratis" : usd(plan.priceUsd)}
+                    {int(plan.tokens)} tokens
                   </span>
                 </li>
               ))}
             </ul>
+            <p className="relative mt-4 text-[14px] text-on-brand/75">{TOKENS_RULE}.</p>
             <p className="relative mt-6 max-w-[380px] font-serif text-[24px] leading-[1.1] italic">
               Nunca te subimos de plan sin preguntarte.
             </p>
-            {largest && catalog.blockPriceUsd !== null && (
+            {largest && (
               <p className="relative mt-3 text-[14px] text-on-brand/75">
-                Pasado el plan {largest.name}, cada {int(catalog.blockMessages)} mensajes suman{" "}
-                {usd(catalog.blockPriceUsd)}.
+                Pasado el plan {largest.name}, se suman bloques de {int(catalog.blockTokens)} tokens.
               </p>
             )}
           </div>
@@ -83,8 +81,8 @@ export function Pricing({ catalog }: { catalog: PlanCatalog }) {
               ))}
             </ul>
             <div className="mt-auto pt-10">
-              <CtaButton size="lg" className="w-full justify-between sm:w-auto">
-                Quiero Polisend<span className="hidden sm:inline"> en mi productora</span>
+              <CtaButton size="lg" message={PLANS_INQUIRY} className="w-full justify-between sm:w-auto">
+                Consultanos<span className="hidden sm:inline"> el plan para tu productora</span>
               </CtaButton>
               <p className="mt-4 text-[13px] text-mute">
                 No toma vacaciones. No pide licencia. No deja mensajes en visto.

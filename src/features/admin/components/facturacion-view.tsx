@@ -42,18 +42,15 @@ import type {
   PlatformBillingTotals,
   PlanOffer,
 } from '@/types/api/billing'
-import {
-  useAssignPlan,
-  useBillingOverview,
-  usePlatformBilling,
-  usePlatformPlans,
-  usePlanActions,
-} from '../hooks/use-billing'
+import { useBillingOverview, usePlatformBilling, usePlatformPlans, usePlanActions } from '../hooks/use-billing'
 import { useRole } from '../hooks/use-role'
 import { numberLabel } from '../lib/number-label'
+import { tokens } from '../lib/tokens'
 import { hasSharedZones, ownerGroupsOf, type BillingOwnerGroup } from '../lib/platform-billing-groups'
 import { PlanLimitActions } from './plan-limit-actions'
-import { HEAD, int, Kpi, MonthPicker, thisMonth, usd } from './billing-ui'
+import { ConsumptionBar, PlanSelect } from './billing-number-parts'
+import { HEAD, int, Kpi, MonthPicker, thisMonth, TokensHint, usd } from './billing-ui'
+import { BillingByAdminTab } from './billing-by-admin-tab'
 import { LiquidacionTab } from './liquidacion-tab'
 import { NetworkFilter } from './network-filter'
 import { RequirePrincipal } from './require-principal'
@@ -66,78 +63,12 @@ function failed(error: unknown, fallback: string) {
   toast.error(error instanceof ApiError && error.status < 500 ? error.message : fallback)
 }
 
-// ─── Consumption bar ──────────────────────────────────────────────────────────
-
-function ConsumptionBar({ row }: { row: BillingNumber }) {
-  const percent = Math.min(100, row.percentUsed)
-  const tone = row.plan.trial ? 'bg-emerald-500 dark:bg-emerald-400' : row.percentUsed >= 80 ? 'bg-amber' : 'bg-ember'
-  return (
-    <div>
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-line-2">
-        <div
-          className={`h-full rounded-full transition-[width] duration-500 ${tone}`}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3 text-[12px]">
-        <span className="text-ink-3">
-          <span className="font-semibold text-ink">{int(row.messagesUsed)}</span> de {int(row.includedMessages)}{' '}
-          mensajes
-        </span>
-        <span className="text-muted-foreground">quedan {int(row.remainingMessages)}</span>
-      </div>
-    </div>
-  )
-}
-
 // ─── Number card (admin and SuperAdmin) ───────────────────────────────────────
-
-function PlanSelect({ row, plans }: { row: BillingNumber; plans: PlanOffer[] }) {
-  const assign = useAssignPlan()
-  const paid = plans.filter(plan => !plan.isTrial)
-  const current = row.assignedPlan?.trial ? '' : String(row.assignedPlan?.id ?? '')
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <Label htmlFor={`plan-${row.id}`} className="text-[11px] font-normal uppercase tracking-[0.12em] text-faint">
-        Plan asignado
-      </Label>
-      <div className="flex items-center gap-2">
-        {assign.isPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-        <select
-          id={`plan-${row.id}`}
-          value={current}
-          disabled={assign.isPending}
-          onChange={event => {
-            const planId = Number(event.target.value)
-            if (!planId) return
-            assign.mutate(
-              { numberId: row.id, planId },
-              {
-                onSuccess: () => toast.success('Plan asignado'),
-                onError: error => failed(error, 'No se pudo asignar el plan'),
-              },
-            )
-          }}
-          className="h-8 rounded-md border border-line-2 bg-paper px-2 text-[13px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-ember-ring"
-        >
-          {current === '' && (
-            <option value="">{row.assignedPlan?.trial ? 'Prueba (primer mes)' : 'Elegí un plan'}</option>
-          )}
-          {paid.map(plan => (
-            <option key={plan.id} value={plan.id}>
-              {plan.name} · {int(plan.messages)} mensajes
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  )
-}
 
 function NumberCard({ row, plans, canAssign }: { row: BillingNumber; plans: PlanOffer[]; canAssign: boolean }) {
   const planLabel = row.plan.trial
-    ? `Prueba · ${int(row.plan.includedMessages)} mensajes gratis`
-    : `${row.plan.name} · ${int(row.plan.includedMessages)} mensajes`
+    ? `Prueba · ${tokens(row.plan.includedMessages)} gratis`
+    : `${row.plan.name} · ${tokens(row.plan.includedMessages)}`
   return (
     <Card className="flex flex-col gap-4 border-line-2 p-4 shadow-sm">
       <div className="min-w-0">
@@ -187,9 +118,8 @@ function NumberCard({ row, plans, canAssign }: { row: BillingNumber; plans: Plan
             <TrendingUp className="mt-0.5 size-3.5 shrink-0 text-ember-2" />
             {row.nextPlan ? (
               <span>
-                Al llegar a los {int(row.includedMessages)} mensajes, el asistente se pausa y se puede pasar a{' '}
-                <span className="font-medium text-ink">{row.nextPlan.name}</span> ({int(row.nextPlan.messages)}{' '}
-                mensajes).
+                Al llegar a los {tokens(row.includedMessages)}, el asistente se pausa y se puede pasar a{' '}
+                <span className="font-medium text-ink">{row.nextPlan.name}</span> ({tokens(row.nextPlan.messages)}).
               </span>
             ) : (
               <span>Todavía no hay planes.</span>
@@ -211,6 +141,7 @@ function ConsumptionTab({ canAssign }: { canAssign: boolean }) {
     <>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <MonthPicker value={period} onChange={setPeriod} />
+        <TokensHint />
       </div>
       {isLoading && (
         <div className="grid gap-3 md:grid-cols-2">
@@ -234,7 +165,7 @@ function ConsumptionTab({ canAssign }: { canAssign: boolean }) {
       )}
       {largest && data && (
         <p className="mt-4 text-[12px] text-muted-foreground">
-          Pasado el plan {largest.name}, se pueden sumar de a {int(data.blockMessages)} mensajes por mes.
+          Pasado el plan {largest.name}, se pueden sumar de a {tokens(data.blockMessages)} por mes.
         </p>
       )}
     </>
@@ -249,16 +180,17 @@ function OfferTab() {
   return (
     <>
       <p className="mb-4 max-w-xl text-[13px] text-muted-foreground">
-        Los planes los define Polisend, que también te informa sus precios. Elegís el plan de cada número en Consumo.
-        Cuando un número llega a los mensajes de su plan, su asistente se pausa y te avisamos para que elijas si pasa al
-        plan siguiente.
+        Los planes los define Polisend. Elegís el plan de cada número en Consumo o en Por administrador. Cuando un
+        número llega a los tokens de su plan, su asistente se pausa y te avisamos para que elijas si pasa al plan
+        siguiente.
       </p>
+      <TokensHint className="mb-4" />
       <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
         <Table>
           <TableHeader>
             <TableRow className="border-line-2 hover:bg-transparent">
               <TableHead className={`h-11 pl-5 ${HEAD}`}>Plan</TableHead>
-              <TableHead className={`pr-5 text-right ${HEAD}`}>Mensajes por mes</TableHead>
+              <TableHead className={`pr-5 text-right ${HEAD}`}>Tokens por mes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -318,13 +250,15 @@ function PlanDialog({
   const sizeOk = Number.isInteger(size) && size > 0
   const priceOk = isTrial || (priceUsd.trim() !== '' && Number.isFinite(amount) && amount >= 0)
   const valid = name.trim().length > 0 && sizeOk && priceOk
-  const perMessage = sizeOk && priceOk && amount > 0 ? amount / size : null
+  const perToken = sizeOk && priceOk && amount > 0 ? amount / size : null
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{plan ? 'Editar plan' : 'Nuevo plan'}</DialogTitle>
-          <DialogDescription>Lo ven y lo pagan todas las organizaciones. El precio puede ser 0.</DialogDescription>
+          <DialogDescription>
+            Lo usan todas las organizaciones, que lo ven en tokens y nunca su precio. El precio puede ser 0.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
@@ -339,7 +273,7 @@ function PlanDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="plan-messages">Mensajes por mes</Label>
+            <Label htmlFor="plan-messages">Tokens por mes</Label>
             <Input
               id="plan-messages"
               type="number"
@@ -364,9 +298,9 @@ function PlanDialog({
               placeholder="25"
               className="h-10 border-line-2 text-[13px]"
             />
-            {perMessage !== null && (
+            {perToken !== null && (
               <p className="text-[12px] text-muted-foreground">
-                USD {perMessage.toLocaleString('es-AR', { maximumFractionDigits: 4 })} por mensaje
+                USD {perToken.toLocaleString('es-AR', { maximumFractionDigits: 4 })} por token
               </p>
             )}
           </div>
@@ -447,11 +381,11 @@ function PlatformPlansTab() {
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[13px] text-muted-foreground">
-          El catálogo de toda la plataforma: lo que ven y pagan todas las organizaciones, y lo que muestra la landing.
-          Cada SuperAdmin elige el plan de sus números. Al llegar al límite, el asistente del número se pausa hasta que
-          la organización lo pase al plan siguiente o empiece el mes. Pasado el plan más grande, se suman bloques de{' '}
-          {int(data?.blockMessages ?? 1000)} mensajes al precio por mensaje de ese plan. Qué funciones incluye cada plan
-          se elige en{' '}
+          El catálogo de toda la plataforma: lo usan todas las organizaciones y lo muestra la landing, siempre en tokens
+          (1 mensaje = 1 token, un mensaje de campaña = 2) y sin precio. El SuperAdmin o el Owner eligen el plan de cada
+          número. Al llegar al límite, el asistente del número se pausa hasta que la organización lo pase al plan
+          siguiente o empiece el mes. Pasado el plan más grande, se suman bloques de {int(data?.blockMessages ?? 1000)}{' '}
+          tokens al precio por token de ese plan. Qué funciones incluye cada plan se elige en{' '}
           <Link href="/admin/funciones" className="font-medium text-ember-2 underline-offset-2 hover:underline">
             Funciones por plan
           </Link>
@@ -468,9 +402,9 @@ function PlatformPlansTab() {
           <TableHeader>
             <TableRow className="border-line-2 hover:bg-transparent">
               <TableHead className={`h-11 pl-5 ${HEAD}`}>Plan</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Mensajes</TableHead>
+              <TableHead className={`text-right ${HEAD}`}>Tokens</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Precio</TableHead>
-              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Por mensaje</TableHead>
+              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Por token</TableHead>
               <TableHead className={HEAD}>Estado</TableHead>
               <TableHead className={`pr-5 text-right ${HEAD}`}>Acciones</TableHead>
             </TableRow>
@@ -584,7 +518,7 @@ function PlatformPlansTab() {
   )
 }
 
-// ─── Dashboard (owner) ─────────────────────────────────────────────────────────
+// ─── Dashboard (Developer) ─────────────────────────────────────────────────────
 
 /** Per message: the bot's, the office's and notices at one rate, campaign messages at another (PlatformBilling.messageCost). */
 type MessageCost = { messageUsd: number; campaignMessageUsd: number } | null
@@ -592,34 +526,40 @@ type MessageCost = { messageUsd: number; campaignMessageUsd: number } | null
 /** USD with up to four decimals, for a per-message rate. */
 const rate = (n: number) => `USD ${n.toLocaleString('es-AR', { maximumFractionDigits: 4 })}`
 
-/** Bot (and office, and notices) and campaign messages; an older API only splits sent and consumed. */
-const botOf = (t: PlatformBillingTotals) => t.botMessages ?? t.sentMessages ?? t.messages
-const campaignsOf = (t: PlatformBillingTotals) => t.campaignMessages ?? 0
+/** An amount the API could not compute (null: no cost rate, or no partner terms) shows as "—". */
+const money = (n: number | null | undefined) => (n === null || n === undefined ? '—' : usd(n))
 
-function MoneyCells({ totals, cost }: { totals: PlatformBillingTotals; cost: MessageCost }) {
-  const margin = totals.marginUsd ?? 0
+/** A margin: green, red when negative, grey when unknown. */
+const marginTone = (n: number | null | undefined) =>
+  n === null || n === undefined
+    ? 'text-muted-foreground'
+    : n < 0
+      ? 'text-destructive'
+      : 'text-emerald-600 dark:text-emerald-400'
+
+/** The Tablero's six columns, the same for an Owner, a zone, an organization and a number. */
+function MoneyCells({ totals }: { totals: PlatformBillingTotals }) {
   return (
     <>
-      <TableCell className="text-right text-[13px] text-ink-3">{int(botOf(totals))}</TableCell>
-      <TableCell className="text-right text-[13px] text-ink-3">{int(campaignsOf(totals))}</TableCell>
-      <TableCell className="text-right text-[13px] font-semibold text-ink">{usd(totals.billedUsd)}</TableCell>
-      <TableCell className="text-right text-[13px] text-ink-3">
-        {cost ? usd(totals.messageCostUsd ?? 0) : '—'}
+      <TableCell className="text-right text-[13px] text-ink-3">{int(totals.settledTokens)}</TableCell>
+      <TableCell className="text-right text-[13px] text-ink-3">{int(totals.planTokens)}</TableCell>
+      <TableCell className="text-right text-[13px] text-ink-3">{money(totals.costUsd)}</TableCell>
+      <TableCell className={`text-right text-[13px] font-semibold ${marginTone(totals.marginUsd)}`}>
+        {money(totals.marginUsd)}
       </TableCell>
-      <TableCell
-        className={`text-right text-[13px] font-semibold ${!cost ? 'text-muted-foreground' : margin < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}`}
-      >
-        {cost ? usd(margin) : '—'}
+      <TableCell className={`text-right text-[13px] ${marginTone(totals.lumarsoftMarginUsd)}`}>
+        {money(totals.lumarsoftMarginUsd)}
       </TableCell>
-      <TableCell className="hidden text-right text-[13px] text-muted-foreground lg:table-cell">
-        {usd(totals.metaCostUsd)}
-      </TableCell>
-      <TableCell className="hidden pr-5 text-right text-[13px] text-muted-foreground xl:table-cell">
-        {usd(totals.openaiCostUsd)}
+      <TableCell className={`pr-5 text-right text-[13px] ${marginTone(totals.nicoMarginUsd)}`}>
+        {money(totals.nicoMarginUsd)}
       </TableCell>
     </>
   )
 }
+
+const COLUMNS = 7
+
+const numbersHint = (count: number) => (count === 1 ? '1 número' : `${int(count)} números`)
 
 /** Left padding of an organization row and of its numbers, by how deep the Tablero nests it. */
 const ORG_INDENT = {
@@ -630,11 +570,9 @@ const ORG_INDENT = {
 
 function OrganizationRows({
   org,
-  cost,
   indent = 'flat',
 }: {
   org: PlatformBillingOrganization
-  cost: MessageCost
   /** Under an Owner group ("Sin zona") or under one of its zones. */
   indent?: keyof typeof ORG_INDENT
 }) {
@@ -643,19 +581,23 @@ function OrganizationRows({
   return (
     <>
       <TableRow className="cursor-pointer" onClick={() => setOpen(!open)}>
-        <TableCell className={`whitespace-normal text-[14px] font-medium text-ink ${ORG_INDENT[indent].org}`}>
-          <span className="flex items-center gap-1.5">
-            <Chevron className="size-4 text-muted-foreground" />
-            {org.name}
-            {!org.isActive && (
-              <Badge variant="outline" className="border-line-2 text-[10.5px] text-muted-foreground">
-                Inactiva
-              </Badge>
-            )}
+        <TableCell className={`whitespace-normal ${ORG_INDENT[indent].org}`}>
+          <span className="flex items-start gap-1.5">
+            <Chevron className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span className="flex flex-col">
+              <span className="flex flex-wrap items-center gap-1.5 text-[14px] font-medium text-ink">
+                {org.name}
+                {!org.isActive && (
+                  <Badge variant="outline" className="border-line-2 text-[10.5px] text-muted-foreground">
+                    Inactiva
+                  </Badge>
+                )}
+              </span>
+              <span className="text-[11.5px] text-muted-foreground">{numbersHint(org.numbers.length)}</span>
+            </span>
           </span>
         </TableCell>
-        <TableCell className="text-right text-[13px] text-ink-3">{int(org.numbers.length)}</TableCell>
-        <MoneyCells totals={org.totals} cost={cost} />
+        <MoneyCells totals={org.totals} />
       </TableRow>
       {open &&
         org.numbers.map(n => (
@@ -663,16 +605,13 @@ function OrganizationRows({
             <TableCell className={`whitespace-normal text-[13px] text-ink ${ORG_INDENT[indent].number}`}>
               <span className="font-mono whitespace-nowrap">{numberLabel(n)}</span>
               <div className="text-[11.5px] text-muted-foreground">
-                {n.plan.trial ? 'Prueba' : `${n.plan.name} · ${int(n.plan.includedMessages)} mensajes`}
+                {n.plan.trial ? 'Prueba' : n.plan.name}
+                {n.responsibleCode && ` · ${n.responsibleCode.code}`}
                 {n.upgraded && ' · subió de plan'}
                 {n.paused && ' · asistente en pausa'}
-                {n.metaBillableMessages > 0 && ` · ${int(n.metaBillableMessages)} cobrados por Meta`}
               </div>
             </TableCell>
-            <TableCell className="text-right text-[12px] text-muted-foreground">
-              {n.responsibleCode ? n.responsibleCode.code : '—'}
-            </TableCell>
-            <MoneyCells totals={n} cost={cost} />
+            <MoneyCells totals={n} />
           </TableRow>
         ))}
     </>
@@ -695,18 +634,14 @@ function GroupRow({
   hint,
   open,
   onToggle,
-  numbers,
   totals,
-  cost,
   zone = false,
 }: {
   label: string
   hint: string
   open: boolean
   onToggle: () => void
-  numbers: number
   totals: PlatformBillingTotals
-  cost: MessageCost
   /** A zone (second level) rather than an Owner. */
   zone?: boolean
 }) {
@@ -724,21 +659,14 @@ function GroupRow({
           </span>
         </span>
       </TableCell>
-      <TableCell className="text-right text-[13px] text-ink-3">{int(numbers)}</TableCell>
-      <MoneyCells totals={totals} cost={cost} />
+      <MoneyCells totals={totals} />
     </TableRow>
   )
 }
 
-function ZoneRows({
-  zone,
-  byId,
-  cost,
-}: {
-  zone: BillingOwnerGroup['zones'][number]
-  byId: OrganizationsById
-  cost: MessageCost
-}) {
+const organizationsHint = (count: number) => (count === 1 ? '1 organización' : `${int(count)} organizaciones`)
+
+function ZoneRows({ zone, byId }: { zone: BillingOwnerGroup['zones'][number]; byId: OrganizationsById }) {
   const [open, setOpen] = useState(true)
   const organizations = organizationsOf(zone.organizationIds, byId)
   return (
@@ -746,43 +674,44 @@ function ZoneRows({
       <GroupRow
         zone
         label={zone.name}
-        hint={zone.totals.organizations === 1 ? '1 organización' : `${int(zone.totals.organizations)} organizaciones`}
+        hint={`${organizationsHint(zone.totals.organizations)} · ${numbersHint(numbersOf(organizations))}`}
         open={open}
         onToggle={() => setOpen(!open)}
-        numbers={numbersOf(organizations)}
         totals={zone.totals}
-        cost={cost}
       />
-      {open && organizations.map(org => <OrganizationRows key={org.id} org={org} cost={cost} indent="zone" />)}
+      {open && organizations.map(org => <OrganizationRows key={org.id} org={org} indent="zone" />)}
     </>
   )
 }
 
 /** An Owner (or "Sin Owner", or "Sin zona") with its zones, open by default. */
-function OwnerRows({ group, byId, cost }: { group: BillingOwnerGroup; byId: OrganizationsById; cost: MessageCost }) {
+function OwnerRows({ group, byId }: { group: BillingOwnerGroup; byId: OrganizationsById }) {
   const [open, setOpen] = useState(true)
   const organizations = organizationsOf(
     group.zones.flatMap(zone => zone.organizationIds),
     byId,
   )
   const zonesHint = group.flat ? null : group.zones.length === 1 ? '1 zona' : `${group.zones.length} zonas`
-  const orgsHint =
-    group.totals.organizations === 1 ? '1 organización' : `${int(group.totals.organizations)} organizaciones`
   return (
     <>
       <GroupRow
         label={group.name}
-        hint={[group.email, zonesHint, orgsHint].filter(Boolean).join(' · ')}
+        hint={[
+          group.email,
+          zonesHint,
+          organizationsHint(group.totals.organizations),
+          numbersHint(numbersOf(organizations)),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         open={open}
         onToggle={() => setOpen(!open)}
-        numbers={numbersOf(organizations)}
         totals={group.totals}
-        cost={cost}
       />
       {open &&
         (group.flat
-          ? organizations.map(org => <OrganizationRows key={org.id} org={org} cost={cost} indent="owner" />)
-          : group.zones.map(zone => <ZoneRows key={zone.id ?? 'none'} zone={zone} byId={byId} cost={cost} />))}
+          ? organizations.map(org => <OrganizationRows key={org.id} org={org} indent="owner" />)
+          : group.zones.map(zone => <ZoneRows key={zone.id ?? 'none'} zone={zone} byId={byId} />))}
     </>
   )
 }
@@ -795,6 +724,7 @@ function PlatformDashboardTab() {
   // Owner → Zona → Organización → Número; an API older than the zones lists the organizations.
   const ownerGroups = data ? ownerGroupsOf(data) : null
   const byId: OrganizationsById = new Map((data?.organizations ?? []).map(org => [org.id, org]))
+  const unsplit = totals !== undefined && totals.lumarsoftMarginUsd === null
 
   return (
     <>
@@ -804,8 +734,8 @@ function PlatformDashboardTab() {
           {!data
             ? null
             : cost
-              ? `Cada mensaje del bot, de la oficina o de un aviso cuesta ${rate(cost.messageUsd)} y cada mensaje de campaña ${rate(cost.campaignMessageUsd)}. La ganancia es lo facturado por el plan menos ese costo. Lo que cobran Meta y OpenAI de verdad se muestra aparte.`
-              : 'El costo por mensaje no está configurado en la API (PARTNER_COST_PER_MESSAGE_USD): no se calculan el costo ni la ganancia.'}
+              ? `Cada mensaje del bot, de la oficina o de un aviso es 1 token y cuesta ${rate(cost.messageUsd)}; cada mensaje de campaña son 2 tokens y cuesta ${rate(cost.campaignMessageUsd)}. El margen de ganancia es lo facturado por el plan menos ese costo, y se reparte entre Lumarsoft y Nico como en la Liquidación.`
+              : 'El costo por token no está configurado en la API (PARTNER_COST_PER_MESSAGE_USD): no se calculan el costo ni los márgenes.'}
         </p>
       </div>
       {data?.closed && (
@@ -818,9 +748,9 @@ function PlatformDashboardTab() {
       )}
       {isError && <p className="mb-4 text-[14px] text-destructive">No se pudo cargar el tablero.</p>}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {isLoading || !totals ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[104px] rounded-xl" />)
+          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[104px] rounded-xl" />)
         ) : (
           <>
             <Kpi
@@ -829,24 +759,31 @@ function PlatformDashboardTab() {
               hint={`${int(totals.activeNumbers)} números activos · ${int(totals.upgradedNumbers)} subieron de plan · ${int(totals.pausedNumbers ?? 0)} en pausa`}
             />
             <Kpi
-              label="Costo de los mensajes"
-              value={cost ? usd(totals.messageCostUsd ?? 0) : '—'}
+              label="Costo Lumarsoft"
+              value={money(totals.costUsd)}
               hint={
                 cost
-                  ? `${int(botOf(totals))} del bot × ${rate(cost.messageUsd)} · ${int(campaignsOf(totals))} de campañas × ${rate(cost.campaignMessageUsd)}`
-                  : 'Sin costo por mensaje configurado'
+                  ? `${int(totals.settledTokens)} tokens usados de ${int(totals.planTokens)} de los planes`
+                  : 'Sin costo por token configurado'
               }
             />
             <Kpi
-              label="Ganancia"
-              value={cost ? usd(totals.marginUsd ?? 0) : '—'}
-              hint="Facturado menos el costo de los mensajes"
-              tone={!cost ? undefined : (totals.marginUsd ?? 0) < 0 ? 'bad' : 'good'}
+              label="Margen de ganancia"
+              value={money(totals.marginUsd)}
+              hint="Facturado menos el costo Lumarsoft"
+              tone={totals.marginUsd === null ? undefined : totals.marginUsd < 0 ? 'bad' : 'good'}
             />
             <Kpi
-              label="Pago real a Meta"
-              value={usd(totals.metaCostUsd)}
-              hint={`${int(totals.metaBillableMessages)} mensajes con cargo · OpenAI aparte: ${usd(totals.openaiCostUsd)}`}
+              label="Margen Lumarsoft"
+              value={money(totals.lumarsoftMarginUsd)}
+              hint={unsplit ? 'Falta la parte de Nico en la API' : 'Su parte del margen de ganancia'}
+              tone={totals.lumarsoftMarginUsd !== null && totals.lumarsoftMarginUsd < 0 ? 'bad' : undefined}
+            />
+            <Kpi
+              label="Margen Nico"
+              value={money(totals.nicoMarginUsd)}
+              hint={unsplit ? 'Falta la parte de Nico en la API' : 'Su parte del margen de ganancia'}
+              tone={totals.nicoMarginUsd !== null && totals.nicoMarginUsd < 0 ? 'bad' : undefined}
             />
           </>
         )}
@@ -858,42 +795,42 @@ function PlatformDashboardTab() {
         </p>
       )}
       <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-line-2 hover:bg-transparent">
-              <TableHead className={`h-11 pl-5 ${HEAD}`}>
-                {ownerGroups ? 'Owner · Zona · Organización' : 'Organización'}
-              </TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Números</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Bot</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Campañas</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Facturado</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Costo</TableHead>
-              <TableHead className={`text-right ${HEAD}`}>Ganancia</TableHead>
-              <TableHead className={`hidden text-right lg:table-cell ${HEAD}`}>Meta real</TableHead>
-              <TableHead className={`hidden pr-5 text-right xl:table-cell ${HEAD}`}>OpenAI</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={9} className="pl-5">
-                  <Skeleton className="h-4 w-full" />
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[920px]">
+            <TableHeader>
+              <TableRow className="border-line-2 hover:bg-transparent">
+                <TableHead className={`h-11 pl-5 ${HEAD}`}>
+                  {ownerGroups ? 'Owner · Zona · Organización · Número' : 'Organización · Número'}
+                </TableHead>
+                <TableHead className={`text-right ${HEAD}`}>Tokens usados</TableHead>
+                <TableHead className={`text-right ${HEAD}`}>Tokens del plan</TableHead>
+                <TableHead className={`text-right ${HEAD}`}>Costo Lumarsoft</TableHead>
+                <TableHead className={`text-right ${HEAD}`}>Margen de ganancia</TableHead>
+                <TableHead className={`text-right ${HEAD}`}>Margen Lumarsoft</TableHead>
+                <TableHead className={`pr-5 text-right ${HEAD}`}>Margen Nico</TableHead>
               </TableRow>
-            )}
-            {data?.organizations.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="py-12 text-center text-[14px] text-muted-foreground">
-                  No hay organizaciones.
-                </TableCell>
-              </TableRow>
-            )}
-            {data && data.organizations.length > 0 && ownerGroups
-              ? ownerGroups.map(group => <OwnerRows key={group.key} group={group} byId={byId} cost={cost} />)
-              : data?.organizations.map(org => <OrganizationRows key={org.id} org={org} cost={cost} />)}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={COLUMNS} className="pl-5">
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                </TableRow>
+              )}
+              {data?.organizations.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={COLUMNS} className="py-12 text-center text-[14px] text-muted-foreground">
+                    No hay organizaciones.
+                  </TableCell>
+                </TableRow>
+              )}
+              {data && data.organizations.length > 0 && ownerGroups
+                ? ownerGroups.map(group => <OwnerRows key={group.key} group={group} byId={byId} />)
+                : data?.organizations.map(org => <OrganizationRows key={org.id} org={org} />)}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </>
   )
@@ -901,15 +838,22 @@ function PlatformDashboardTab() {
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 
-type BillingTab = 'consumo' | 'planes' | 'tablero' | 'liquidacion'
+type BillingTab = 'consumo' | 'administradores' | 'planes' | 'tablero' | 'liquidacion'
 
 export function FacturacionView() {
   const { isDeveloper, canManageOrg, isAdmin, isLoading: roleLoading } = useRole()
   // `?tab=` (the assistant's links) or the role's first tab.
-  const [tab, setTab] = useUrlTab<BillingTab | 'auto'>(['consumo', 'planes', 'tablero', 'liquidacion'], 'auto')
+  const [tab, setTab] = useUrlTab<BillingTab | 'auto'>(
+    ['consumo', 'administradores', 'planes', 'tablero', 'liquidacion'],
+    'auto',
+  )
   // A tab of the other side (an office link to Consumo opened by the Developer, a Tablero link opened by an office)
   // falls back to the role's first tab: the money tabs only ever render for the Developer.
-  const roleTabs: BillingTab[] = isDeveloper ? ['tablero', 'liquidacion', 'planes'] : ['consumo', 'planes']
+  const roleTabs: BillingTab[] = isDeveloper
+    ? ['tablero', 'liquidacion', 'planes']
+    : canManageOrg
+      ? ['consumo', 'administradores', 'planes']
+      : ['consumo']
   const current: BillingTab = tab !== 'auto' && roleTabs.includes(tab) ? tab : roleTabs[0]
 
   if (!roleLoading && !isDeveloper && !canManageOrg && !isAdmin) {
@@ -930,11 +874,11 @@ export function FacturacionView() {
           <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Facturación</h1>
           <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
             {isDeveloper
-              ? 'Lo que se factura a cada organización contra lo que cuestan sus mensajes, cómo se reparte con el socio comercial y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes por mensajes.'
-              : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
+              ? 'Lo que se factura a cada organización contra el costo Lumarsoft de sus tokens, cómo se reparte el margen con Nico y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes en tokens.'
+              : 'Cada número tiene un plan de tokens por mes: cada mensaje que envía el asistente, la oficina desde el panel o un aviso cuenta 1 token, y cada mensaje de campaña, 2. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente.'}
           </p>
         </div>
-        {/* An Owner's Zona › Principal: the plans and messages of that principal's numbers, never an amount. */}
+        {/* An Owner's Zona › Principal: the plans and tokens of that principal's numbers, never an amount. */}
         <NetworkFilter showProducer={false} />
       </div>
 
@@ -948,7 +892,10 @@ export function FacturacionView() {
                   <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
                 </>
               ) : (
-                <TabsTrigger value="consumo">Consumo</TabsTrigger>
+                <>
+                  <TabsTrigger value="consumo">Consumo</TabsTrigger>
+                  <TabsTrigger value="administradores">Por administrador</TabsTrigger>
+                </>
               )}
               <TabsTrigger value="planes">Planes</TabsTrigger>
             </TabsList>
@@ -967,6 +914,8 @@ export function FacturacionView() {
           )
         ) : current === 'planes' && canManageOrg ? (
           <OfferTab />
+        ) : current === 'administradores' && canManageOrg ? (
+          <BillingByAdminTab />
         ) : (
           <ConsumptionTab canAssign={canManageOrg} />
         )}

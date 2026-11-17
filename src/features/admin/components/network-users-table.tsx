@@ -1,6 +1,6 @@
 'use client'
 
-import { Ellipsis, Send, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
+import { Ellipsis, Lock, Send, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import type { NetworkUser } from '@/types/api/hierarchy'
+import type { NetworkUser, ReadOnlyNetworkUser } from '@/types/api/hierarchy'
 import { formatJoinDate } from '../lib/network-users'
 import { ROLES, roleLabel } from '../lib/roles'
 import { TwoFactorBadge } from './account-access-dialog'
@@ -28,6 +28,8 @@ interface NetworkUsersTableProps {
   isError: boolean
   /** The signed-in account: "Vos", and no delete or 2FA reset on it. */
   selfId: number | null
+  /** An Owner's read-only rows (Lumarsoft, the other Owners of its zones): after the others, with no actions. */
+  readOnlyUsers?: ReadOnlyNetworkUser[]
   /** Principal and Zona columns: hidden for a SuperAdmin (every row is of its principal). */
   showPrincipal: boolean
   emptyText: string
@@ -69,6 +71,71 @@ function CodesCell({ user }: { user: NetworkUser }) {
   )
 }
 
+function UserCell({ user, isSelf = false }: { user: NetworkUser | ReadOnlyNetworkUser; isSelf?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar className="size-9">
+        <AvatarFallback
+          className={
+            user.readOnly
+              ? 'bg-secondary text-[12px] font-semibold text-muted-foreground'
+              : 'bg-ember-soft text-[12px] font-semibold text-ember-2'
+          }
+        >
+          {(user.name || user.email).slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="truncate text-[14px] font-medium text-ink">{user.name || user.email}</span>
+          {isSelf && (
+            <Badge variant="secondary" className="bg-ember-soft text-ember-2">
+              Vos
+            </Badge>
+          )}
+          {typeof user.twoFactorEnabled === 'boolean' && <TwoFactorBadge enabled={user.twoFactorEnabled} />}
+        </div>
+        {user.name && <div className="truncate text-[12px] text-muted-foreground">{user.email}</div>}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A row nobody may edit: the API's `label` as its role ("Lumarsoft · Developer", "Owner · <shared zones>"), "—" where a
+ * managed account has a principal, a zone or codes, and no menu.
+ */
+function ReadOnlyRow({ user, showPrincipal }: { user: ReadOnlyNetworkUser; showPrincipal: boolean }) {
+  const none = <span className="text-[13px] text-muted-foreground">—</span>
+  return (
+    <TableRow className="bg-secondary/25 hover:bg-secondary/25">
+      <TableCell className="py-3 pl-5">
+        <UserCell user={user} />
+      </TableCell>
+      <TableCell>
+        <Badge
+          variant="outline"
+          className="h-auto max-w-[240px] whitespace-normal rounded-md border-line-2 text-left font-normal text-ink-3"
+        >
+          {user.label || roleLabel(user.role)}
+        </Badge>
+      </TableCell>
+      {showPrincipal && <TableCell>{none}</TableCell>}
+      {showPrincipal && <TableCell className="hidden lg:table-cell">{none}</TableCell>}
+      <TableCell className="hidden md:table-cell">{none}</TableCell>
+      <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
+        {user.createdAt ? formatJoinDate(user.createdAt) : '—'}
+      </TableCell>
+      <TableCell className="pr-5">
+        <div className="flex justify-end" title="Solo lectura: nadie puede editar esta cuenta desde Usuarios">
+          <Lock className="size-4 text-faint" />
+          <span className="sr-only">Solo lectura</span>
+        </div>
+      </TableCell>
+    </TableRow>
+  )
+}
+
 function LoadingRows({ columns }: { columns: number }) {
   return Array.from({ length: 3 }).map((_, i) => (
     <TableRow key={i}>
@@ -87,12 +154,16 @@ function LoadingRows({ columns }: { columns: number }) {
   ))
 }
 
-/** The SuperAdmins and Admins of every principal the caller reaches (plan §6.3). */
+/**
+ * The SuperAdmins and Admins of every principal the caller reaches (plan §6.3); for an Owner, then, the read-only rows
+ * of Lumarsoft and of the other Owners of its zones.
+ */
 export function NetworkUsersTable({
   users,
   isLoading,
   isError,
   selfId,
+  readOnlyUsers = [],
   showPrincipal,
   emptyText,
   onEdit,
@@ -146,25 +217,7 @@ export function NetworkUsersTable({
               return (
                 <TableRow key={user.id}>
                   <TableCell className="py-3 pl-5">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-9">
-                        <AvatarFallback className="bg-ember-soft text-[12px] font-semibold text-ember-2">
-                          {(user.name || user.email).slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-[14px] font-medium text-ink">{user.name || user.email}</span>
-                          {isSelf && (
-                            <Badge variant="secondary" className="bg-ember-soft text-ember-2">
-                              Vos
-                            </Badge>
-                          )}
-                          <TwoFactorBadge enabled={user.twoFactorEnabled} />
-                        </div>
-                        {user.name && <div className="truncate text-[12px] text-muted-foreground">{user.email}</div>}
-                      </div>
-                    </div>
+                    <UserCell user={user} isSelf={isSelf} />
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="font-normal text-ink-3">
@@ -219,6 +272,19 @@ export function NetworkUsersTable({
                 </TableRow>
               )
             })}
+
+            {users && readOnlyUsers.length > 0 && (
+              <>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={columns} className="pb-1.5 pl-5 pt-4">
+                    <span className="text-[11px] uppercase tracking-[0.12em] text-faint">Solo lectura</span>
+                  </TableCell>
+                </TableRow>
+                {readOnlyUsers.map(user => (
+                  <ReadOnlyRow key={`read-only-${user.id}`} user={user} showPrincipal={showPrincipal} />
+                ))}
+              </>
+            )}
           </TableBody>
         </Table>
       </div>

@@ -7,9 +7,9 @@ import { usd } from './billing-ui'
 
 /** What each month's billing splits into: the bars stack up to what was billed. */
 const SERIES = [
-  { key: 'serviceCostUsd', name: 'Costo de servicio', color: 'var(--color-chart-1)' },
-  { key: 'ownerShareUsd', name: 'Parte plataforma', color: 'var(--color-chart-3)' },
-  { key: 'partnerShareUsd', name: 'Socio comercial', color: '#10b981' },
+  { key: 'serviceCostUsd', name: 'Costo Lumarsoft', color: 'var(--color-chart-1)' },
+  { key: 'ownerShareUsd', name: 'Margen Lumarsoft', color: 'var(--color-chart-3)' },
+  { key: 'partnerShareUsd', name: 'Margen Nico', color: '#10b981' },
 ] as const
 
 interface TooltipEntry {

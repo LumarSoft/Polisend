@@ -12,6 +12,7 @@ import type {
   NetworkTree,
   NetworkUsage,
   NetworkUser,
+  NetworkUserRow,
   NetworkUsersQuery,
   PrincipalCode,
   RestoreNetworkUserRequest,
@@ -74,8 +75,12 @@ export const hierarchyService = {
       body: data,
     }),
 
-  users: (token: string, query: NetworkUsersQuery = {}): Promise<NetworkUser[]> =>
-    apiRequest<NetworkUser[]>(`/hierarchy/users${queryString({ ...query })}`, { token }),
+  /**
+   * With `includeReadOnly`, an Owner also gets read-only rows (`readOnly: true`): Lumarsoft's accounts and the Owners of
+   * its zones.
+   */
+  users: (token: string, query: NetworkUsersQuery = {}): Promise<NetworkUserRow[]> =>
+    apiRequest<NetworkUserRow[]>(`/hierarchy/users${queryString({ ...query })}`, { token }),
 
   /** 409 with code EMAIL_RESTORABLE (`restorableUserId` in the ApiError's body) offers `restoreUser`. */
   createUser: (token: string, data: CreateNetworkUserRequest): Promise<CreateNetworkUserResponse> =>

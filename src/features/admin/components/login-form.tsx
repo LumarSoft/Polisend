@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '../context/auth-context'
-import { readRememberedLoginEmail, useLoginSubmit } from '../hooks/use-login'
+import { readRememberedLoginEmail, rememberLoginEmail, useLoginSubmit } from '../hooks/use-login'
 import { useRole } from '../hooks/use-role'
 import { homePathFor } from '../lib/roles'
 import { LoginTwoFactorStep } from './login-two-factor-step'
@@ -102,7 +103,19 @@ export function LoginForm() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <div className="flex items-baseline justify-between gap-3">
+                <Label htmlFor="password">Contraseña</Label>
+                {/* The typed e-mail goes along in this tab's storage, never in the URL. */}
+                <Link
+                  href="/admin/recuperar"
+                  onClick={() => {
+                    if (email.trim()) rememberLoginEmail(email.trim())
+                  }}
+                  className="text-[12.5px] text-muted-foreground underline-offset-2 hover:text-ember-2 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

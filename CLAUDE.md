@@ -66,7 +66,11 @@ pnpm exec tsc --noEmit
   `<RequirePrincipal>`, las consultas con `enabled: useTenantQueriesEnabled()`, y sumar la ruta a
   `SCREENS_WITH_NETWORK_FILTER` (`lib/panel-areas.ts`). Listas de toda la red: `<NetworkFilter mode="network">`.
 - Rutas: `/admin/red`, `/admin/red/consumo` (Owner), `/admin/owners` (Developer), `/admin/cuenta` ("Mi cuenta", todos
-  los roles; es la única de Configuración que tiene el Developer) y `/admin/activar` (pública, fuera de `(panel)`).
+  los roles; es la única de Configuración que tiene el Developer), `/admin/activar` y `/admin/recuperar` (públicas,
+  fuera de `(panel)`).
+- Tokens (17/11): fuera del Developer, planes y consumo se dicen en tokens (1 mensaje = 1 token, uno de campaña = 2;
+  `lib/tokens.ts`, `<TokensHint>`) y nunca aparece un precio ni un USD de la plataforma. Detalle en
+  `docs/panel/owner-zones.md` (sección «Tokens, password recovery and consumption per Admin»).
 - Pantallas de plataforma contra `/platform/*` (la API mantiene `/owner/*` como alias); la red, contra `/hierarchy/*`.
 
 ## Ingreso, verificación en dos pasos y enlaces de contraseña (plan §6.6)

@@ -74,17 +74,56 @@ export function useUpdateFeatureRoles() {
   })
 }
 
-/** The SuperAdmin puts a number on a plan; the month and the numbers refresh after it. */
+/**
+ * A principal of the Owner's network other than the acting one, for the running month (Consumo de la red: a number's
+ * plan and the catalog). Read only while it is shown, never refreshed on its own.
+ */
+export function usePrincipalBillingOverview(principalId: number, enabled = true) {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.billingOfPrincipal(principalId),
+    queryFn: () => billingService.overview(token as string, undefined, principalId),
+    enabled: !!token && enabled,
+    gcTime: 0,
+  })
+}
+
+/** The principal's month by Admin (Facturación › Por administrador), refreshed while the screen is open. */
+export function useBillingByAdmin(period?: string, enabled = true) {
+  const { token } = useAuth()
+
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.billingByAdmin(period),
+    queryFn: () => billingService.byAdmin(token as string, period),
+    enabled: !!token && enabled,
+    placeholderData: keepPreviousData,
+    refetchInterval: LIVE_REFRESH_MS,
+  })
+}
+
+export interface AssignPlanVariables {
+  numberId: number
+  planId: number
+  /** An Owner changing a number of another principal of its network (sent as that request's acting principal). */
+  principalId?: number
+}
+
+/**
+ * The SuperAdmin (or an Owner) puts a number on a plan; the month, the numbers and the network's consumption refresh
+ * after it.
+ */
 export function useAssignPlan() {
   const { token } = useAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ numberId, planId }: { numberId: number; planId: number }) =>
-      billingService.assignPlan(token as string, numberId, planId),
+    mutationFn: ({ numberId, planId, principalId }: AssignPlanVariables) =>
+      billingService.assignPlan(token as string, numberId, planId, principalId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.billingAll })
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.phoneNumbers })
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.usageAll })
     },
   })
 }

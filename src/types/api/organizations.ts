@@ -16,28 +16,19 @@ export interface OrganizationCode {
   lastCarteraSyncAt: string | null
 }
 
-/** Cost and billing of a phone number for the running month. */
+/**
+ * Billing of a phone number for the running month. What Meta and OpenAI really cost is left out of the panel, also for
+ * the Developer (decision of 17/11): any such field the API still sends is not read.
+ */
 export interface PhoneNumberUsage {
   period: string
-  openaiInputTokens: number
-  openaiOutputTokens: number
-  openaiCostUsd: number
-  metaConversations: number
-  metaMessages: number
-  metaBillableMessages: number
-  openaiCalls: number
-  metaCostUsd: number
-  /** What the number costs us (OpenAI + Meta). Measured. */
-  totalCostUsd: number
-  /** Messages the platform sent this month. */
+  /** Tokens of the month: 1 per message the platform sent, 2 per campaign message (the field keeps its name). */
   messages: number
   assignedPlan: BilledPlan | null
   plan: BilledPlan
   upgraded: boolean
   /** What the platform invoices the organization for the month. */
   billedUsd: number
-  /** Billed minus Meta (OpenAI is prepaid). */
-  marginUsd: number
 }
 
 export interface OrganizationNumber {
@@ -54,16 +45,13 @@ export interface OrganizationNumber {
   usage: PhoneNumberUsage
 }
 
+/** The organization's running month (its real Meta and OpenAI cost, if the API still sends it, is not read). */
 export interface OrganizationBilling {
   period: string
-  /** Messages per block past the largest plan. */
+  /** Tokens per block past the largest plan. */
   blockMessages: number
   activeNumbers: number
-  metaCostUsd: number
-  openaiCostUsd: number
   billedUsd: number
-  /** Billed minus Meta (OpenAI is prepaid). */
-  marginUsd: number
 }
 
 export interface OrganizationUser {

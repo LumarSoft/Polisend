@@ -119,9 +119,17 @@ interface PreparedRequest {
   actingPrincipalId: number | null
 }
 
-/** The one header builder of apiRequest, apiStream and apiDownload. */
-function prepareRequest(token: string | null | undefined, headers: Record<string, string> = {}): PreparedRequest {
-  const actingPrincipalId = actingPrincipalFor(token)
+/**
+ * The one header builder of apiRequest, apiStream and apiDownload. `forPrincipal` replaces the acting principal for
+ * this request only, and only in an Owner's session (every other session sends no principal at all).
+ */
+function prepareRequest(
+  token: string | null | undefined,
+  headers: Record<string, string> = {},
+  forPrincipal?: number,
+): PreparedRequest {
+  const acting = actingPrincipalFor(token)
+  const actingPrincipalId = acting !== null && forPrincipal !== undefined ? forPrincipal : acting
   return {
     actingPrincipalId,
     headers: {
@@ -201,15 +209,21 @@ interface RequestOptions {
    * request is not sent: it would carry the new principal and land one principal's data in another.
    */
   startedIn?: number | null
+  /**
+   * An Owner's request about one principal of its network other than the acting one (Consumo de la red: a number's
+   * plan). Sent in X-Acting-Principal instead of the acting principal for this request only, so the panel stays on its
+   * principal; the answer must echo it like any other. Ignored outside an Owner's session.
+   */
+  forPrincipal?: number
 }
 
 async function send(path: string, options: RequestOptions, checkPrincipal: boolean) {
-  const { method = 'GET', token, body, startedIn } = options
+  const { method = 'GET', token, body, startedIn, forPrincipal } = options
   // A FormData body (file uploads) goes as is: the browser sets the multipart
   // Content-Type with its boundary.
   const isForm = body instanceof FormData
-  const prepared = prepareRequest(token, isForm ? {} : { 'Content-Type': 'application/json' })
-  if (startedIn !== undefined && prepared.actingPrincipalId !== startedIn) {
+  const prepared = prepareRequest(token, isForm ? {} : { 'Content-Type': 'application/json' }, forPrincipal)
+  if (startedIn !== undefined && actingPrincipalFor(token) !== startedIn) {
     throw new ApiError(
       0,
       'Cambiaste de principal antes de que terminara: no se guardó nada. Hacelo de nuevo en este principal.',

@@ -364,7 +364,9 @@ function SendDialog({
             {candidateMessage(campaign, sample)}
           </div>
         )}
-        <p className="text-[12px] text-muted-foreground">Meta cobra cada mensaje de campaña como marketing.</p>
+        <p className="text-[12px] text-muted-foreground">
+          Cada mensaje de campaña cuenta 2 tokens del plan del número.
+        </p>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose} className="border-line-2">
             Cancelar

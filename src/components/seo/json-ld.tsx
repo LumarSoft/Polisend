@@ -1,14 +1,14 @@
 import { faqFor } from "@/components/sections/faq";
-import { paidPlans, type PlanCatalog } from "@/lib/plan-format";
+import type { PlanCatalog } from "@/lib/plan-format";
 import { FEATURES } from "@/lib/product";
 import { SITE } from "@/lib/site";
 
 /**
- * schema.org graph for the landing: who publishes it, what the product is,
- * what it costs and the FAQ. Only facts that the page itself states.
+ * schema.org graph for the landing: who publishes it, what the product is and
+ * the FAQ. Only facts that the page itself states, and never a price: the plans
+ * are told in tokens (decision of 17/11).
  */
 export function JsonLd({ catalog }: { catalog: PlanCatalog }) {
-  const paid = paidPlans(catalog);
   const org = `${SITE.url}/#organization`;
   const graph = {
     "@context": "https://schema.org",
@@ -62,28 +62,6 @@ export function JsonLd({ catalog }: { catalog: PlanCatalog }) {
         areaServed: { "@type": "Country", name: "Argentina" },
         featureList: FEATURES,
         publisher: { "@id": org },
-        offers: {
-          "@type": "AggregateOffer",
-          url: `${SITE.url}/#precio`,
-          priceCurrency: "USD",
-          lowPrice: paid[0]?.priceUsd ?? 0,
-          highPrice: paid.at(-1)?.priceUsd ?? 0,
-          offerCount: catalog.plans.length,
-          availability: "https://schema.org/InStock",
-          offers: catalog.plans.map((plan) => ({
-            "@type": "Offer",
-            name: plan.name,
-            price: plan.priceUsd,
-            priceCurrency: "USD",
-            priceSpecification: {
-              "@type": "UnitPriceSpecification",
-              price: plan.priceUsd,
-              priceCurrency: "USD",
-              unitText: plan.isTrial ? "el primer mes" : "por mes",
-              referenceQuantity: { "@type": "QuantitativeValue", value: plan.messages, unitText: "mensajes" },
-            },
-          })),
-        },
       },
       {
         "@type": "FAQPage",

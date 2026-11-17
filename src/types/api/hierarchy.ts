@@ -93,6 +93,10 @@ export interface NetworkUsageNumber {
   responsibleCode: { code: string; holderName: string | null } | null
   /** The plan's name. */
   plan: string | null
+  /** The catalog id of the plan the month is counted on (null past the largest plan). Missing from an older API. */
+  planId?: number | null
+  /** The catalog plan the number is on; null in a closed month or past the largest plan. Missing from an older API. */
+  assignedPlanId?: number | null
   planMessages: number
   /** What the plan counts (a campaign message counts 2 from the commercial weight date). */
   consumedMessages: number
@@ -227,6 +231,8 @@ export interface NetworkUser {
   name: string | null
   email: string
   role: NetworkUserRole
+  /** Absent (or false) on every account the caller manages. */
+  readOnly?: false
   createdAt: string
   twoFactorEnabled: boolean
   principal: { id: number; name: string }
@@ -236,12 +242,44 @@ export interface NetworkUser {
   codes: HierarchyPrincipalCode[]
 }
 
+/** The roles of the read-only rows: the platform (Lumarsoft) and the other Owners of the caller's zones. */
+export type ReadOnlyUserRole = 'DEVELOPER' | 'OWNER'
+
+/**
+ * A row of `GET /hierarchy/users?includeReadOnly=true` that only an OWNER gets (decision of 17/11): the live Developer
+ * accounts and the other Owners that share one of its zones. Nobody may edit it (the API answers 404 on its routes): no
+ * principal, zone or codes, nothing about its second step, and no actions in the panel.
+ */
+export interface ReadOnlyNetworkUser {
+  id: number
+  name: string | null
+  email: string
+  role: ReadOnlyUserRole
+  readOnly: true
+  /** What the account is, for the Rol column: "Lumarsoft · Developer", "Owner · <shared zone names>". */
+  label?: string
+  createdAt?: string
+  /** Null: the API says nothing about a read-only account's second step. */
+  twoFactorEnabled?: boolean | null
+  principal?: null
+  zone?: null
+  codes?: HierarchyPrincipalCode[]
+}
+
+/** What `GET /hierarchy/users` lists: the accounts the caller manages and, for an Owner asking, the read-only ones. */
+export type NetworkUserRow = NetworkUser | ReadOnlyNetworkUser
+
 export interface NetworkUsersQuery {
   zoneId?: number
   producerId?: number
   role?: NetworkUserRole
   /** Part of the name or the e-mail. */
   q?: string
+  /**
+   * An Owner's Usuarios: also list the read-only rows (Lumarsoft, the other Owners of its zones). Without it the API
+   * sends only the accounts the caller manages; ignored for every other role.
+   */
+  includeReadOnly?: boolean
 }
 
 /** A principal created together with its first SuperAdmin (Owner or Developer only). */

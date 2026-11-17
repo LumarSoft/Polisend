@@ -44,6 +44,7 @@ import { useLinkedId } from '../hooks/use-panel-link'
 import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { NetworkFilter } from './network-filter'
 import { RequirePrincipal } from './require-principal'
+import { TokensHint } from './billing-ui'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 
@@ -320,7 +321,7 @@ export function NumerosView() {
     )
   }
 
-  // Each number's messages of the month; plans and amounts are in Facturación.
+  // Each number's tokens of the month (the API's `messages`); plans are in Facturación.
   const totalMessages = (numbers ?? []).reduce((sum, n) => sum + n.usage.messages, 0)
   const disconnected = (numbers ?? []).filter(n => n.disconnectedAt)
   const columns = canManageOrg ? 5 : 4
@@ -335,8 +336,8 @@ export function NumerosView() {
           </h1>
           <p className="mt-1.5 text-[14px] text-muted-foreground">
             {canManageOrg
-              ? 'Números de WhatsApp, código responsable y consumo del mes: mensajes y uso de la IA.'
-              : 'Los números de WhatsApp a tu cargo y los mensajes que enviaron en el mes.'}
+              ? 'Números de WhatsApp, código responsable y consumo del mes: tokens y uso de la IA.'
+              : 'Los números de WhatsApp a tu cargo y los tokens que usaron en el mes.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -394,10 +395,13 @@ export function NumerosView() {
               className="mt-1 w-48"
             />
           </div>
-          <p className="text-[13px] text-muted-foreground">
-            Cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Los planes están en
-            Facturación.
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-[13px] text-muted-foreground">
+              Cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Los planes están en
+              Facturación.
+            </p>
+            <TokensHint />
+          </div>
         </div>
         {isError && (
           <p role="alert" className="mb-4 text-destructive">
@@ -406,13 +410,13 @@ export function NumerosView() {
         )}
         {period < '2026-10' && (
           <p className="mb-4 text-[13px] text-muted-foreground">
-            El conteo de mensajes y llamadas comienza con la actualización de octubre. Los meses anteriores conservan el
-            consumo registrado.
+            El conteo de tokens y consultas a la IA comienza con la actualización de octubre. Los meses anteriores
+            conservan el consumo registrado.
           </p>
         )}
         <Card className="mb-4 flex items-center justify-between border-line-2 p-4">
           <span className="text-[13px] text-muted-foreground">
-            Mensajes del mes · {period} ({canManageOrg ? 'todos los números' : 'tus números'})
+            Tokens del mes · {period} ({canManageOrg ? 'todos los números' : 'tus números'})
           </span>
           <span className="font-display text-[20px] text-ink">{numbers && !isError ? int(totalMessages) : '—'}</span>
         </Card>
@@ -428,7 +432,7 @@ export function NumerosView() {
                   Responsable
                 </TableHead>
                 <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Mensajes del mes
+                  Tokens del mes
                 </TableHead>
                 {canManageOrg && (
                   <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -534,7 +538,7 @@ export function NumerosView() {
                   <TableCell className="text-[13px]">
                     <span className="font-medium text-ink">{int(n.usage.messages)}</span>
                     <div className="text-[11px] text-muted-foreground">
-                      {n.usage.plan ? `plan ${n.usage.plan.trial ? 'Prueba' : n.usage.plan.name}` : 'mensajes enviados'}
+                      {n.usage.plan ? `plan ${n.usage.plan.trial ? 'Prueba' : n.usage.plan.name}` : 'tokens usados'}
                       {n.usage.upgraded && ' · subió de plan'}
                     </div>
                   </TableCell>

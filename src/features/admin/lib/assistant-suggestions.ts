@@ -48,7 +48,7 @@ const BY_SCREEN: Array<[string, AssistantSuggestion[]]> = [
   [
     '/admin/numeros',
     [
-      { label: '¿Cuántos mensajes usé este mes en cada número?', icon: Wallet },
+      { label: '¿Cuántos tokens usé este mes en cada número?', icon: Wallet },
       { label: 'Cargá un feriado en mis números', icon: CalendarOff, fill: 'Cargá un feriado el ' },
       BANK,
       PENDING,

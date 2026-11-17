@@ -147,7 +147,7 @@ export function PlanFeaturesView() {
           Funciones por plan
         </h1>
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
-          Qué incluye cada plan además de los mensajes. Una organización puede usar una función si el plan de alguno de
+          Qué incluye cada plan además de los tokens. Una organización puede usar una función si el plan de alguno de
           sus números la incluye; si no, el panel la muestra bloqueada y dice desde qué plan está. Las columnas de roles
           la apagan para todos los Admin o SuperAdmin, aunque su plan la incluya. Una función nueva arranca apagada en
           todos los planes.

@@ -8,7 +8,7 @@ import { numberLabel } from '../lib/number-label'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 
-/** The month's messages against the plan, above the user menu. Opens Facturación. */
+/** The month's tokens against the plan, above the user menu. Opens Facturación. */
 export function SidebarUsage({ enabled }: { enabled: boolean }) {
   const usage = useMonthUsage(enabled)
   if (!usage) return null
@@ -26,11 +26,11 @@ export function SidebarUsage({ enabled }: { enabled: boolean }) {
       <TooltipTrigger asChild>
         <Link
           href="/admin/facturacion"
-          aria-label={`Mensajes de ${usage.monthLabel}: ${int(usage.used)} de ${int(usage.included)}`}
+          aria-label={`Tokens de ${usage.monthLabel}: ${int(usage.used)} de ${int(usage.included)}`}
           className="block rounded-lg px-2 py-2 transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
         >
           <div className="flex items-baseline justify-between gap-2 text-[11px] leading-none">
-            <span className="text-muted-foreground">Mensajes de {usage.monthLabel}</span>
+            <span className="text-muted-foreground">Tokens de {usage.monthLabel}</span>
             <span className="text-muted-foreground tabular-nums">
               <span className="font-semibold text-sidebar-foreground">{int(usage.used)}</span> / {int(usage.included)}
             </span>
@@ -65,7 +65,10 @@ export function SidebarUsage({ enabled }: { enabled: boolean }) {
             ))}
           </ul>
         ) : (
-          <span>Al llegar al límite del plan, el asistente se pausa hasta que elijas. Detalle en Facturación.</span>
+          <span>
+            1 mensaje = 1 token y un mensaje de campaña = 2. Al llegar al límite del plan, el asistente se pausa hasta
+            que elijas. Detalle en Facturación.
+          </span>
         )}
       </TooltipContent>
     </Tooltip>

@@ -8,7 +8,7 @@ import { CtaButton } from "@/components/ui/primitives";
 import { MessageField } from "./message-field";
 import { gsap, MOTION_OK, useGSAP } from "@/lib/gsap";
 import { useChatPlayer, useInView } from "@/lib/hooks";
-import { int, paidPlans, trialPlan, usd, type PlanCatalog } from "@/lib/plan-format";
+import { int, paidPlans, trialPlan, type PlanCatalog } from "@/lib/plan-format";
 
 function factsFor(catalog: PlanCatalog) {
   const from = paidPlans(catalog)[0];
@@ -17,9 +17,9 @@ function factsFor(catalog: PlanCatalog) {
     { k: "Responde", v: "En segundos", s: "24 h · 7 días · feriados" },
     { k: "Integrado con", v: "Triunfo y Sancor", s: "Cartera, documentos y cotizador" },
     {
-      k: "Precio",
-      v: from ? `Desde ${usd(from.priceUsd)}/mes` : "A tu medida",
-      s: trial ? `${int(trial.messages)} mensajes gratis el primer mes` : from ? `${int(from.messages)} mensajes por mes` : "",
+      k: "Planes",
+      v: from ? `Desde ${int(from.tokens)} tokens/mes` : "A tu medida",
+      s: trial ? `${int(trial.tokens)} tokens gratis el primer mes` : "Por número de WhatsApp",
     },
   ];
 }
