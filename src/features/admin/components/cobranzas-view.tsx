@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
-import type { CobranzaCliente, CobranzaEstadoFilter, CobranzasStats } from '@/types/api/cobranzas'
+import type { CobranzaCliente, CobranzaEstadoFilter, CobranzaSort, CobranzasStats } from '@/types/api/cobranzas'
 import { useCobranzas } from '../hooks/use-cobranzas'
 import { usePanelBrand } from '../hooks/use-panel-brand'
 import { useCobranzasStats } from '../hooks/use-cobranzas-stats'
@@ -42,6 +42,7 @@ import {
   RiskIcon,
 } from '../lib/asegurados-ui'
 import { AseguradoSheet } from './asegurado-sheet'
+import { CobranzasSortSelect, DEFAULT_COBRANZA_SORT } from './cobranzas-sort-select'
 import { ExpiredPoliciesTab } from './expired-policies-tab'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUrlTab } from '../hooks/use-panel-link'
@@ -390,6 +391,7 @@ export function CobranzasView() {
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput, 350)
   const [filter, setFilter] = useState<CobranzaEstadoFilter>('vencidas')
+  const [sort, setSort] = useState<CobranzaSort>(DEFAULT_COBRANZA_SORT)
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
   const [scope, setScope] = useScopeFilterState()
   const [paymentMethod, setPaymentMethod] = useState('')
@@ -406,6 +408,10 @@ export function CobranzasView() {
     setFilter(value)
     setPage(1)
   }
+  const handleSort = (value: CobranzaSort) => {
+    setSort(value)
+    setPage(1)
+  }
   const handleScope = (value: ScopeFilterValue) => {
     setScope(value)
     setPage(1)
@@ -418,7 +424,7 @@ export function CobranzasView() {
   // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
   const tenantEnabled = useTenantQueriesEnabled()
   const { data, isLoading, isError, isFetching } = useCobranzas(
-    { search, status: filter, ...scope, paymentMethod: paymentMethod || undefined, page, pageSize: PAGE_SIZE },
+    { search, status: filter, sort, ...scope, paymentMethod: paymentMethod || undefined, page, pageSize: PAGE_SIZE },
     tenantEnabled,
   )
   const { data: stats } = useCobranzasStats({ ...scope, paymentMethod: paymentMethod || undefined }, tenantEnabled)
@@ -499,33 +505,36 @@ export function CobranzasView() {
           <>
             <KpiRow stats={stats} />
 
-            {/* Segmented filter — fixed equal-width columns, no reflow */}
-            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-line-2 bg-secondary/50 p-1 sm:max-w-2xl sm:grid-cols-4">
-              {FILTERS.map(option => {
-                const active = filter === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => handleFilter(option.value)}
-                    className={`flex h-9 items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
-                      active
-                        ? 'bg-background text-ink shadow-sm dark:bg-canvas-3'
-                        : 'text-muted-foreground hover:text-ink'
-                    }`}
-                  >
-                    {option.label}
-                    <span
-                      className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
-                        active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              {/* Segmented filter — fixed equal-width columns, no reflow */}
+              <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-line-2 bg-secondary/50 p-1 sm:max-w-2xl sm:grid-cols-4">
+                {FILTERS.map(option => {
+                  const active = filter === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => handleFilter(option.value)}
+                      className={`flex h-9 items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
+                        active
+                          ? 'bg-background text-ink shadow-sm dark:bg-canvas-3'
+                          : 'text-muted-foreground hover:text-ink'
                       }`}
                     >
-                      {filterCount(stats, option.value)}
-                    </span>
-                  </button>
-                )
-              })}
+                      {option.label}
+                      <span
+                        className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+                          active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
+                        }`}
+                      >
+                        {filterCount(stats, option.value)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <CobranzasSortSelect value={sort} onChange={handleSort} />
             </div>
 
             <Card className="overflow-hidden border-line-2 py-0 shadow-sm">

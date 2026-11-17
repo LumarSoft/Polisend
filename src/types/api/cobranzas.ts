@@ -2,6 +2,12 @@ import type { RiskType } from './clients'
 
 export type CobranzaEstadoFilter = 'vencidas' | 'rechazadas' | 'pendientes' | 'todas'
 
+/**
+ * The order of the two cobranzas worklists, by how long ago the cuota (or the policy) fell due.
+ * `recent`: the latest first, what the panel opens with. `oldest`: the longest overdue first (the API's default).
+ */
+export type CobranzaSort = 'oldest' | 'recent'
+
 export interface CobranzaCliente {
   id: number
   firstName: string
@@ -54,6 +60,7 @@ export interface CobranzasScopeQuery {
 export interface CobranzasQuery extends CobranzasScopeQuery {
   search?: string
   status?: CobranzaEstadoFilter
+  sort?: CobranzaSort
   page?: number
   pageSize?: number
 }

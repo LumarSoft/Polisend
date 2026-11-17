@@ -36,16 +36,12 @@ import { usePlanFeature } from '../hooks/use-billing'
 import { useExpiredPolicies, useExpiredPolicyActions } from '../hooks/use-expired-policies'
 import { useProfile } from '../hooks/use-profile'
 import { formatDate, initials, policyName, RISK_LABELS, RiskIcon } from '../lib/asegurados-ui'
+import { CobranzasSortSelect, DEFAULT_COBRANZA_SORT } from './cobranzas-sort-select'
 
 const PAGE_SIZE = 25
 
 /** The reasons the office gives most; any other goes in the text. */
 const HIDE_REASONS = ['Vendió el vehículo', 'Se aseguró en otra compañía', 'No quiere renovar']
-
-const SORTS: { value: ExpiredPolicySort; label: string }[] = [
-  { value: 'oldest', label: 'Más tiempo vencidas' },
-  { value: 'recent', label: 'Vencidas hace poco' },
-]
 
 const SKIP_LABELS: Record<ExpiryNoticeSkipReason, string> = {
   NO_PHONE: 'sin teléfono',
@@ -463,7 +459,7 @@ export function ExpiredPoliciesTab({
   onSelectClient: (clientId: number) => void
 }) {
   const [showHidden, setShowHidden] = useState(false)
-  const [sort, setSort] = useState<ExpiredPolicySort>('oldest')
+  const [sort, setSort] = useState<ExpiredPolicySort>(DEFAULT_COBRANZA_SORT)
   const [page, setPage] = useState(1)
   const [toHide, setToHide] = useState<ExpiredPolicy | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -623,18 +619,7 @@ export function ExpiredPoliciesTab({
               </Button>
             </>
           )}
-          <select
-            value={sort}
-            onChange={e => changeSort(e.target.value as ExpiredPolicySort)}
-            className="h-9 rounded-md border border-line-2 bg-background px-2.5 text-[12.5px] text-ink-3"
-            aria-label="Ordenar"
-          >
-            {SORTS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <CobranzasSortSelect value={sort} onChange={changeSort} />
           <Button
             type="button"
             size="sm"
