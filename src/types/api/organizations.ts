@@ -177,24 +177,3 @@ export interface UpdateProducerCodeRequest {
   holderName?: string
   isActive?: boolean
 }
-
-export interface CreateSuperAdminRequest {
-  email: string
-  password: string
-}
-
-/** Roles the Developer can assign inside an organization (never OWNER or DEVELOPER). */
-export type AssignableRole = 'SUPERADMIN' | 'ADMIN'
-
-export interface CreateOrgUserRequest {
-  email: string
-  password: string
-  role: AssignableRole
-  /** Codes of the organization an ADMIN will see; ignored for a SUPERADMIN. */
-  producerCodeIds?: number[]
-}
-
-export interface UpdateOrgUserRequest {
-  password?: string
-  role?: AssignableRole
-}

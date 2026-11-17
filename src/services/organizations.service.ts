@@ -3,16 +3,12 @@ import type {
   CreateOrganizationRequest,
   CreateOrganizationResponse,
   CreateProducerCodeRequest,
-  CreateOrgUserRequest,
-  CreateSuperAdminRequest,
   OrganizationCode,
   OrganizationDetail,
   OrganizationSummary,
-  OrganizationUser,
   SetOrganizationPlanResponse,
   UpdateOrganizationRequest,
   UpdateOrganizationResponse,
-  UpdateOrgUserRequest,
   UpdateProducerCodeRequest,
 } from '@/types/api/organizations'
 
@@ -63,24 +59,5 @@ export const organizationsService = {
       method: 'PATCH',
       token,
       body: data,
-    }),
-
-  addSuperAdmin: (token: string, id: number, data: CreateSuperAdminRequest): Promise<OrganizationUser> =>
-    apiRequest<OrganizationUser>(`/platform/organizations/${id}/superadmins`, { method: 'POST', token, body: data }),
-
-  addUser: (token: string, id: number, data: CreateOrgUserRequest): Promise<OrganizationUser> =>
-    apiRequest<OrganizationUser>(`/platform/organizations/${id}/users`, { method: 'POST', token, body: data }),
-
-  updateUser: (token: string, id: number, userId: number, data: UpdateOrgUserRequest): Promise<OrganizationUser> =>
-    apiRequest<OrganizationUser>(`/platform/organizations/${id}/users/${userId}`, {
-      method: 'PATCH',
-      token,
-      body: data,
-    }),
-
-  removeUser: (token: string, id: number, userId: number): Promise<{ id: number; deleted: boolean }> =>
-    apiRequest<{ id: number; deleted: boolean }>(`/platform/organizations/${id}/users/${userId}`, {
-      method: 'DELETE',
-      token,
     }),
 }

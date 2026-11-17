@@ -4,10 +4,7 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type {
   CreateOrganizationRequest,
   CreateProducerCodeRequest,
-  CreateOrgUserRequest,
-  CreateSuperAdminRequest,
   UpdateOrganizationRequest,
-  UpdateOrgUserRequest,
   UpdateProducerCodeRequest,
 } from '@/types/api/organizations'
 import { useAuth } from '../context/auth-context'
@@ -77,27 +74,5 @@ export function useOrganizationMutations(orgId?: number) {
       organizationsService.updateCode(token as string, id, codeId, data),
     onSuccess: invalidate,
   })
-  const addSuperAdmin = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateSuperAdminRequest }) =>
-      organizationsService.addSuperAdmin(token as string, id, data),
-    onSuccess: invalidate,
-  })
-
-  const addUser = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateOrgUserRequest }) =>
-      organizationsService.addUser(token as string, id, data),
-    onSuccess: invalidate,
-  })
-  const updateUser = useMutation({
-    mutationFn: ({ id, userId, data }: { id: number; userId: number; data: UpdateOrgUserRequest }) =>
-      organizationsService.updateUser(token as string, id, userId, data),
-    onSuccess: invalidate,
-  })
-  const removeUser = useMutation({
-    mutationFn: ({ id, userId }: { id: number; userId: number }) =>
-      organizationsService.removeUser(token as string, id, userId),
-    onSuccess: invalidate,
-  })
-
-  return { create, update, setActive, setPlan, addCode, updateCode, addSuperAdmin, addUser, updateUser, removeUser }
+  return { create, update, setActive, setPlan, addCode, updateCode }
 }
