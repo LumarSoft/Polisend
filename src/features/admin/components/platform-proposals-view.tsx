@@ -9,12 +9,12 @@ import { cn } from '@/lib/utils'
 import {
   PROPOSAL_STATUSES,
   PROPOSAL_STATUS_LABEL,
-  type OwnerProposal,
-  type OwnerProposalFilter,
+  type PlatformProposal,
+  type PlatformProposalFilter,
   type ProposalStatus,
 } from '@/types/api/improvements'
 import { useListPage } from '../hooks/use-list-page'
-import { useOwnerProposals, useUpdateProposal } from '../hooks/use-proposals'
+import { usePlatformProposals, useUpdateProposal } from '../hooks/use-proposals'
 import { ListPagination } from './list-pagination'
 import { ProposalCard } from './proposal-card'
 
@@ -23,7 +23,7 @@ const PAGE_SIZE = 10
 const fieldClass =
   'rounded-xl border border-line-2 bg-paper px-3 py-2 text-[13px] text-ink outline-none focus:border-ember focus:shadow-[0_0_0_3px_var(--color-ember-soft)]'
 
-function ProposalAnswer({ proposal }: { proposal: OwnerProposal }) {
+function ProposalAnswer({ proposal }: { proposal: PlatformProposal }) {
   const update = useUpdateProposal()
   const [status, setStatus] = useState<ProposalStatus>(proposal.status)
   const [response, setResponse] = useState(proposal.response ?? '')
@@ -71,15 +71,15 @@ function ProposalAnswer({ proposal }: { proposal: OwnerProposal }) {
 }
 
 /** Lumar (OWNER): every organization's proposals, to answer and move through the statuses. */
-export function OwnerProposalsView() {
-  const [filter, setFilter] = useState<OwnerProposalFilter>('open')
+export function PlatformProposalsView() {
+  const [filter, setFilter] = useState<PlatformProposalFilter>('open')
   const { page, goTo, reset, keepWithin, topRef } = useListPage()
-  const { data: result, isLoading, isError, isFetching } = useOwnerProposals({ page, pageSize: PAGE_SIZE, filter })
+  const { data: result, isLoading, isError, isFetching } = usePlatformProposals({ page, pageSize: PAGE_SIZE, filter })
   keepWithin(result?.totalPages)
 
   const visible = result?.data ?? []
 
-  const chooseFilter = (next: OwnerProposalFilter) => {
+  const chooseFilter = (next: PlatformProposalFilter) => {
     setFilter(next)
     reset()
   }

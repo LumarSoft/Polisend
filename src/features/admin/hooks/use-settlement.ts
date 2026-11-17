@@ -14,12 +14,12 @@ export function isSettlementNotConfigured(error: unknown): boolean {
 
 const retry = (failureCount: number, error: Error) => !isSettlementNotConfigured(error) && failureCount < 3
 
-/** One month of the settlement with the commercial partner (owner). */
+/** One month of the settlement with the commercial partner (Developer). */
 export function useSettlement(period: string, live: boolean) {
   const { token } = useAuth()
 
   return useQuery({
-    queryKey: QUERY_KEYS.owner.settlement(period),
+    queryKey: QUERY_KEYS.platform.settlement(period),
     queryFn: () => billingService.settlement(token as string, period),
     enabled: !!token,
     placeholderData: keepPreviousData,
@@ -28,12 +28,12 @@ export function useSettlement(period: string, live: boolean) {
   })
 }
 
-/** The last twelve months of the settlement (owner). */
+/** The last twelve months of the settlement (Developer). */
 export function useSettlementSeries() {
   const { token } = useAuth()
 
   return useQuery({
-    queryKey: QUERY_KEYS.owner.settlementSeries,
+    queryKey: QUERY_KEYS.platform.settlementSeries,
     queryFn: () => billingService.settlementSeries(token as string),
     enabled: !!token,
     retry,
@@ -48,8 +48,8 @@ export function useCloseMonth() {
   return useMutation({
     mutationFn: (period: string) => billingService.closeMonth(token as string, period),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.settlementAll })
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.billingAll })
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.settlementAll })
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.billingAll })
     },
   })
 }

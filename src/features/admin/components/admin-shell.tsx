@@ -7,12 +7,16 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AssistantProvider } from '../context/assistant-context'
+import { useActingPrincipal } from '../context/acting-principal-context'
 import { useAuth } from '../context/auth-context'
 import { useRole } from '../hooks/use-role'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
+import { DEVELOPER_PATHS, OWNER_NETWORK_PATHS, SCREENS_WITH_NETWORK_FILTER, matchesPath } from '../lib/panel-areas'
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
 import { AppSidebar } from './app-sidebar'
 import { AssistantLauncher } from './assistant-launcher'
 import { TourOverlay } from './tour-overlay'
+import { RequirePrincipal } from './require-principal'
 import { TriunfoStatusBanner } from './triunfo-status-banner'
 import { SectionFocus } from './section-focus'
 
@@ -32,53 +36,59 @@ const TITLES: Record<string, string> = {
   '/admin/configuracion': 'Configuración',
   '/admin/mejoras': 'Mejoras',
   '/admin/status': 'Status',
+  '/admin/owners': 'Owners y zonas',
+  '/admin/red': 'Mi red',
+  '/admin/red/consumo': 'Consumo de la red',
+  '/admin/cuenta': 'Mi cuenta',
   ...Object.fromEntries(CAMPAIGN_PAGES.map(page => [campaignHref(page), page.label])),
 }
 
-const OWNER_PATHS = [
-  '/admin/organizaciones',
-  '/admin/facturacion',
-  '/admin/funciones',
-  '/admin/plantillas',
-  '/admin/mejoras',
-  '/admin/status',
-]
+function ShellLoading() {
+  return (
+    <div className="flex min-h-svh items-center justify-center bg-sidebar">
+      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { isAuthenticated, hydrated } = useAuth()
-  const { isOwner, isLoading: roleLoading } = useRole()
+  const { role, isDeveloper, isOwner, isLoading: roleLoading } = useRole()
+  const { hasPrincipal } = useActingPrincipal()
+  const tenant = useTenantQueriesEnabled()
+  // A pasted cartera URL: the Developer never enters one.
+  const developerOutside = isDeveloper && !matchesPath(pathname, DEVELOPER_PATHS)
 
   useEffect(() => {
     if (hydrated && !isAuthenticated) router.replace('/admin/login')
   }, [hydrated, isAuthenticated, router])
 
-  // The OWNER's interface is "Organizaciones", "Facturación", "Funciones por plan", "Plantillas", the "Mejoras"
-  // editor and "Status": keep it there.
   useEffect(() => {
-    if (!roleLoading && isOwner && !OWNER_PATHS.some(p => pathname.startsWith(p))) {
-      router.replace('/admin/organizaciones')
-    }
-  }, [roleLoading, isOwner, pathname, router])
+    if (developerOutside) router.replace('/admin/organizaciones')
+  }, [developerOutside, router])
 
-  if (!hydrated || !isAuthenticated) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-sidebar">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
+  // Nothing renders (nothing loads) until the role is known, nor a screen the Developer is being taken out of.
+  if (!hydrated || !isAuthenticated || (roleLoading && !role) || developerOutside) return <ShellLoading />
 
-  const title = TITLES[pathname] ?? 'Panel'
+  const title =
+    TITLES[pathname] ?? (pathname.startsWith('/admin/organizaciones/') ? 'Organización' : undefined) ?? 'Panel'
   // The Whatsapp section fills the whole screen, like WhatsApp Web, and carries
   // the menu button in its own header.
   const fullScreen = pathname === '/admin/inbox'
+  // An Owner whose zone change left it without a principal: a work screen that does not show the cascading filter
+  // itself shows RequirePrincipal's message (with the filter) instead of loading anything.
+  const guardPrincipal =
+    isOwner &&
+    !hasPrincipal &&
+    !matchesPath(pathname, OWNER_NETWORK_PATHS) &&
+    !matchesPath(pathname, SCREENS_WITH_NETWORK_FILTER)
 
   return (
     <TooltipProvider delayDuration={200}>
-      {/* The OWNER does not work a cartera: nothing for the assistant to look up. */}
-      <AssistantProvider enabled={!roleLoading && !isOwner} route={pathname} screen={title}>
+      {/* The assistant works on a principal's cartera: never for the Developer, and for an Owner only inside one. */}
+      <AssistantProvider enabled={tenant} route={pathname} screen={title}>
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
@@ -90,9 +100,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <AssistantLauncher />
               </header>
             )}
-            {/* The OWNER sees each organization's outage in Organizaciones instead. */}
-            <TriunfoStatusBanner enabled={!roleLoading && !isOwner} />
-            <div className="flex flex-1 flex-col">{children}</div>
+            {/* The Developer sees each organization's outage in Organizaciones instead. */}
+            <TriunfoStatusBanner enabled={tenant} />
+            <div className="flex flex-1 flex-col">
+              {guardPrincipal ? <RequirePrincipal>{children}</RequirePrincipal> : children}
+            </div>
           </SidebarInset>
           {/* Outside the top bar: the guide carries on in Whatsapp, which has none. */}
           <TourOverlay />

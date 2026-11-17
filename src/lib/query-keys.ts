@@ -3,10 +3,11 @@ import type { BalanceQuery } from '@/types/api/balance'
 import type { AdminClientsQuery } from '@/types/api/clients'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
 import type { ExpiredPoliciesQuery } from '@/types/api/expired-policies'
+import type { NetworkUsersQuery } from '@/types/api/hierarchy'
 import type {
   ImprovementsQuery,
-  OwnerImprovementsQuery,
-  OwnerProposalsQuery,
+  PlatformImprovementsQuery,
+  PlatformProposalsQuery,
   PageQuery,
 } from '@/types/api/improvements'
 import type { NovedadesQuery } from '@/types/api/novedades'
@@ -79,23 +80,41 @@ export const QUERY_KEYS = {
     assistantConversations: ['admin', 'assistant', 'conversations'] as const,
     assistantConversation: (id: number) => ['admin', 'assistant', 'conversations', id] as const,
   },
-  owner: {
-    organizations: ['owner', 'organizations'] as const,
-    organization: (id: number) => ['owner', 'organizations', id] as const,
-    organizationTriunfo: (id: number) => ['owner', 'organizations', id, 'triunfo'] as const,
-    organizationTriunfoErrors: (id: number) => ['owner', 'organizations', id, 'triunfo', 'errors'] as const,
-    plans: ['owner', 'plans'] as const,
-    featureRoles: ['owner', 'plans', 'feature-roles'] as const,
-    templates: ['owner', 'templates'] as const,
-    billingAll: ['owner', 'billing'] as const,
-    billing: (period?: string) => ['owner', 'billing', period ?? 'current'] as const,
-    settlementAll: ['owner', 'settlement'] as const,
-    settlement: (period?: string) => ['owner', 'settlement', 'month', period ?? 'current'] as const,
-    settlementSeries: ['owner', 'settlement', 'series'] as const,
-    improvementsAll: ['owner', 'improvements'] as const,
-    improvements: (params?: OwnerImprovementsQuery) => ['owner', 'improvements', 'list', params ?? {}] as const,
-    proposalsAll: ['owner', 'improvement-proposals'] as const,
-    proposals: (params?: OwnerProposalsQuery) => ['owner', 'improvement-proposals', 'list', params ?? {}] as const,
-    proposalsNew: ['owner', 'improvement-proposals', 'new'] as const,
+  platform: {
+    organizations: ['platform', 'organizations'] as const,
+    organization: (id: number) => ['platform', 'organizations', id] as const,
+    organizationTriunfo: (id: number) => ['platform', 'organizations', id, 'triunfo'] as const,
+    organizationTriunfoErrors: (id: number) => ['platform', 'organizations', id, 'triunfo', 'errors'] as const,
+    plans: ['platform', 'plans'] as const,
+    featureRoles: ['platform', 'plans', 'feature-roles'] as const,
+    templates: ['platform', 'templates'] as const,
+    billingAll: ['platform', 'billing'] as const,
+    billing: (period?: string) => ['platform', 'billing', period ?? 'current'] as const,
+    settlementAll: ['platform', 'settlement'] as const,
+    settlement: (period?: string) => ['platform', 'settlement', 'month', period ?? 'current'] as const,
+    settlementSeries: ['platform', 'settlement', 'series'] as const,
+    improvementsAll: ['platform', 'improvements'] as const,
+    improvements: (params?: PlatformImprovementsQuery) => ['platform', 'improvements', 'list', params ?? {}] as const,
+    proposalsAll: ['platform', 'improvement-proposals'] as const,
+    proposals: (params?: PlatformProposalsQuery) =>
+      ['platform', 'improvement-proposals', 'list', params ?? {}] as const,
+    proposalsNew: ['platform', 'improvement-proposals', 'new'] as const,
+    zones: ['platform', 'zones'] as const,
+    owners: ['platform', 'owners'] as const,
+  },
+  /** The network (/hierarchy/*): not tied to the acting principal. */
+  hierarchy: {
+    all: ['hierarchy'] as const,
+    /** The cascading filter's list. The acting-principal provider keeps its own copy outside each principal's cache. */
+    principals: ['hierarchy', 'principals'] as const,
+    tree: ['hierarchy', 'tree'] as const,
+    usageAll: ['hierarchy', 'usage'] as const,
+    usage: (period?: string) => ['hierarchy', 'usage', period ?? 'current'] as const,
+    usersAll: ['hierarchy', 'users'] as const,
+    users: (query?: NetworkUsersQuery) => ['hierarchy', 'users', 'list', query ?? {}] as const,
+  },
+  auth: {
+    /** The public /admin/activar page (the token itself never goes in a key). */
+    passwordSetup: ['auth', 'password-setup'] as const,
   },
 } as const

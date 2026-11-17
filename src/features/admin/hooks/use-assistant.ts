@@ -12,6 +12,7 @@ import type {
   SendAssistantMessageRequest,
 } from '@/types/api/assistant'
 import { useAuth } from '../context/auth-context'
+import { useActingPrincipal } from '../context/acting-principal-context'
 import { useProfile } from './use-profile'
 
 /** The answer being written, shown until it is saved and read back. */
@@ -26,23 +27,24 @@ export interface LiveTurn {
   stopped: boolean
 }
 
-const currentKey = (userId: number) => `assistant:current:${userId}`
+/** Per user and, for an Owner, per acting principal: the API keeps a conversation per user and principal. */
+const currentKey = (scope: string) => `assistant:current:${scope}`
 
-/** The conversation open in this tab, per user, so a reload goes back to it. */
-function readCurrent(userId: number | null): number | null {
-  if (userId === null) return null
+/** The conversation open in this tab, per user (and principal), so a reload goes back to it. */
+function readCurrent(conversationScope: string | null): number | null {
+  if (conversationScope === null) return null
   try {
-    const id = Number(sessionStorage.getItem(currentKey(userId)))
+    const id = Number(sessionStorage.getItem(currentKey(conversationScope)))
     return Number.isInteger(id) && id > 0 ? id : null
   } catch {
     return null
   }
 }
 
-function writeCurrent(userId: number, id: number | null) {
+function writeCurrent(conversationScope: string, id: number | null) {
   try {
-    if (id) sessionStorage.setItem(currentKey(userId), String(id))
-    else sessionStorage.removeItem(currentKey(userId))
+    if (id) sessionStorage.setItem(currentKey(conversationScope), String(id))
+    else sessionStorage.removeItem(currentKey(conversationScope))
   } catch {
     // Storage blocked: the open conversation just does not survive a reload (it stays in the history).
   }
@@ -84,24 +86,29 @@ function settledMessages(messages: AssistantMessage[], live: LiveTurn | null): A
 export function useAssistant(page: SendAssistantMessageRequest['page'], enabled = true) {
   const { token } = useAuth()
   const { data: profile } = useProfile()
+  const { actingPrincipalId } = useActingPrincipal()
   const queryClient = useQueryClient()
-  const userId = profile?.id ?? null
+  const conversationScope = profile
+    ? actingPrincipalId !== null
+      ? `${profile.id}:${actingPrincipalId}`
+      : String(profile.id)
+    : null
   const [conversationId, setConversationId] = useState<number | null>(null)
-  const [loadedFor, setLoadedFor] = useState<number | null>(null)
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const [live, setLive] = useState<LiveTurn | null>(null)
   const [busyActions, setBusyActions] = useState<number[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
   // Whoever signs in gets their own conversation back (never another user's).
-  if (userId !== loadedFor) {
-    setLoadedFor(userId)
-    setConversationId(readCurrent(userId))
+  if (conversationScope !== loadedFor) {
+    setLoadedFor(conversationScope)
+    setConversationId(readCurrent(conversationScope))
     setLive(null)
   }
 
   useEffect(() => {
-    if (userId !== null && loadedFor === userId) writeCurrent(userId, conversationId)
-  }, [userId, loadedFor, conversationId])
+    if (conversationScope !== null && loadedFor === conversationScope) writeCurrent(conversationScope, conversationId)
+  }, [conversationScope, loadedFor, conversationId])
 
   const conversation = useQuery({
     queryKey: QUERY_KEYS.admin.assistantConversation(conversationId ?? 0),

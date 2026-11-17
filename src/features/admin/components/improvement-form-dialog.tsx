@@ -12,16 +12,16 @@ import {
   IMPROVEMENT_AREA_LABEL,
   type ImprovementArea,
   type ImprovementRequest,
-  type OwnerImprovement,
+  type PlatformImprovement,
 } from '@/types/api/improvements'
 import type { OrganizationSummary } from '@/types/api/organizations'
-import { useOwnerImprovementActions } from '../hooks/use-improvements'
+import { usePlatformImprovementActions } from '../hooks/use-improvements'
 import { useOrganizations } from '../hooks/use-organizations'
 import { ImprovementCard } from './improvement-card'
 
 interface ImprovementFormDialogProps {
   /** Null = new improvement. */
-  improvement: OwnerImprovement | null
+  improvement: PlatformImprovement | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -40,7 +40,10 @@ function defaultOrganizationId(organizations: OrganizationSummary[] | undefined)
   return active.reduce((best, o) => (o.counts.clients > best.counts.clients ? o : best)).id
 }
 
-function initialForm(improvement: OwnerImprovement | null, organizations?: OrganizationSummary[]): ImprovementRequest {
+function initialForm(
+  improvement: PlatformImprovement | null,
+  organizations?: OrganizationSummary[],
+): ImprovementRequest {
   return {
     title: improvement?.title ?? '',
     summary: improvement?.summary ?? '',
@@ -58,11 +61,11 @@ function ImprovementForm({
   organizations,
   onDone,
 }: {
-  improvement: OwnerImprovement | null
+  improvement: PlatformImprovement | null
   organizations: OrganizationSummary[] | undefined
   onDone: () => void
 }) {
-  const { create, update } = useOwnerImprovementActions()
+  const { create, update } = usePlatformImprovementActions()
   const [form, setForm] = useState<ImprovementRequest>(() => initialForm(improvement, organizations))
   const pending = create.isPending || update.isPending
   const isPublished = !!improvement?.publishedAt

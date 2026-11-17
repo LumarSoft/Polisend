@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { improvementsService } from '@/services/improvements.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type { OwnerProposalsQuery, PageQuery, ProposalRequest, ProposalUpdate } from '@/types/api/improvements'
+import type { PlatformProposalsQuery, PageQuery, ProposalRequest, ProposalUpdate } from '@/types/api/improvements'
 import { useAuth } from '../context/auth-context'
 
 /** One page of the organization's shared board of proposals. */
@@ -24,22 +24,22 @@ export function useCreateProposal() {
   })
 }
 
-/** Lumar (OWNER): one page of every organization's proposals. */
-export function useOwnerProposals(params: OwnerProposalsQuery) {
+/** Lumar (DEVELOPER): one page of every organization's proposals. */
+export function usePlatformProposals(params: PlatformProposalsQuery) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: QUERY_KEYS.owner.proposals(params),
-    queryFn: () => improvementsService.ownerProposals(token as string, params),
+    queryKey: QUERY_KEYS.platform.proposals(params),
+    queryFn: () => improvementsService.platformProposals(token as string, params),
     enabled: !!token,
     placeholderData: keepPreviousData,
   })
 }
 
-/** OWNER sidebar badge: proposals still in "Nueva". */
+/** DEVELOPER sidebar badge: proposals still in "Nueva". */
 export function useNewProposalsCount(enabled = true) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: QUERY_KEYS.owner.proposalsNew,
+    queryKey: QUERY_KEYS.platform.proposalsNew,
     queryFn: () => improvementsService.newProposalsCount(token as string),
     enabled: !!token && enabled,
     refetchInterval: 5 * 60_000,
@@ -53,8 +53,8 @@ export function useUpdateProposal() {
     mutationFn: ({ id, data }: { id: number; data: ProposalUpdate }) =>
       improvementsService.updateProposal(token as string, id, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.proposalsAll })
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.proposalsNew })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.proposalsAll })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.proposalsNew })
     },
   })
 }

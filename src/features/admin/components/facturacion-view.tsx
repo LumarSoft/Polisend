@@ -38,16 +38,25 @@ import { ApiError } from '@/lib/api-client'
 import type {
   BillingNumber,
   CatalogPlan,
-  OwnerBillingOrganization,
-  OwnerBillingTotals,
+  PlatformBillingOrganization,
+  PlatformBillingTotals,
   PlanOffer,
 } from '@/types/api/billing'
-import { useAssignPlan, useBillingOverview, useOwnerBilling, useOwnerPlans, usePlanActions } from '../hooks/use-billing'
+import {
+  useAssignPlan,
+  useBillingOverview,
+  usePlatformBilling,
+  usePlatformPlans,
+  usePlanActions,
+} from '../hooks/use-billing'
 import { useRole } from '../hooks/use-role'
 import { numberLabel } from '../lib/number-label'
+import { hasSharedZones, ownerGroupsOf, type BillingOwnerGroup } from '../lib/platform-billing-groups'
 import { PlanLimitActions } from './plan-limit-actions'
 import { HEAD, int, Kpi, MonthPicker, thisMonth, usd } from './billing-ui'
 import { LiquidacionTab } from './liquidacion-tab'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 import { useUrlTab } from '../hooks/use-panel-link'
 
 const price = (n: number) => (n === 0 ? 'Gratis' : usd(n))
@@ -392,8 +401,8 @@ function PlanDialog({
   )
 }
 
-function OwnerPlansTab() {
-  const { data, isLoading } = useOwnerPlans()
+function PlatformPlansTab() {
+  const { data, isLoading } = usePlatformPlans()
   const { createPlan, updatePlan, removePlan } = usePlanActions()
   const [editing, setEditing] = useState<CatalogPlan | null>(null)
   const [creating, setCreating] = useState(false)
@@ -577,17 +586,17 @@ function OwnerPlansTab() {
 
 // ─── Dashboard (owner) ─────────────────────────────────────────────────────────
 
-/** Per message: the bot's, the office's and notices at one rate, campaign messages at another (OwnerBilling.messageCost). */
+/** Per message: the bot's, the office's and notices at one rate, campaign messages at another (PlatformBilling.messageCost). */
 type MessageCost = { messageUsd: number; campaignMessageUsd: number } | null
 
 /** USD with up to four decimals, for a per-message rate. */
 const rate = (n: number) => `USD ${n.toLocaleString('es-AR', { maximumFractionDigits: 4 })}`
 
 /** Bot (and office, and notices) and campaign messages; an older API only splits sent and consumed. */
-const botOf = (t: OwnerBillingTotals) => t.botMessages ?? t.sentMessages ?? t.messages
-const campaignsOf = (t: OwnerBillingTotals) => t.campaignMessages ?? 0
+const botOf = (t: PlatformBillingTotals) => t.botMessages ?? t.sentMessages ?? t.messages
+const campaignsOf = (t: PlatformBillingTotals) => t.campaignMessages ?? 0
 
-function MoneyCells({ totals, cost }: { totals: OwnerBillingTotals; cost: MessageCost }) {
+function MoneyCells({ totals, cost }: { totals: PlatformBillingTotals; cost: MessageCost }) {
   const margin = totals.marginUsd ?? 0
   return (
     <>
@@ -612,13 +621,29 @@ function MoneyCells({ totals, cost }: { totals: OwnerBillingTotals; cost: Messag
   )
 }
 
-function OrganizationRows({ org, cost }: { org: OwnerBillingOrganization; cost: MessageCost }) {
+/** Left padding of an organization row and of its numbers, by how deep the Tablero nests it. */
+const ORG_INDENT = {
+  flat: { org: 'pl-3', number: 'pl-10' },
+  owner: { org: 'pl-8', number: 'pl-15' },
+  zone: { org: 'pl-13', number: 'pl-20' },
+} as const
+
+function OrganizationRows({
+  org,
+  cost,
+  indent = 'flat',
+}: {
+  org: PlatformBillingOrganization
+  cost: MessageCost
+  /** Under an Owner group ("Sin zona") or under one of its zones. */
+  indent?: keyof typeof ORG_INDENT
+}) {
   const [open, setOpen] = useState(false)
   const Chevron = open ? ChevronDown : ChevronRight
   return (
     <>
       <TableRow className="cursor-pointer" onClick={() => setOpen(!open)}>
-        <TableCell className="whitespace-normal pl-3 text-[14px] font-medium text-ink">
+        <TableCell className={`whitespace-normal text-[14px] font-medium text-ink ${ORG_INDENT[indent].org}`}>
           <span className="flex items-center gap-1.5">
             <Chevron className="size-4 text-muted-foreground" />
             {org.name}
@@ -635,7 +660,7 @@ function OrganizationRows({ org, cost }: { org: OwnerBillingOrganization; cost: 
       {open &&
         org.numbers.map(n => (
           <TableRow key={n.id} className="bg-secondary/30">
-            <TableCell className="whitespace-normal pl-10 text-[13px] text-ink">
+            <TableCell className={`whitespace-normal text-[13px] text-ink ${ORG_INDENT[indent].number}`}>
               <span className="font-mono whitespace-nowrap">{numberLabel(n)}</span>
               <div className="text-[11.5px] text-muted-foreground">
                 {n.plan.trial ? 'Prueba' : `${n.plan.name} · ${int(n.plan.includedMessages)} mensajes`}
@@ -654,11 +679,122 @@ function OrganizationRows({ org, cost }: { org: OwnerBillingOrganization; cost: 
   )
 }
 
-function OwnerDashboardTab() {
+type OrganizationsById = Map<number, PlatformBillingOrganization>
+
+/** The month's organizations with these ids (a zone's, an Owner's), skipping any it does not list. */
+function organizationsOf(ids: number[], byId: OrganizationsById): PlatformBillingOrganization[] {
+  return ids.flatMap(id => byId.get(id) ?? [])
+}
+
+function numbersOf(organizations: PlatformBillingOrganization[]): number {
+  return organizations.reduce((sum, org) => sum + org.numbers.length, 0)
+}
+
+function GroupRow({
+  label,
+  hint,
+  open,
+  onToggle,
+  numbers,
+  totals,
+  cost,
+  zone = false,
+}: {
+  label: string
+  hint: string
+  open: boolean
+  onToggle: () => void
+  numbers: number
+  totals: PlatformBillingTotals
+  cost: MessageCost
+  /** A zone (second level) rather than an Owner. */
+  zone?: boolean
+}) {
+  const Chevron = open ? ChevronDown : ChevronRight
+  return (
+    <TableRow className={`cursor-pointer ${zone ? '' : 'bg-secondary/50 hover:bg-secondary/60'}`} onClick={onToggle}>
+      <TableCell className={`whitespace-normal ${zone ? 'pl-8' : 'pl-3'}`}>
+        <span className="flex items-start gap-1.5">
+          <Chevron className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <span className="flex flex-col">
+            <span className={zone ? 'text-[13.5px] font-medium text-ink' : 'text-[14px] font-semibold text-ink'}>
+              {label}
+            </span>
+            <span className="text-[11.5px] font-normal text-muted-foreground">{hint}</span>
+          </span>
+        </span>
+      </TableCell>
+      <TableCell className="text-right text-[13px] text-ink-3">{int(numbers)}</TableCell>
+      <MoneyCells totals={totals} cost={cost} />
+    </TableRow>
+  )
+}
+
+function ZoneRows({
+  zone,
+  byId,
+  cost,
+}: {
+  zone: BillingOwnerGroup['zones'][number]
+  byId: OrganizationsById
+  cost: MessageCost
+}) {
+  const [open, setOpen] = useState(true)
+  const organizations = organizationsOf(zone.organizationIds, byId)
+  return (
+    <>
+      <GroupRow
+        zone
+        label={zone.name}
+        hint={zone.totals.organizations === 1 ? '1 organización' : `${int(zone.totals.organizations)} organizaciones`}
+        open={open}
+        onToggle={() => setOpen(!open)}
+        numbers={numbersOf(organizations)}
+        totals={zone.totals}
+        cost={cost}
+      />
+      {open && organizations.map(org => <OrganizationRows key={org.id} org={org} cost={cost} indent="zone" />)}
+    </>
+  )
+}
+
+/** An Owner (or "Sin Owner", or "Sin zona") with its zones, open by default. */
+function OwnerRows({ group, byId, cost }: { group: BillingOwnerGroup; byId: OrganizationsById; cost: MessageCost }) {
+  const [open, setOpen] = useState(true)
+  const organizations = organizationsOf(
+    group.zones.flatMap(zone => zone.organizationIds),
+    byId,
+  )
+  const zonesHint = group.flat ? null : group.zones.length === 1 ? '1 zona' : `${group.zones.length} zonas`
+  const orgsHint =
+    group.totals.organizations === 1 ? '1 organización' : `${int(group.totals.organizations)} organizaciones`
+  return (
+    <>
+      <GroupRow
+        label={group.name}
+        hint={[group.email, zonesHint, orgsHint].filter(Boolean).join(' · ')}
+        open={open}
+        onToggle={() => setOpen(!open)}
+        numbers={numbersOf(organizations)}
+        totals={group.totals}
+        cost={cost}
+      />
+      {open &&
+        (group.flat
+          ? organizations.map(org => <OrganizationRows key={org.id} org={org} cost={cost} indent="owner" />)
+          : group.zones.map(zone => <ZoneRows key={zone.id ?? 'none'} zone={zone} byId={byId} cost={cost} />))}
+    </>
+  )
+}
+
+function PlatformDashboardTab() {
   const [period, setPeriod] = useState(thisMonth)
-  const { data, isLoading, isError } = useOwnerBilling(period)
+  const { data, isLoading, isError } = usePlatformBilling(period)
   const totals = data?.totals
   const cost: MessageCost = data?.messageCost ?? null
+  // Owner → Zona → Organización → Número; an API older than the zones lists the organizations.
+  const ownerGroups = data ? ownerGroupsOf(data) : null
+  const byId: OrganizationsById = new Map((data?.organizations ?? []).map(org => [org.id, org]))
 
   return (
     <>
@@ -716,11 +852,18 @@ function OwnerDashboardTab() {
         )}
       </div>
 
+      {data && hasSharedZones(data) && (
+        <p className="mb-3 text-[12.5px] text-muted-foreground">
+          Una zona con más de un Owner aparece debajo de cada uno: los totales de arriba la cuentan una sola vez.
+        </p>
+      )}
       <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
         <Table>
           <TableHeader>
             <TableRow className="border-line-2 hover:bg-transparent">
-              <TableHead className={`h-11 pl-5 ${HEAD}`}>Organización</TableHead>
+              <TableHead className={`h-11 pl-5 ${HEAD}`}>
+                {ownerGroups ? 'Owner · Zona · Organización' : 'Organización'}
+              </TableHead>
               <TableHead className={`text-right ${HEAD}`}>Números</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Bot</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Campañas</TableHead>
@@ -746,9 +889,9 @@ function OwnerDashboardTab() {
                 </TableCell>
               </TableRow>
             )}
-            {data?.organizations.map(org => (
-              <OrganizationRows key={org.id} org={org} cost={cost} />
-            ))}
+            {data && data.organizations.length > 0 && ownerGroups
+              ? ownerGroups.map(group => <OwnerRows key={group.key} group={group} byId={byId} cost={cost} />)
+              : data?.organizations.map(org => <OrganizationRows key={org.id} org={org} cost={cost} />)}
           </TableBody>
         </Table>
       </Card>
@@ -761,12 +904,15 @@ function OwnerDashboardTab() {
 type BillingTab = 'consumo' | 'planes' | 'tablero' | 'liquidacion'
 
 export function FacturacionView() {
-  const { isOwner, isSuperAdmin, isAdmin, isLoading: roleLoading } = useRole()
+  const { isDeveloper, canManageOrg, isAdmin, isLoading: roleLoading } = useRole()
   // `?tab=` (the assistant's links) or the role's first tab.
   const [tab, setTab] = useUrlTab<BillingTab | 'auto'>(['consumo', 'planes', 'tablero', 'liquidacion'], 'auto')
-  const current: BillingTab = tab === 'auto' ? (isOwner ? 'tablero' : 'consumo') : tab
+  // A tab of the other side (an office link to Consumo opened by the Developer, a Tablero link opened by an office)
+  // falls back to the role's first tab: the money tabs only ever render for the Developer.
+  const roleTabs: BillingTab[] = isDeveloper ? ['tablero', 'liquidacion', 'planes'] : ['consumo', 'planes']
+  const current: BillingTab = tab !== 'auto' && roleTabs.includes(tab) ? tab : roleTabs[0]
 
-  if (!roleLoading && !isOwner && !isSuperAdmin && !isAdmin) {
+  if (!roleLoading && !isDeveloper && !canManageOrg && !isAdmin) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">Acceso restringido.</p>
@@ -776,49 +922,55 @@ export function FacturacionView() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
-      <div className="mb-6">
-        <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
-          {isOwner ? 'Plataforma' : 'Planes y consumo'}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
+            {isDeveloper ? 'Plataforma' : 'Planes y consumo'}
+          </div>
+          <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Facturación</h1>
+          <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
+            {isDeveloper
+              ? 'Lo que se factura a cada organización contra lo que cuestan sus mensajes, cómo se reparte con el socio comercial y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes por mensajes.'
+              : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
+          </p>
         </div>
-        <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Facturación</h1>
-        <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
-          {isOwner
-            ? 'Lo que se factura a cada organización contra lo que cuestan sus mensajes, cómo se reparte con el socio comercial y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes por mensajes.'
-            : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
-        </p>
+        {/* An Owner's Zona › Principal: the plans and messages of that principal's numbers, never an amount. */}
+        <NetworkFilter showProducer={false} />
       </div>
 
-      {(isOwner || isSuperAdmin) && (
-        <Tabs value={current} onValueChange={v => setTab(v as BillingTab)} className="mb-5">
-          <TabsList>
-            {isOwner ? (
-              <>
-                <TabsTrigger value="tablero">Tablero</TabsTrigger>
-                <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
-              </>
-            ) : (
-              <TabsTrigger value="consumo">Consumo</TabsTrigger>
-            )}
-            <TabsTrigger value="planes">Planes</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
+      <RequirePrincipal showFilter={false}>
+        {(isDeveloper || canManageOrg) && (
+          <Tabs value={current} onValueChange={v => setTab(v as BillingTab)} className="mb-5">
+            <TabsList>
+              {isDeveloper ? (
+                <>
+                  <TabsTrigger value="tablero">Tablero</TabsTrigger>
+                  <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
+                </>
+              ) : (
+                <TabsTrigger value="consumo">Consumo</TabsTrigger>
+              )}
+              <TabsTrigger value="planes">Planes</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
-      {roleLoading ? (
-        <Skeleton className="h-[200px] rounded-xl" />
-      ) : isOwner ? (
-        current === 'planes' ? (
-          <OwnerPlansTab />
-        ) : current === 'liquidacion' ? (
-          <LiquidacionTab />
+        {roleLoading ? (
+          <Skeleton className="h-[200px] rounded-xl" />
+        ) : isDeveloper ? (
+          current === 'planes' ? (
+            <PlatformPlansTab />
+          ) : current === 'liquidacion' ? (
+            <LiquidacionTab />
+          ) : (
+            <PlatformDashboardTab />
+          )
+        ) : current === 'planes' && canManageOrg ? (
+          <OfferTab />
         ) : (
-          <OwnerDashboardTab />
-        )
-      ) : current === 'planes' && isSuperAdmin ? (
-        <OfferTab />
-      ) : (
-        <ConsumptionTab canAssign={isSuperAdmin} />
-      )}
+          <ConsumptionTab canAssign={canManageOrg} />
+        )}
+      </RequirePrincipal>
     </div>
   )
 }

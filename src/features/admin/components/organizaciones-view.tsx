@@ -1,167 +1,37 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { Building2, KeyRound, Loader2, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, KeyRound, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { ApiError } from '@/lib/api-client'
 import { useRole } from '../hooks/use-role'
 import { useOrganizations, useOrganizationMutations } from '../hooks/use-organizations'
+import { usePlatformZones } from '../hooks/use-platform-structure'
+import { apiErrorMessage } from '../lib/api-error-message'
+import { OrganizationZoneSelect } from './organizacion-zona'
+import { PrincipalFormDialog, type PrincipalFormValues } from './principal-form-dialog'
 
-function errMsg(error: unknown, fallback = 'No se pudo guardar. Intentá de nuevo.') {
-  if (error instanceof ApiError && error.status === 409) return 'Ese correo o código ya está en uso.'
-  return fallback
-}
+/** The zone filter: every zone, one of them, or the organizations in none. */
+const ALL_ZONES = 'all'
+const NO_ZONE = 'none'
 
-// ── Create-organization dialog ───────────────────────────
-function CreateOrgForm({ onDone }: { onDone: () => void }) {
-  const { create } = useOrganizationMutations()
-  const [name, setName] = useState('')
-  const [masterCode, setMasterCode] = useState('')
-  const [botName, setBotName] = useState('')
-  const [adminEmail, setAdminEmail] = useState('')
-  const [adminPassword, setAdminPassword] = useState('')
-  const [codesText, setCodesText] = useState('')
+const HEAD = 'text-[11px] uppercase tracking-[0.12em] text-muted-foreground'
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    // Parse "codigo, nombre" per line (nombre optional).
-    const codes = codesText
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map(l => {
-        const [code, ...rest] = l.split(',')
-        return { code: code.trim(), holderName: rest.join(',').trim() || undefined }
-      })
-      .filter(c => c.code)
-
-    create.mutate(
-      {
-        name,
-        masterCode: masterCode.trim() || undefined,
-        botName: botName.trim() || undefined,
-        adminEmail,
-        adminPassword,
-        codes: codes.length ? codes : undefined,
-      },
-      {
-        onSuccess: () => {
-          toast.success('Organización creada')
-          onDone()
-        },
-        onError: e => toast.error(errMsg(e)),
-      },
-    )
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="org-name">Nombre de la organización</Label>
-        <Input
-          id="org-name"
-          required
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="ACME Seguros SRL"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="org-master">Código master</Label>
-          <Input id="org-master" value={masterCode} onChange={e => setMasterCode(e.target.value)} placeholder="12345" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="org-bot">Nombre del bot</Label>
-          <Input id="org-bot" value={botName} onChange={e => setBotName(e.target.value)} placeholder="SOFÍA" />
-        </div>
-      </div>
-
-      <div className="rounded-md border border-line-2 p-3">
-        <p className="mb-2 text-[12px] font-medium text-ink-3">Primer SuperAdmin de la organización</p>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="org-admin-email">Correo</Label>
-            <Input
-              id="org-admin-email"
-              type="email"
-              required
-              value={adminEmail}
-              onChange={e => setAdminEmail(e.target.value)}
-              placeholder="admin@acme.com"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="org-admin-pass">Contraseña</Label>
-            <Input
-              id="org-admin-pass"
-              type="password"
-              required
-              minLength={6}
-              value={adminPassword}
-              onChange={e => setAdminPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="org-codes">Códigos de productor (opcional)</Label>
-        <textarea
-          id="org-codes"
-          value={codesText}
-          onChange={e => setCodesText(e.target.value)}
-          rows={4}
-          placeholder={'Un código por línea. Formato: código, titular\n8074, PEREZ JUAN\n14831, GOMEZ ANA'}
-          className="rounded-md border border-line-2 bg-background px-3 py-2 text-[13px] font-mono"
-        />
-        <p className="text-[12px] text-muted-foreground">
-          El código master se agrega automáticamente si lo completaste arriba.
-        </p>
-      </div>
-
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onDone}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? (
-            <>
-              <Loader2 className="size-4 animate-spin" /> Creando…
-            </>
-          ) : (
-            'Crear organización'
-          )}
-        </Button>
-      </DialogFooter>
-    </form>
-  )
-}
-
-// ── Organization detail (codes + admins) ─────────────────
-// ── Main view ────────────────────────────────────────────
 export function OrganizacionesView() {
-  const { isOwner, isLoading: roleLoading } = useRole()
-  const { data: orgs, isLoading } = useOrganizations(isOwner)
+  const router = useRouter()
+  const { isDeveloper, isLoading: roleLoading } = useRole()
+  const { data: orgs, isLoading } = useOrganizations(isDeveloper)
+  const { data: zones = [] } = usePlatformZones(isDeveloper)
+  const { create } = useOrganizationMutations()
   const [createOpen, setCreateOpen] = useState(false)
+  const [zoneFilter, setZoneFilter] = useState<string>(ALL_ZONES)
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center md:px-8">
         <div className="mx-auto flex max-w-md flex-col items-center gap-3">
@@ -169,13 +39,38 @@ export function OrganizacionesView() {
             <KeyRound className="size-5" />
           </div>
           <h1 className="font-display text-[22px] text-ink">Acceso restringido</h1>
-          <p className="text-[14px] text-muted-foreground">
-            Solo el Owner de la plataforma (Lumar) puede gestionar organizaciones.
-          </p>
+          <p className="text-[14px] text-muted-foreground">Solo Developer (Lumar) gestiona las organizaciones.</p>
         </div>
       </div>
     )
   }
+
+  const visible = (orgs ?? []).filter(org =>
+    zoneFilter === ALL_ZONES ? true : zoneFilter === NO_ZONE ? !org.zone : String(org.zone?.id) === zoneFilter,
+  )
+
+  const createOrganization = (values: PrincipalFormValues) =>
+    create.mutate(
+      {
+        name: values.name,
+        zoneId: values.zoneId,
+        ...(values.masterCode ? { masterCode: values.masterCode } : {}),
+        ...(values.codes.length ? { codes: values.codes } : {}),
+        ...(values.adminEmail ? { adminEmail: values.adminEmail } : {}),
+      },
+      {
+        onSuccess: created => {
+          toast.success(
+            created.invitationSent && values.adminEmail
+              ? `Principal ${created.name} creado. Le enviamos una invitación a ${values.adminEmail}.`
+              : `Principal ${created.name} creado, sin usuarios todavía.`,
+          )
+          setCreateOpen(false)
+          router.push(`/admin/organizaciones/${created.id}`)
+        },
+        onError: error => toast.error(apiErrorMessage(error, 'No se pudo crear la organización.')),
+      },
+    )
 
   return (
     <div className="mx-auto w-full max-w-5xl px-5 py-8 md:px-8 md:py-10">
@@ -186,7 +81,8 @@ export function OrganizacionesView() {
             Organizaciones
           </h1>
           <p className="mt-1.5 text-[14px] text-muted-foreground">
-            Cada organización es un cliente (tenant) con sus códigos, números y SuperAdmins.
+            Cada organización es un principal: sus códigos, sus números y sus usuarios. La zona decide qué Owners la
+            ven.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="h-10">
@@ -194,91 +90,124 @@ export function OrganizacionesView() {
         </Button>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label htmlFor="org-zone-filter" className="text-[12.5px] text-muted-foreground">
+          Zona
+        </label>
+        <select
+          id="org-zone-filter"
+          value={zoneFilter}
+          onChange={event => setZoneFilter(event.target.value)}
+          className="h-9 rounded-md border border-line-2 bg-paper px-2 text-[13px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-ember-ring"
+        >
+          <option value={ALL_ZONES}>Todas</option>
+          {zones.map(zone => (
+            <option key={zone.id} value={zone.id}>
+              {zone.name}
+            </option>
+          ))}
+          <option value={NO_ZONE}>Sin zona</option>
+        </select>
+      </div>
+
       <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Organización
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Códigos</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Usuarios</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Números</TableHead>
-              <TableHead className="w-20 pr-5" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 2 }).map((_, i) => (
-                <TableRow key={i}>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[720px]">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className={`h-11 pl-5 ${HEAD}`}>Organización</TableHead>
+                <TableHead className={HEAD}>Zona</TableHead>
+                <TableHead className={HEAD}>Códigos</TableHead>
+                <TableHead className={HEAD}>Usuarios</TableHead>
+                <TableHead className={HEAD}>Números</TableHead>
+                <TableHead className="w-20 pr-5" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading &&
+                Array.from({ length: 2 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="pl-5">
+                      <Skeleton className="h-4 w-44" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-10" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-10" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-10" />
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      <Skeleton className="ml-auto h-8 w-16" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+              {orgs && visible.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                        <Building2 className="size-5" />
+                      </div>
+                      <p className="text-[14px] text-muted-foreground">
+                        {orgs.length === 0 ? 'Todavía no hay organizaciones.' : 'Ninguna organización en esa zona.'}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {visible.map(o => (
+                <TableRow key={o.id}>
                   <TableCell className="pl-5">
-                    <Skeleton className="h-4 w-44" />
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-medium text-ink">{o.name}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {o.masterCode ? `master ${o.masterCode} · ` : ''}
+                        {o.slug}
+                        {!o.isActive && ' · inactiva'}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-4 w-10" />
+                    <OrganizationZoneSelect organization={o} zones={zones} />
                   </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-10" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-10" />
-                  </TableCell>
+                  <TableCell className="text-[13px] text-ink-3">{o.counts.codes}</TableCell>
+                  <TableCell className="text-[13px] text-ink-3">{o.counts.users}</TableCell>
+                  <TableCell className="text-[13px] text-ink-3">{o.counts.phoneNumbers}</TableCell>
                   <TableCell className="pr-5">
-                    <Skeleton className="ml-auto h-8 w-16" />
+                    <div className="flex justify-end">
+                      <Button asChild variant="ghost" size="sm" className="h-8">
+                        <Link href={`/admin/organizaciones/${o.id}`}>Gestionar</Link>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
-
-            {orgs && orgs.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                      <Building2 className="size-5" />
-                    </div>
-                    <p className="text-[14px] text-muted-foreground">Todavía no hay organizaciones.</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-
-            {orgs?.map(o => (
-              <TableRow key={o.id}>
-                <TableCell className="pl-5">
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-medium text-ink">{o.name}</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {o.masterCode ? `master ${o.masterCode} · ` : ''}
-                      {o.slug}
-                      {!o.isActive && ' · inactiva'}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-[13px] text-ink-3">{o.counts.codes}</TableCell>
-                <TableCell className="text-[13px] text-ink-3">{o.counts.users}</TableCell>
-                <TableCell className="text-[13px] text-ink-3">{o.counts.phoneNumbers}</TableCell>
-                <TableCell className="pr-5">
-                  <div className="flex justify-end">
-                    <Button asChild variant="ghost" size="sm" className="h-8">
-                      <Link href={`/admin/organizaciones/${o.id}`}>Gestionar</Link>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        </div>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="font-display text-[20px]">Nueva organización</DialogTitle>
-            <DialogDescription>Creá un cliente nuevo con su primer SuperAdmin y sus códigos.</DialogDescription>
-          </DialogHeader>
-          {createOpen && <CreateOrgForm onDone={() => setCreateOpen(false)} />}
-        </DialogContent>
-      </Dialog>
+      <PrincipalFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Nueva organización"
+        description="Un principal nuevo con sus productores. Su primer SuperAdmin, si lo cargás, entra por invitación."
+        zones={zones}
+        zoneRequired={false}
+        masterRequired={false}
+        withFirstAccount
+        saving={create.isPending}
+        submitLabel="Crear organización"
+        onSubmit={createOrganization}
+      />
     </div>
   )
 }

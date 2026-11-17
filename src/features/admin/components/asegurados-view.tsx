@@ -12,7 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import type { AdminClientSummary, ClientEstadoFilter, ClientSort, RiskType } from '@/types/api/clients'
 import { useAdminClients } from '../hooks/use-admin-clients'
-import { ScopeFilter, type ScopeFilterValue } from './scope-filter'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
+import type { ScopeFilterValue } from './scope-filter'
+import { SectionScopeFilter } from './section-scope-filter'
+import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
 import { useLinkedClient } from '../hooks/use-linked-client'
 import {
@@ -184,15 +187,12 @@ export function AseguradosView() {
     setPage(1)
   }
 
-  const { data, isLoading, isError, isFetching } = useAdminClients({
-    search,
-    riskType,
-    status: estado,
-    sort,
-    ...scope,
-    page,
-    pageSize: PAGE_SIZE,
-  })
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data, isLoading, isError, isFetching } = useAdminClients(
+    { search, riskType, status: estado, sort, ...scope, page, pageSize: PAGE_SIZE },
+    tenantEnabled,
+  )
 
   const clients = data?.data ?? []
   const total = data?.total ?? 0
@@ -210,9 +210,9 @@ export function AseguradosView() {
             Gestioná tu cartera de asegurados, sus pólizas y vencimientos.
           </p>
         </div>
-        <div className="flex w-full max-w-xl items-center gap-2">
-          <ScopeFilter value={scope} onChange={handleScope} className="shrink-0" />
-          <div data-help="asegurados-buscar" className="relative flex-1">
+        <div className="flex w-full max-w-xl flex-wrap items-center gap-2">
+          <SectionScopeFilter value={scope} onChange={handleScope} className="shrink-0" />
+          <div data-help="asegurados-buscar" className="relative min-w-48 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar nombre, DNI, email, patente…"
@@ -224,140 +224,144 @@ export function AseguradosView() {
         </div>
       </div>
 
-      <AseguradosStats activeEstado={estado} onSelectEstado={handleEstado} />
+      <RequirePrincipal showFilter={false}>
+        <AseguradosStats activeEstado={estado} onSelectEstado={handleEstado} />
 
-      <AseguradosFilters
-        riskType={riskType}
-        estado={estado}
-        sort={sort}
-        onRiskTypeChange={handleRiskType}
-        onEstadoChange={handleEstado}
-        onSortChange={handleSort}
-      />
+        <AseguradosFilters
+          riskType={riskType}
+          estado={estado}
+          sort={sort}
+          onRiskTypeChange={handleRiskType}
+          onEstadoChange={handleEstado}
+          onSortChange={handleSort}
+        />
 
-      <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-line-2 hover:bg-transparent">
-              <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-faint">Asegurado</TableHead>
-              <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint lg:table-cell">
-                Contacto
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">Pólizas</TableHead>
-              <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint sm:table-cell">
-                Pagos
-              </TableHead>
-              <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint md:table-cell">
-                Próx. vencimiento
-              </TableHead>
-              <TableHead className="w-8 pr-4" />
-            </TableRow>
-          </TableHeader>
-          <TableBody className={isFetching && !isLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-            {isLoading &&
-              Array.from({ length: 6 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="py-3 pl-5">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="size-9 rounded-full" />
-                      <div className="space-y-1.5">
-                        <Skeleton className="h-3.5 w-32" />
-                        <Skeleton className="h-3 w-20" />
+        <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-line-2 hover:bg-transparent">
+                <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-faint">
+                  Asegurado
+                </TableHead>
+                <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint lg:table-cell">
+                  Contacto
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">Pólizas</TableHead>
+                <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint sm:table-cell">
+                  Pagos
+                </TableHead>
+                <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint md:table-cell">
+                  Próx. vencimiento
+                </TableHead>
+                <TableHead className="w-8 pr-4" />
+              </TableRow>
+            </TableHeader>
+            <TableBody className={isFetching && !isLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+              {isLoading &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="py-3 pl-5">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-9 rounded-full" />
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-3.5 w-32" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
                       </div>
-                    </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Skeleton className="h-3.5 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-28 rounded-md" />
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Skeleton className="h-8 w-24" />
+                    </TableCell>
+                    <TableCell className="pr-4" />
+                  </TableRow>
+                ))}
+
+              {isError && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-14 text-center text-[14px] text-destructive">
+                    No se pudieron cargar los asegurados.
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <Skeleton className="h-3.5 w-40" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-6 w-28 rounded-md" />
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Skeleton className="h-8 w-24" />
-                  </TableCell>
-                  <TableCell className="pr-4" />
                 </TableRow>
-              ))}
+              )}
 
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={6} className="py-14 text-center text-[14px] text-destructive">
-                  No se pudieron cargar los asegurados.
-                </TableCell>
-              </TableRow>
-            )}
-
-            {!isLoading && !isError && clients.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                      <Users className="size-5" />
+              {!isLoading && !isError && clients.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                        <Users className="size-5" />
+                      </div>
+                      <p className="text-[14px] text-muted-foreground">
+                        {search || riskType || estado
+                          ? 'No se encontraron asegurados con esos filtros.'
+                          : 'Todavía no hay asegurados.'}
+                      </p>
                     </div>
-                    <p className="text-[14px] text-muted-foreground">
-                      {search || riskType || estado
-                        ? 'No se encontraron asegurados con esos filtros.'
-                        : 'Todavía no hay asegurados.'}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!isLoading &&
+                clients.map(client => (
+                  <ClientRow key={client.id} client={client} onSelect={() => setSelectedId(client.id)} />
+                ))}
+            </TableBody>
+          </Table>
+        </Card>
+
+        {!isLoading && !isError && total > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[12px] text-muted-foreground">
+              Mostrando{' '}
+              <span className="font-medium text-ink-3">
+                {rangeStart}–{rangeEnd}
+              </span>{' '}
+              de <span className="font-medium text-ink-3">{total}</span> {total === 1 ? 'asegurado' : 'asegurados'}
+            </p>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="h-8 border-line-2 px-2.5 text-[12.5px]"
+                >
+                  <ChevronLeft className="size-4" />
+                  Anterior
+                </Button>
+                <span className="text-[12.5px] text-muted-foreground">
+                  Página <span className="font-medium text-ink-3">{page}</span> de {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="h-8 border-line-2 px-2.5 text-[12.5px]"
+                >
+                  Siguiente
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
             )}
+          </div>
+        )}
 
-            {!isLoading &&
-              clients.map(client => (
-                <ClientRow key={client.id} client={client} onSelect={() => setSelectedId(client.id)} />
-              ))}
-          </TableBody>
-        </Table>
-      </Card>
-
-      {!isLoading && !isError && total > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[12px] text-muted-foreground">
-            Mostrando{' '}
-            <span className="font-medium text-ink-3">
-              {rangeStart}–{rangeEnd}
-            </span>{' '}
-            de <span className="font-medium text-ink-3">{total}</span> {total === 1 ? 'asegurado' : 'asegurados'}
-          </p>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="h-8 border-line-2 px-2.5 text-[12.5px]"
-              >
-                <ChevronLeft className="size-4" />
-                Anterior
-              </Button>
-              <span className="text-[12.5px] text-muted-foreground">
-                Página <span className="font-medium text-ink-3">{page}</span> de {totalPages}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="h-8 border-line-2 px-2.5 text-[12.5px]"
-              >
-                Siguiente
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <AseguradoSheet clientId={selectedId} onClose={closeClient} />
+        <AseguradoSheet clientId={selectedId} onClose={closeClient} />
+      </RequirePrincipal>
     </div>
   )
 }

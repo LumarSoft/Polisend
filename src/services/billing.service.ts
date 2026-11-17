@@ -9,7 +9,7 @@ import type {
   FeatureRolesResponse,
   OrganizationFeatures,
   PlanFeatureKey,
-  OwnerBilling,
+  PlatformBilling,
   SettlementMonth,
   SettlementSeries,
   UpdatePlanRequest,
@@ -48,47 +48,47 @@ export const billingService = {
     })
   },
 
-  ownerBilling(token: string, period?: string): Promise<OwnerBilling> {
-    return apiRequest<OwnerBilling>(`/owner/billing${periodQuery(period)}`, { token })
+  platformBilling(token: string, period?: string): Promise<PlatformBilling> {
+    return apiRequest<PlatformBilling>(`/platform/billing${periodQuery(period)}`, { token })
   },
 
-  /** How a month's billing splits with the commercial partner (owner). */
+  /** How a month's billing splits with the commercial partner (Developer). */
   settlement(token: string, period?: string): Promise<SettlementMonth> {
-    return apiRequest<SettlementMonth>(`/owner/settlement${periodQuery(period)}`, { token })
+    return apiRequest<SettlementMonth>(`/platform/settlement${periodQuery(period)}`, { token })
   },
 
-  /** The last twelve months of the settlement (owner). */
+  /** The last twelve months of the settlement (Developer). */
   settlementSeries(token: string): Promise<SettlementSeries> {
-    return apiRequest<SettlementSeries>('/owner/settlement/series', { token })
+    return apiRequest<SettlementSeries>('/platform/settlement/series', { token })
   },
 
-  /** Freezes a month that already ended (owner). */
+  /** Freezes a month that already ended (Developer). */
   closeMonth(token: string, period: string): Promise<CloseMonthResult> {
-    return apiRequest<CloseMonthResult>('/owner/billing/close', { method: 'POST', token, body: { period } })
+    return apiRequest<CloseMonthResult>('/platform/billing/close', { method: 'POST', token, body: { period } })
   },
 
   plans(token: string): Promise<CatalogResponse> {
-    return apiRequest<CatalogResponse>('/owner/plans', { token })
+    return apiRequest<CatalogResponse>('/platform/plans', { token })
   },
 
   createPlan(token: string, data: CreatePlanRequest): Promise<CatalogPlan> {
-    return apiRequest<CatalogPlan>('/owner/plans', { method: 'POST', token, body: data })
+    return apiRequest<CatalogPlan>('/platform/plans', { method: 'POST', token, body: data })
   },
 
   updatePlan(token: string, id: number, data: UpdatePlanRequest): Promise<CatalogPlan> {
-    return apiRequest<CatalogPlan>(`/owner/plans/${id}`, { method: 'PATCH', token, body: data })
+    return apiRequest<CatalogPlan>(`/platform/plans/${id}`, { method: 'PATCH', token, body: data })
   },
 
-  /** Who may use each function besides the plan (owner). */
+  /** Who may use each function besides the plan (Developer). */
   featureRoles(token: string): Promise<FeatureRolesResponse> {
-    return apiRequest<FeatureRolesResponse>('/owner/plan-features/roles', { token })
+    return apiRequest<FeatureRolesResponse>('/platform/plan-features/roles', { token })
   },
 
   updateFeatureRoles(token: string, key: PlanFeatureKey, data: Partial<FeatureRoles>): Promise<FeatureRoles> {
-    return apiRequest<FeatureRoles>(`/owner/plan-features/roles/${key}`, { method: 'PATCH', token, body: data })
+    return apiRequest<FeatureRoles>(`/platform/plan-features/roles/${key}`, { method: 'PATCH', token, body: data })
   },
 
   removePlan(token: string, id: number): Promise<{ ok: boolean }> {
-    return apiRequest<{ ok: boolean }>(`/owner/plans/${id}`, { method: 'DELETE', token })
+    return apiRequest<{ ok: boolean }>(`/platform/plans/${id}`, { method: 'DELETE', token })
   },
 }

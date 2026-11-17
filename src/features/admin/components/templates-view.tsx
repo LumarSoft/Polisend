@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { TemplateRow, TemplatesAccount, TemplatesNumber } from '@/types/api/templates'
-import { useOwnerTemplates } from '../hooks/use-owner-templates'
+import { usePlatformTemplates } from '../hooks/use-platform-templates'
 import { useRole } from '../hooks/use-role'
 import { categoryLabel, messagingLimitLabel, needsAttention, qualityOf, templateStatus } from '../lib/templates-format'
 import { HEAD } from './billing-ui'
@@ -118,10 +118,10 @@ function AccountCard({ account }: { account: TemplatesAccount }) {
 
 /** "Plantillas": the owner's view of every organization's Meta templates, account by account. */
 export function TemplatesView() {
-  const { isOwner, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError, isFetching, refetch } = useOwnerTemplates(isOwner)
+  const { isDeveloper, isLoading: roleLoading } = useRole()
+  const { data, isLoading, isError, isFetching, refetch } = usePlatformTemplates(isDeveloper)
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">Acceso restringido.</p>

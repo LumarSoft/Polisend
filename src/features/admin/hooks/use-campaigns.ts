@@ -16,13 +16,13 @@ import { useAuth } from '../context/auth-context'
 const PENDING_REFRESH_MS = 60_000
 
 /** The organization's five campaigns, with their message, review status and how many clients each finds. */
-export function useCampaigns() {
+export function useCampaigns(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.campaigns,
     queryFn: () => campaignsService.list(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     refetchInterval: query =>
       query.state.data?.campaigns.some(c => c.templates.some(t => t.status === 'PENDING')) ? PENDING_REFRESH_MS : false,
   })

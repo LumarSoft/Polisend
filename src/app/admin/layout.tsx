@@ -1,8 +1,5 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
-import { AuthProvider } from '@/features/admin/context/auth-context'
-import { PanelThemeProvider } from '@/features/admin/context/panel-theme-context'
-import { PanelToaster } from '@/features/admin/components/panel-toaster'
 import { PANEL_THEME_SCRIPT } from '@/features/admin/lib/panel-theme'
 import { Providers } from './providers'
 import './panel.css'
@@ -40,14 +37,7 @@ export default function AdminRootLayout({ children }: LayoutProps<'/admin'>) {
         <script dangerouslySetInnerHTML={{ __html: PANEL_THEME_SCRIPT }} />
       </head>
       <body>
-        <Providers>
-          <PanelThemeProvider>
-            <AuthProvider>
-              {children}
-              <PanelToaster />
-            </AuthProvider>
-          </PanelThemeProvider>
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

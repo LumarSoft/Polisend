@@ -21,13 +21,13 @@ export function useOwnLogo() {
   return { upload, remove }
 }
 
-/** Any organization's logo, set by the owner from Organizaciones. */
+/** Any organization's logo, set by the Developer from Organizaciones. */
 export function useOrganizationLogo(orgId: number) {
   const { token } = useAuth()
   const queryClient = useQueryClient()
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.organizations })
-    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owner.organization(orgId) })
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.organizations })
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platform.organization(orgId) })
   }
 
   const upload = useMutation({

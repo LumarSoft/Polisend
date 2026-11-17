@@ -38,12 +38,7 @@ import { WhatsAppIcon } from '@/components/ui/brand-icons'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -66,6 +61,7 @@ import type {
 import type { TaskPerson } from '@/types/api/tasks'
 import { useCampaignActions, useCampaignCandidates } from '../hooks/use-campaigns'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useRole } from '../hooks/use-role'
 import { useTaskPeople } from '../hooks/use-tasks'
 import { formatDate } from '../lib/asegurados-ui'
 import {
@@ -612,6 +608,8 @@ export function CampaignClientsTab({ campaign }: { campaign: Campaign }) {
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput, 350)
   const [scope, setScope] = useScopeFilterState()
+  // An Owner chooses the productor above the tabs and is never assigned an opportunity (no "Solo las mías").
+  const { isOwner } = useRole()
   const [coverage, setCoverage] = useState('')
   const [reason, setReason] = useState<CancellationReason | ''>('')
   const [gap, setGap] = useState('')
@@ -628,6 +626,14 @@ export function CampaignClientsTab({ campaign }: { campaign: Campaign }) {
   const [assigning, setAssigning] = useState<number[]>([])
   const [tasking, setTasking] = useState(false)
   const [outcome, setOutcome] = useState<{ mode: CloseMode; candidate: CampaignCandidate } | null>(null)
+  // The Owner's productor changes outside this tab: start again from the first page, with nothing ticked.
+  const scopeKey = `${scope.producerCodeId ?? ''}:${scope.phoneNumberId ?? ''}`
+  const [listedScope, setListedScope] = useState(scopeKey)
+  if (listedScope !== scopeKey) {
+    setListedScope(scopeKey)
+    setPage(1)
+    setSelectedIds(new Set())
+  }
 
   const { data, isLoading, isError, isFetching } = useCampaignCandidates(
     campaign.kind,
@@ -805,7 +811,7 @@ export function CampaignClientsTab({ campaign }: { campaign: Campaign }) {
     <>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex w-full flex-col gap-2 sm:max-w-sm">
-          <ScopeFilter value={scope} onChange={changeScope} className="w-full" />
+          <ScopeFilter value={scope} onChange={changeScope} className="w-full" numbersOnly={isOwner} />
           <CampaignFilterSelect
             campaign={campaign}
             filters={data?.filters}
@@ -830,15 +836,17 @@ export function CampaignClientsTab({ campaign }: { campaign: Campaign }) {
                 </option>
               ))}
             </select>
-            <label className="flex shrink-0 items-center gap-1.5 text-[12.5px] text-ink-3">
-              <input
-                type="checkbox"
-                checked={mine}
-                onChange={e => changeMine(e.target.checked)}
-                className="size-4 accent-ember"
-              />
-              Solo las mías
-            </label>
+            {!isOwner && (
+              <label className="flex shrink-0 items-center gap-1.5 text-[12.5px] text-ink-3">
+                <input
+                  type="checkbox"
+                  checked={mine}
+                  onChange={e => changeMine(e.target.checked)}
+                  className="size-4 accent-ember"
+                />
+                Solo las mías
+              </label>
+            )}
           </div>
           <label
             className="flex items-center gap-1.5 text-[12.5px] text-ink-3"

@@ -3,12 +3,12 @@ import { adminSiniestrosService } from '@/services/siniestros.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
 import { useAuth } from '../context/auth-context'
 
-export function useAdminSiniestrosStats() {
+export function useAdminSiniestrosStats(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.siniestrosStats,
     queryFn: () => adminSiniestrosService.stats(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
   })
 }

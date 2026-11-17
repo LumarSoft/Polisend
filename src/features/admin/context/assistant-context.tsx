@@ -8,14 +8,14 @@ import { AssistantPanel } from '../components/assistant-panel'
 interface AssistantPanelContext {
   open: boolean
   setOpen: (open: boolean) => void
-  /** False when no plan has the assistant (or the person is the OWNER): no button at all. */
+  /** False when no plan has the assistant, for the Developer, and for an Owner without a principal: no button at all. */
   available: boolean
 }
 
 const Context = createContext<AssistantPanelContext>({ open: false, setOpen: () => undefined, available: false })
 
 interface AssistantProviderProps {
-  /** Off for the OWNER, who has no portfolio to ask about. */
+  /** Off for the Developer (no cartera) and for an Owner without an active principal. */
   enabled: boolean
   /** The screen the person is on: sent with each question. */
   route: string
@@ -30,7 +30,7 @@ interface AssistantProviderProps {
  */
 export function AssistantProvider({ enabled, route, screen, children }: AssistantProviderProps) {
   const [open, setOpen] = useState(false)
-  const plan = usePlanFeature('ai_assistant')
+  const plan = usePlanFeature('ai_assistant', enabled)
   const available = enabled && !plan.nowhere
   const page = useMemo(() => ({ route, screen }), [route, screen])
   const assistant = useAssistant(page, available)

@@ -4,9 +4,7 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type {
   CreateOrganizationRequest,
   CreateProducerCodeRequest,
-  CreateOrgUserRequest,
-  CreateSuperAdminRequest,
-  UpdateOrgUserRequest,
+  UpdateOrganizationRequest,
   UpdateProducerCodeRequest,
 } from '@/types/api/organizations'
 import { useAuth } from '../context/auth-context'
@@ -14,7 +12,7 @@ import { useAuth } from '../context/auth-context'
 export function useOrganizations(enabled = true) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: QUERY_KEYS.owner.organizations,
+    queryKey: QUERY_KEYS.platform.organizations,
     queryFn: () => organizationsService.list(token as string),
     enabled: !!token && enabled,
   })
@@ -23,7 +21,7 @@ export function useOrganizations(enabled = true) {
 export function useOrganization(id: number | null) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: id != null ? QUERY_KEYS.owner.organization(id) : QUERY_KEYS.owner.organizations,
+    queryKey: id != null ? QUERY_KEYS.platform.organization(id) : QUERY_KEYS.platform.organizations,
     queryFn: () => organizationsService.detail(token as string, id as number),
     enabled: !!token && id != null,
   })
@@ -33,13 +31,28 @@ export function useOrganizationMutations(orgId?: number) {
   const { token } = useAuth()
   const qc = useQueryClient()
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.organizations })
-    if (orgId != null) qc.invalidateQueries({ queryKey: QUERY_KEYS.owner.organization(orgId) })
+    qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.organizations })
+    if (orgId != null) qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.organization(orgId) })
   }
 
   const create = useMutation({
     mutationFn: (data: CreateOrganizationRequest) => organizationsService.create(token as string, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      // A new organization may land in a zone: the zones and the network list it too.
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.zones })
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.all })
+    },
+  })
+  /** Switch on or off, or move between zones (Developer). */
+  const update = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateOrganizationRequest }) =>
+      organizationsService.update(token as string, id, data),
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.all })
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.zones })
+    },
   })
   const setActive = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
@@ -61,27 +74,5 @@ export function useOrganizationMutations(orgId?: number) {
       organizationsService.updateCode(token as string, id, codeId, data),
     onSuccess: invalidate,
   })
-  const addSuperAdmin = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateSuperAdminRequest }) =>
-      organizationsService.addSuperAdmin(token as string, id, data),
-    onSuccess: invalidate,
-  })
-
-  const addUser = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateOrgUserRequest }) =>
-      organizationsService.addUser(token as string, id, data),
-    onSuccess: invalidate,
-  })
-  const updateUser = useMutation({
-    mutationFn: ({ id, userId, data }: { id: number; userId: number; data: UpdateOrgUserRequest }) =>
-      organizationsService.updateUser(token as string, id, userId, data),
-    onSuccess: invalidate,
-  })
-  const removeUser = useMutation({
-    mutationFn: ({ id, userId }: { id: number; userId: number }) =>
-      organizationsService.removeUser(token as string, id, userId),
-    onSuccess: invalidate,
-  })
-
-  return { create, setActive, setPlan, addCode, updateCode, addSuperAdmin, addUser, updateUser, removeUser }
+  return { create, update, setActive, setPlan, addCode, updateCode }
 }

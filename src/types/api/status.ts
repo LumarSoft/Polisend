@@ -49,7 +49,7 @@ export interface IntegrationIncident {
   message: string
   /** What the service's error page says, in its own words. */
   answer: string | null
-  /** The raw answer, for the OWNER only. */
+  /** The raw answer, for the DEVELOPER only. */
   sample?: string | null
   failures: number
   startedAt: string
@@ -92,7 +92,7 @@ export interface WhatsappNumberStatus {
 export interface StatusOverview {
   checkedAt: string
   components: IntegrationComponent[]
-  /** The user's organization; for the OWNER, the organizations whose credentials Triunfo refuses. */
+  /** The user's organization; for the DEVELOPER, the organizations whose credentials Triunfo refuses. */
   triunfoAccess: TriunfoAccess[]
   whatsapp: WhatsappNumberStatus[]
   /** The latest incidents of the last 30 days, open ones included. */

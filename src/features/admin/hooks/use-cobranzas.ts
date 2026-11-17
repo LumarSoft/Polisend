@@ -4,13 +4,13 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
 import { useAuth } from '../context/auth-context'
 
-export function useCobranzas(params: CobranzasQuery) {
+export function useCobranzas(params: CobranzasQuery, enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.cobranzas(params),
     queryFn: () => cobranzasService.list(params, token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     placeholderData: keepPreviousData,
   })
 }

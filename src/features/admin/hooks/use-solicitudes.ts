@@ -4,13 +4,13 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type { SolicitudesQuery, SolicitudKind } from '@/types/api/solicitudes'
 import { useAuth } from '../context/auth-context'
 
-export function useSolicitudes(params: SolicitudesQuery) {
+export function useSolicitudes(params: SolicitudesQuery, enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.solicitudes(params),
     queryFn: () => solicitudesService.list(params, token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     placeholderData: keepPreviousData,
     // A solicitud the bot just created shows up without reloading: the list is
     // re-read on every visit (the global 5-min staleTime would hide it) and
@@ -21,13 +21,13 @@ export function useSolicitudes(params: SolicitudesQuery) {
 }
 
 /** Count of NEW (uncontacted) solicitudes, polled for the sidebar alert. */
-export function useNewSolicitudesCount() {
+export function useNewSolicitudesCount(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.solicitudes({ status: 'NEW', pageSize: 1 }),
     queryFn: () => solicitudesService.list({ status: 'NEW', pageSize: 1 }, token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     refetchInterval: 20_000,
     select: page => page.total,
   })

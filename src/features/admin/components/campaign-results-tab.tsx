@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Campaign, CampaignResultCounts, CampaignResultsResponse } from '@/types/api/campaigns'
 import { useCampaignResults } from '../hooks/use-campaigns'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useRole } from '../hooks/use-role'
 import { useTaskPeople } from '../hooks/use-tasks'
 import { formatPremium, formatRate } from '../lib/campaigns-format'
 import { ScopeFilter, type ScopeFilterValue } from './scope-filter'
@@ -172,6 +173,8 @@ function CountHeads() {
 export function CampaignResultsTab({ campaign }: { campaign: Campaign }) {
   const [period, setPeriod] = useState<Period>('90')
   const [scope, setScope] = useScopeFilterState()
+  // An Owner chooses the productor above the tabs: here only the numbers.
+  const { isOwner } = useRole()
   const [assignedToId, setAssignedToId] = useState('')
   const { data: people = [] } = useTaskPeople()
   const { data, isLoading, isError, isFetching } = useCampaignResults(
@@ -211,7 +214,7 @@ export function CampaignResultsTab({ campaign }: { campaign: Campaign }) {
             </option>
           ))}
         </select>
-        <ScopeFilter value={scope} onChange={changeScope} className="sm:w-64" />
+        <ScopeFilter value={scope} onChange={changeScope} className="sm:w-64" numbersOnly={isOwner} />
         <select
           value={assignedToId}
           onChange={e => setAssignedToId(e.target.value)}

@@ -1,5 +1,5 @@
 import type { AdminOrganization, AdminRole } from '@/types/api/auth'
-import { isPlatformOperator } from './roles'
+import { isDeveloperRole } from './roles'
 
 /** How the panel presents the organization of whoever is logged in. */
 export interface PanelBrand {
@@ -14,7 +14,7 @@ export interface PanelBrand {
   logoUrl: string | null
 }
 
-/** Before login, for the owner (Lumarsoft) and while the profile loads. */
+/** Before login, for the Developer (Lumarsoft) and while the profile loads. */
 export const PLATFORM_BRAND: PanelBrand = {
   name: 'Polisend',
   signature: '',
@@ -35,9 +35,9 @@ export function initialsOf(name: string): string {
     .toUpperCase()
 }
 
-/** The user's organization as the panel shows it. The owner runs the platform, so it sees Polisend. */
+/** The organization as the panel shows it. The Developer runs the platform, so it sees Polisend. */
 export function brandOf(org: AdminOrganization | undefined, role: AdminRole | undefined): PanelBrand {
-  if (!org || isPlatformOperator(role)) return PLATFORM_BRAND
+  if (!org || isDeveloperRole(role)) return PLATFORM_BRAND
   return {
     name: org.displayName,
     signature: org.displayName,

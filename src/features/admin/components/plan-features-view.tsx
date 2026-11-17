@@ -7,15 +7,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ApiError } from '@/lib/api-client'
 import type { CatalogPlan, FeatureRoleName, PlanFeatureInfo } from '@/types/api/billing'
-import { useFeatureRoles, useOwnerPlans, usePlanActions, useUpdateFeatureRoles } from '../hooks/use-billing'
+import { useFeatureRoles, usePlatformPlans, usePlanActions, useUpdateFeatureRoles } from '../hooks/use-billing'
 import { useRole } from '../hooks/use-role'
 import { HEAD } from './billing-ui'
 import { PanelSwitch } from './panel-switch'
+import { ROLES } from '../lib/roles'
 
 /** The roles a function can be turned off for, next to the plans. */
 const ROLE_COLUMNS: Array<{ role: FeatureRoleName; label: string }> = [
-  { role: 'ADMIN', label: 'Administradores' },
-  { role: 'SUPERADMIN', label: 'SuperAdmins' },
+  { role: ROLES.admin, label: 'Admin' },
+  { role: ROLES.superAdmin, label: 'SuperAdmin' },
 ]
 
 function failed(error: unknown) {
@@ -36,7 +37,7 @@ function PlanFeaturesTable({ features, plans }: { features: PlanFeatureInfo[]; p
       {
         onSuccess: () =>
           toast.success(
-            `${feature.label}: ${on ? 'habilitada' : 'deshabilitada'} para ${role === 'ADMIN' ? 'administradores' : 'SuperAdmins'}`,
+            `${feature.label}: ${on ? 'habilitada' : 'deshabilitada'} para los ${role === ROLES.admin ? 'Admin' : 'SuperAdmin'}`,
           ),
         onError: failed,
         onSettled: () => setPending(null),
@@ -125,12 +126,12 @@ function PlanFeaturesTable({ features, plans }: { features: PlanFeatureInfo[]; p
 
 /** "Funciones por plan": the owner's switches of what each plan, and each role, can use. */
 export function PlanFeaturesView() {
-  const { isOwner, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError } = useOwnerPlans(isOwner)
+  const { isDeveloper, isLoading: roleLoading } = useRole()
+  const { data, isLoading, isError } = usePlatformPlans(isDeveloper)
   const plans = data?.plans ?? []
   const features = data?.features ?? []
 
-  if (!roleLoading && !isOwner) {
+  if (!roleLoading && !isDeveloper) {
     return (
       <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
         <p className="text-[14px] text-muted-foreground">Acceso restringido.</p>
@@ -148,8 +149,8 @@ export function PlanFeaturesView() {
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
           Qué incluye cada plan además de los mensajes. Una organización puede usar una función si el plan de alguno de
           sus números la incluye; si no, el panel la muestra bloqueada y dice desde qué plan está. Las columnas de roles
-          la apagan para todos los administradores o SuperAdmins, aunque su plan la incluya. Una función nueva arranca
-          apagada en todos los planes.
+          la apagan para todos los Admin o SuperAdmin, aunque su plan la incluya. Una función nueva arranca apagada en
+          todos los planes.
         </p>
       </div>
 

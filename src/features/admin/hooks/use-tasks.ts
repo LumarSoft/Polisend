@@ -4,34 +4,34 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type { TasksQuery } from '@/types/api/tasks'
 import { useAuth } from '../context/auth-context'
 
-export function useTasks(query: TasksQuery) {
+export function useTasks(query: TasksQuery, enabled = true) {
   const { token } = useAuth()
   return useQuery({
     queryKey: QUERY_KEYS.admin.tasks(query),
     queryFn: () => tasksService.list(token as string, query),
-    enabled: !!token,
+    enabled: !!token && enabled,
     // Someone may leave a task or a reply while the list is open.
     refetchInterval: 30_000,
   })
 }
 
 /** Open tasks assigned to me, for the menu badge. */
-export function useTaskStats() {
+export function useTaskStats(enabled = true) {
   const { token } = useAuth()
   return useQuery({
     queryKey: QUERY_KEYS.admin.tasksStats,
     queryFn: () => tasksService.stats(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     refetchInterval: 20_000,
   })
 }
 
 /** People a task can be assigned to. */
-export function useTaskPeople() {
+export function useTaskPeople(enabled = true) {
   const { token } = useAuth()
   return useQuery({
     queryKey: QUERY_KEYS.admin.taskPeople,
     queryFn: () => tasksService.people(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
   })
 }

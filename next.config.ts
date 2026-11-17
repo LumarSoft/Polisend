@@ -16,6 +16,15 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async headers() {
+    return [
+      {
+        // A password-setup link (/admin/activar?token=…): its token must never leave in a Referer header.
+        source: "/admin/activar",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

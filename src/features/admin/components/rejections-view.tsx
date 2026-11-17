@@ -6,11 +6,16 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useRejectionImports } from '../hooks/use-rejections'
 import { useRejectionUpload } from '../hooks/use-rejection-upload'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { formatMoment } from '../lib/rejections-format'
 import { RejectionImportDetail } from './rejection-import-detail'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 
 export function RejectionsView() {
-  const { data, isLoading, isError } = useRejectionImports()
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data, isLoading, isError } = useRejectionImports(tenantEnabled)
   const [pickedId, setPickedId] = useState<number | null>(null)
   const { upload, busy } = useRejectionUpload(setPickedId)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -43,73 +48,81 @@ export function RejectionsView() {
             if (file) void upload(file)
           }}
         />
-        <Button data-help="rechazos-cargar" onClick={() => fileInput.current?.click()} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-          Cargar Excel
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* An Owner's Zona › Principal: an Excel is the whole principal's, not a productor's. */}
+          <NetworkFilter showProducer={false} />
+          {tenantEnabled && (
+            <Button data-help="rechazos-cargar" onClick={() => fileInput.current?.click()} disabled={busy}>
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              Cargar Excel
+            </Button>
+          )}
+        </div>
       </header>
 
-      {data && !data.templateReady && (
-        <p className="mb-4 rounded-lg border border-amber-border bg-amber-subtle px-4 py-3 text-[13px] text-amber-700 dark:text-amber">
-          El mensaje de WhatsApp para avisar rechazos está en revisión de Meta. Ya podés cargar los Excel; el botón de
-          enviar se habilita cuando lo aprueben.
-        </p>
-      )}
+      <RequirePrincipal showFilter={false}>
+        {data && !data.templateReady && (
+          <p className="mb-4 rounded-lg border border-amber-border bg-amber-subtle px-4 py-3 text-[13px] text-amber-700 dark:text-amber">
+            El mensaje de WhatsApp para avisar rechazos está en revisión de Meta. Ya podés cargar los Excel; el botón de
+            enviar se habilita cuando lo aprueben.
+          </p>
+        )}
 
-      {isError ? (
-        <p role="alert" className="rounded-xl border border-line-2 bg-card p-10 text-center text-destructive">
-          No se pudieron cargar los rechazos.
-        </p>
-      ) : isLoading ? (
-        <p className="flex items-center justify-center gap-2 p-10 text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Cargando…
-        </p>
-      ) : imports.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-line-2 bg-card p-12 text-center">
-          <FileSpreadsheet className="mx-auto size-8 text-muted-foreground" />
-          <p className="mt-3 text-[14px] text-ink-3">Todavía no cargaste ningún Excel de rechazos.</p>
-          <Button variant="outline" className="mt-4" onClick={() => fileInput.current?.click()} disabled={busy}>
-            <Upload className="size-4" /> Cargar el primero
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <ul className="flex gap-2 overflow-x-auto pb-1">
-            {imports.map(item => {
-              const sent = (item.counts.SENT ?? 0) + (item.counts.MARKED ?? 0)
-              const total = Object.values(item.counts).reduce((sum, n) => sum + (n ?? 0), 0)
-              return (
-                <li key={item.id} className="w-[240px] shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setPickedId(item.id)}
-                    className={cn(
-                      'w-full rounded-lg border px-3 py-2.5 text-left transition-colors',
-                      item.id === selectedId
-                        ? 'border-ember-ring bg-ember-soft'
-                        : 'border-line-2 bg-card hover:bg-secondary/60',
-                    )}
-                  >
-                    <p className="truncate text-[13px] font-medium text-ink">{item.fileName}</p>
-                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                      {formatMoment(item.createdAt)} · {sent}/{total} avisados
-                    </p>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+        {isError ? (
+          <p role="alert" className="rounded-xl border border-line-2 bg-card p-10 text-center text-destructive">
+            No se pudieron cargar los rechazos.
+          </p>
+        ) : isLoading ? (
+          <p className="flex items-center justify-center gap-2 p-10 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Cargando…
+          </p>
+        ) : imports.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-line-2 bg-card p-12 text-center">
+            <FileSpreadsheet className="mx-auto size-8 text-muted-foreground" />
+            <p className="mt-3 text-[14px] text-ink-3">Todavía no cargaste ningún Excel de rechazos.</p>
+            <Button variant="outline" className="mt-4" onClick={() => fileInput.current?.click()} disabled={busy}>
+              <Upload className="size-4" /> Cargar el primero
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <ul className="flex gap-2 overflow-x-auto pb-1">
+              {imports.map(item => {
+                const sent = (item.counts.SENT ?? 0) + (item.counts.MARKED ?? 0)
+                const total = Object.values(item.counts).reduce((sum, n) => sum + (n ?? 0), 0)
+                return (
+                  <li key={item.id} className="w-[240px] shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setPickedId(item.id)}
+                      className={cn(
+                        'w-full rounded-lg border px-3 py-2.5 text-left transition-colors',
+                        item.id === selectedId
+                          ? 'border-ember-ring bg-ember-soft'
+                          : 'border-line-2 bg-card hover:bg-secondary/60',
+                      )}
+                    >
+                      <p className="truncate text-[13px] font-medium text-ink">{item.fileName}</p>
+                      <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                        {formatMoment(item.createdAt)} · {sent}/{total} avisados
+                      </p>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
 
-          <section
-            data-help="rechazos-carga"
-            className="min-w-0 overflow-hidden rounded-xl border border-line-2 bg-card"
-          >
-            {selectedId !== null && (
-              <RejectionImportDetail key={selectedId} importId={selectedId} onDeleted={() => setPickedId(null)} />
-            )}
-          </section>
-        </div>
-      )}
+            <section
+              data-help="rechazos-carga"
+              className="min-w-0 overflow-hidden rounded-xl border border-line-2 bg-card"
+            >
+              {selectedId !== null && (
+                <RejectionImportDetail key={selectedId} importId={selectedId} onDeleted={() => setPickedId(null)} />
+              )}
+            </section>
+          </div>
+        )}
+      </RequirePrincipal>
     </div>
   )
 }

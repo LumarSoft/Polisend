@@ -18,6 +18,8 @@ interface ScopeFilterProps {
   className?: string
   /** Text of the "no filter" option. */
   allLabel?: string
+  /** Only the numbers (an Owner chooses the productor in the cascading filter). */
+  numbersOnly?: boolean
 }
 
 /**
@@ -31,13 +33,13 @@ interface ScopeFilterProps {
  * codes when they have more than one, so a branch with several productores
  * can work one at a time; with a single code there is nothing to choose.
  */
-export function ScopeFilter({ value, onChange, className, allLabel = 'Todos' }: ScopeFilterProps) {
-  const { isSuperAdmin } = useRole()
-  const { data: codes } = useProducerCodes(isSuperAdmin)
-  const { data: numbers } = usePhoneNumbers(isSuperAdmin)
+export function ScopeFilter({ value, onChange, className, allLabel = 'Todos', numbersOnly = false }: ScopeFilterProps) {
+  const { canManageOrg } = useRole()
+  const { data: codes } = useProducerCodes(canManageOrg && !numbersOnly)
+  const { data: numbers } = usePhoneNumbers(canManageOrg)
   const ownCodes = useOwnProducerCodes()
 
-  if (!isSuperAdmin) {
+  if (!canManageOrg) {
     if (ownCodes.length < 2) return null
     return (
       <select
@@ -57,8 +59,10 @@ export function ScopeFilter({ value, onChange, className, allLabel = 'Todos' }: 
     )
   }
 
+  if (numbersOnly && !numbers?.length) return null
+
   const selected =
-    value.producerCodeId != null
+    value.producerCodeId != null && !numbersOnly
       ? `c:${value.producerCodeId}`
       : value.phoneNumberId != null
         ? `p:${value.phoneNumberId}`
@@ -76,7 +80,7 @@ export function ScopeFilter({ value, onChange, className, allLabel = 'Todos' }: 
       value={selected}
       onChange={e => handle(e.target.value)}
       className={`h-10 rounded-md border border-line-2 bg-background px-3 text-[13px] text-ink-3 ${className ?? ''}`}
-      aria-label="Filtrar por número o productor"
+      aria-label={numbersOnly ? 'Filtrar por número' : 'Filtrar por número o productor'}
     >
       <option value="">{allLabel}</option>
       {numbers && numbers.length > 0 && (
@@ -89,7 +93,7 @@ export function ScopeFilter({ value, onChange, className, allLabel = 'Todos' }: 
           ))}
         </optgroup>
       )}
-      {codes && codes.length > 0 && (
+      {!numbersOnly && codes && codes.length > 0 && (
         <optgroup label="Productores">
           {codes.map(c => (
             <option key={`c${c.id}`} value={`c:${c.id}`}>

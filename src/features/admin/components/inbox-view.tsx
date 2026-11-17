@@ -19,12 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { useInboxConversations } from '../hooks/use-inbox-conversations'
@@ -32,7 +27,11 @@ import { InboxList } from './inbox-list'
 import { InboxThread } from './inbox-thread'
 import { AseguradoSheet } from './asegurado-sheet'
 import { ScopeFilter } from './scope-filter'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
+import { useActingPrincipal } from '../context/acting-principal-context'
 import type { InboxConversation } from '@/types/api/inbox'
 import { contactDisplayName } from '../lib/inbox-contact'
 import { AssistantLauncher } from './assistant-launcher'
@@ -101,7 +100,11 @@ export function InboxView() {
   const [scope, setScope] = useScopeFilterState()
   const search = useDebouncedValue(searchInput, 350)
 
-  const { data: conversations = [], isLoading } = useInboxConversations(undefined, search, scope)
+  // An Owner works one principal at a time: its Zona › Principal › Productor sits under the header, and nothing loads
+  // while a zone change left it without a principal.
+  const { isOwnerSession } = useActingPrincipal()
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data: conversations = [], isLoading } = useInboxConversations(undefined, search, scope, tenantEnabled)
 
   const deletion = useMutation({
     mutationFn: (target: InboxConversation | 'all') =>
@@ -135,6 +138,21 @@ export function InboxView() {
     taken: conversations.filter(c => c.botPaused || !!c.numberBotDisabled).length,
   }
 
+  if (isOwnerSession && !tenantEnabled) {
+    return (
+      <div className="flex h-svh flex-col overflow-hidden bg-background md:h-[calc(100svh-1rem)] md:rounded-xl">
+        {/* Whatsapp has no top bar of its own: the menu button has to stay reachable. */}
+        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-4">
+          <SidebarTrigger className="-ml-1 text-muted-foreground" />
+          <span className="font-display text-[14.5px] tracking-[-0.01em] text-ink">Whatsapp</span>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <RequirePrincipal>{null}</RequirePrincipal>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="wa flex h-svh overflow-hidden bg-(--wa-surface) md:h-[calc(100svh-1rem)] md:rounded-xl">
       {/* Chat list */}
@@ -153,6 +171,7 @@ export function InboxView() {
               value={scope}
               onChange={setScope}
               allLabel="Todos los números"
+              numbersOnly={isOwnerSession}
               className={cn(
                 '!h-8 min-w-0 max-w-[180px] cursor-pointer truncate !rounded-full !border-0 !px-3 !text-[13px] outline-none',
                 scope.phoneNumberId != null || scope.producerCodeId != null
@@ -177,6 +196,13 @@ export function InboxView() {
         </div>
 
         <div className="space-y-2 px-3 pb-2">
+          {isOwnerSession && (
+            <NetworkFilter
+              producerCodeId={scope.producerCodeId ?? null}
+              onProducerCodeChange={id => setScope(id !== null ? { producerCodeId: id } : {})}
+              className="gap-1.5 [&>button]:h-8 [&>button]:min-w-0 [&>button]:flex-1 [&>button]:basis-[150px] [&>button]:rounded-full"
+            />
+          )}
           <label className="flex h-[35px] items-center gap-3 rounded-lg bg-(--wa-panel) px-3 focus-within:bg-(--wa-surface) focus-within:ring-2 focus-within:ring-(--wa-green)">
             <Search className="size-4 shrink-0 text-(--wa-icon)" />
             <input

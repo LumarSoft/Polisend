@@ -10,8 +10,9 @@ export const rejectionsService = {
     return apiRequest<RejectionImport>(`/admin/rejections/${id}`, { token })
   },
 
-  create(token: string, data: CreateRejectionImportRequest): Promise<RejectionImport> {
-    return apiRequest<RejectionImport>('/admin/rejections', { method: 'POST', token, body: data })
+  /** `startedIn`: the acting principal the upload began in; nothing is sent if the Owner left it meanwhile. */
+  create(token: string, data: CreateRejectionImportRequest, startedIn?: number | null): Promise<RejectionImport> {
+    return apiRequest<RejectionImport>('/admin/rejections', { method: 'POST', token, body: data, startedIn })
   },
 
   send(token: string, id: number, ids: number[]): Promise<RejectionImport> {

@@ -10,7 +10,7 @@ export interface PhoneNumberCodeRef {
 
 /**
  * A number's month. The API sends each role its own part: every role gets the
- * messages and the plan, the SuperAdmin also the activity, and only the OWNER
+ * messages and the plan, the SuperAdmin also the activity, and only the DEVELOPER
  * the plan's price, what the month is billed, what Meta and OpenAI cost and the profit.
  */
 export interface PhoneNumberUsage {
@@ -21,22 +21,22 @@ export interface PhoneNumberUsage {
   assignedPlan?: UnpricedPlan<BilledPlan> | null
   plan?: UnpricedPlan<BilledPlan>
   upgraded?: boolean
-  /** Owner only. */
+  /** Developer only. */
   billedUsd?: number
   /** Its assistant is paused this month for reaching the plan. */
   planPaused?: boolean
-  /** SuperAdmin and owner: messages sent and the OpenAI calls and tokens. */
+  /** SuperAdmin and Owner: messages sent and the OpenAI calls and tokens. */
   metaMessages?: number
   metaConversations?: number
   openaiCalls?: number
   inputTokens?: number
   outputTokens?: number
-  /** Owner only. */
+  /** Developer only. */
   metaBillableMessages?: number
   openaiCostUsd?: number
   metaCostUsd?: number
   totalCostUsd?: number
-  /** Owner only: billed minus Meta (OpenAI is prepaid). */
+  /** Developer only: billed minus Meta (OpenAI is prepaid). */
   marginUsd?: number
 }
 
@@ -59,9 +59,9 @@ export interface AdminPhoneNumber {
   /** The branch the number belongs to, as the office calls it ("27 de Febrero"); absent on older APIs. */
   branchName?: string | null
   isActive: boolean
-  /** Owner only: the OpenAI budget of the month. */
+  /** Developer only: the OpenAI budget of the month. */
   monthlyBudgetUsd?: number | null
-  /** SuperAdmin and owner: the AI paused for the month on reaching its budget. */
+  /** SuperAdmin and Owner: the AI paused for the month on reaching its budget. */
   budgetExceededAt?: string | null
   /** Set when Meta dropped the number off the WhatsApp API; cleared by reconnecting. */
   disconnectedAt: string | null

@@ -20,11 +20,11 @@ export interface Improvement {
   area: ImprovementArea
   /** Date of the change (ISO, midnight UTC). */
   releasedOn: string | null
-  /** Null = draft (only the owner sees it). */
+  /** Null = draft (only the Developer sees it). */
   publishedAt: string | null
 }
 
-export interface OwnerImprovement extends Improvement {
+export interface PlatformImprovement extends Improvement {
   producerId: number | null
   producer: { id: number; name: string } | null
   createdAt: string
@@ -54,15 +54,15 @@ export interface ImprovementsPage extends ImprovementsListPage<Improvement> {
   areaCounts: Record<ImprovementArea, number>
 }
 
-export type OwnerImprovementFilter = 'all' | 'drafts' | 'published'
+export type PlatformImprovementFilter = 'all' | 'drafts' | 'published'
 
-export interface OwnerImprovementsQuery extends PageQuery {
-  filter: OwnerImprovementFilter
+export interface PlatformImprovementsQuery extends PageQuery {
+  filter: PlatformImprovementFilter
 }
 
-export interface OwnerImprovementsPage extends ImprovementsListPage<OwnerImprovement> {
+export interface PlatformImprovementsPage extends ImprovementsListPage<PlatformImprovement> {
   /** Size of each status list, regardless of the filter (for the chips). */
-  counts: Record<OwnerImprovementFilter, number>
+  counts: Record<PlatformImprovementFilter, number>
 }
 
 export interface ImprovementsVisit {
@@ -112,19 +112,19 @@ export interface Proposal {
   mine: boolean
 }
 
-export interface OwnerProposal extends Omit<Proposal, 'mine'> {
+export interface PlatformProposal extends Omit<Proposal, 'mine'> {
   producer: { id: number; name: string }
 }
 
-export type OwnerProposalFilter = 'open' | 'all'
+export type PlatformProposalFilter = 'open' | 'all'
 
-export interface OwnerProposalsQuery extends PageQuery {
-  filter: OwnerProposalFilter
+export interface PlatformProposalsQuery extends PageQuery {
+  filter: PlatformProposalFilter
 }
 
-export interface OwnerProposalsPage extends ImprovementsListPage<OwnerProposal> {
+export interface PlatformProposalsPage extends ImprovementsListPage<PlatformProposal> {
   /** Size of each list, regardless of the filter (for the chips). */
-  counts: Record<OwnerProposalFilter, number>
+  counts: Record<PlatformProposalFilter, number>
 }
 
 export interface ProposalRequest {

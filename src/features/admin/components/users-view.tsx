@@ -1,276 +1,366 @@
 'use client'
 
 import { useState } from 'react'
-import { Ellipsis, Plus, ShieldCheck, SquarePen, Trash2, UserPlus } from 'lucide-react'
-import { toast } from 'sonner'
-import { Card } from '@/components/ui/card'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { Network, Plus, Search, ShieldCheck, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import type { AdminUser } from '@/types/api/auth'
-import { useUsers } from '../hooks/use-users'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
+import type { HierarchyPrincipal, NetworkUser, NetworkUserRole, NetworkUsersQuery } from '@/types/api/hierarchy'
+import type { AccountAccessAction } from '../hooks/use-account-access'
+import { useGuidedOnboarding, type GuidedPrincipal } from '../hooks/use-guided-onboarding'
+import { useHierarchyPrincipals, useNetworkTree, useNetworkUsers } from '../hooks/use-hierarchy'
+import { setUrlParams, useLinkedId, useUrlTab } from '../hooks/use-panel-link'
 import { useProfile } from '../hooks/use-profile'
 import { useRole } from '../hooks/use-role'
-import { useDeleteUser } from '../hooks/use-delete-user'
-import { UserFormDialog } from './user-form-dialog'
+import { NO_ZONE, zoneKeyOf } from '../lib/network'
+import { USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
+import { ROLES, roleLabel } from '../lib/roles'
+import { AccountAccessDialog } from './account-access-dialog'
 import { BranchOnboardingDialog } from './branch-onboarding-dialog'
+import { EMPTY_NETWORK_FILTER, NetworkFilter, type NetworkListFilterValue } from './network-filter'
+import { NetworkUsersTable } from './network-users-table'
+import { PrincipalCodesBlock } from './principal-codes-block'
+import { DeleteUserDialog } from './user-account-dialogs'
+import { UserFormDialog } from './user-form-dialog'
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+const ALL = 'all'
+const TABS = ['usuarios', 'productores'] as const
+
+const ROLE_OPTIONS: ComboboxOption[] = [
+  { value: ALL, label: 'Todos los roles' },
+  { value: ROLES.superAdmin, label: roleLabel(ROLES.superAdmin) },
+  { value: ROLES.admin, label: roleLabel(ROLES.admin) },
+]
+
+/** An Admin manages nobody: the API refuses /hierarchy/users to it. */
+function Restricted() {
+  return (
+    <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center md:px-8">
+      <div className="mx-auto flex max-w-md flex-col items-center gap-3">
+        <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+          <ShieldCheck className="size-5" />
+        </div>
+        <h1 className="font-display text-[22px] text-ink">Acceso restringido</h1>
+        <p className="text-[14px] text-muted-foreground">
+          Los usuarios y sus códigos los gestionan el SuperAdmin de tu principal o su Owner.
+        </p>
+      </div>
+    </div>
+  )
 }
 
-export function UsersView() {
-  const { data: users, isLoading, isError } = useUsers()
-  const { data: profile } = useProfile()
-  const { isSuperAdmin, isLoading: roleLoading } = useRole()
-  const deleteUser = useDeleteUser()
+/** The Owner picks where "Alta guiada de productor" works when no principal is filtered. */
+function GuidedPrincipalPicker({
+  open,
+  onOpenChange,
+  principals,
+  onPick,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  principals: HierarchyPrincipal[]
+  onPick: (principal: GuidedPrincipal) => void
+}) {
+  const [chosen, setChosen] = useState<number | null>(null)
+  const principal = principals.find(p => p.id === chosen) ?? null
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle className="font-display text-[20px]">Alta guiada de productor</DialogTitle>
+          <DialogDescription>
+            ¿En qué principal? Pasa a ser tu principal activo, porque el alta conecta su número de WhatsApp.
+          </DialogDescription>
+        </DialogHeader>
+        <Combobox
+          label="Principal"
+          placeholder="Elegí un principal"
+          searchPlaceholder="Buscar principal…"
+          value={chosen === null ? null : String(chosen)}
+          options={principals.map(p => ({ value: String(p.id), label: p.name, hint: p.zoneName ?? undefined }))}
+          onChange={raw => setChosen(Number(raw))}
+          className="w-full"
+        />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            disabled={!principal}
+            onClick={() => {
+              if (!principal) return
+              onOpenChange(false)
+              onPick({ id: principal.id, name: principal.name })
+            }}
+          >
+            Empezar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [branchOpen, setBranchOpen] = useState(false)
-  const [editing, setEditing] = useState<AdminUser | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
+/** Client-side narrowing the API does not do: "Mi principal"/"Sin zona", and who sees one productor. */
+function narrowUsers(
+  users: NetworkUser[] | undefined,
+  filter: NetworkListFilterValue,
+  principals: HierarchyPrincipal[],
+): NetworkUser[] | undefined {
+  if (!users) return users
+  let rows = users
+  if (filter.zoneKey === NO_ZONE && filter.principalId === null) {
+    const ids = new Set(principals.filter(p => zoneKeyOf(p) === NO_ZONE).map(p => p.id))
+    rows = rows.filter(user => ids.has(user.principal.id))
+  }
+  const codeId = filter.producerCodeId
+  if (codeId !== null) {
+    rows = rows.filter(user => user.role === ROLES.superAdmin || user.codes.some(code => code.id === codeId))
+  }
+  return rows
+}
+
+function UsersScreen() {
+  const { isDeveloper, isOwner, isSuperAdmin } = useRole()
+  const { data: profile } = useProfile()
+  const guided = useGuidedOnboarding()
+  const [tab, setTab] = useUrlTab(TABS, 'usuarios')
+
+  const [filter, setFilter] = useState<NetworkListFilterValue>(EMPTY_NETWORK_FILTER)
+  const [role, setRole] = useState<NetworkUserRole | null>(null)
+  const [searchInput, setSearchInput] = useState('')
+  const search = useDebouncedValue(searchInput.trim(), 300)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<NetworkUser | null>(null)
+  /** The role "Nuevo usuario" starts with when a link asked for one (`&nuevo=superadmin`). */
+  const [linkedRole, setLinkedRole] = useState<NetworkUserRole | undefined>(undefined)
+  const params = useSearchParams()
+  // `?principal=<id>` (Mi red's "Ver usuarios", an organization's detail) preselects the principal; with
+  // `&nuevo=superadmin` (Mi red's «Sin SuperAdmin · crear uno») it also opens "Nuevo usuario" as its SuperAdmin.
+  const clearPrincipalLink = useLinkedId(USERS_PRINCIPAL_PARAM, id => {
+    setFilter({ zoneKey: null, principalId: id, producerCodeId: null })
+    if (params.get(USERS_NEW_PARAM) === USERS_NEW_SUPERADMIN) {
+      setEditing(null)
+      setLinkedRole(ROLES.superAdmin)
+      setFormOpen(true)
+    }
+  })
+  const changeFilter = (next: NetworkListFilterValue) => {
+    setFilter(next)
+    clearPrincipalLink()
+  }
+
+  const { data: principals = [] } = useHierarchyPrincipals()
+  const query: NetworkUsersQuery = {
+    ...(typeof filter.zoneKey === 'number' && filter.principalId === null ? { zoneId: filter.zoneKey } : {}),
+    ...(filter.principalId !== null ? { producerId: filter.principalId } : {}),
+    ...(role ? { role } : {}),
+    ...(search ? { q: search } : {}),
+  }
+  const usersQuery = useNetworkUsers(query)
+  const users = narrowUsers(usersQuery.data, filter, principals)
+  // The SuperAdmin's own principal: its name, its codes (filter and "Productores").
+  const tree = useNetworkTree(isSuperAdmin)
+  const ownPrincipal = isSuperAdmin ? (principals.find(p => p.isHome) ?? principals[0] ?? null) : null
+
+  const [deleteTarget, setDeleteTarget] = useState<NetworkUser | null>(null)
+  const [access, setAccess] = useState<{ action: AccountAccessAction; user: NetworkUser } | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
+  const emptyText = filtered || role || search ? 'Ningún usuario coincide con los filtros.' : 'Todavía no hay usuarios.'
 
   const openCreate = () => {
     setEditing(null)
-    setDialogOpen(true)
+    setLinkedRole(undefined)
+    setFormOpen(true)
   }
 
-  const openEdit = (user: AdminUser) => {
-    setEditing(user)
-    setDialogOpen(true)
+  const changeFormOpen = (open: boolean) => {
+    setFormOpen(open)
+    if (!open && linkedRole) {
+      setLinkedRole(undefined)
+      setUrlParams({ [USERS_NEW_PARAM]: null })
+    }
   }
 
-  const confirmDelete = () => {
-    if (!deleteTarget) return
-    const target = deleteTarget
-    deleteUser.mutate(target.id, {
-      onSuccess: () => {
-        toast.success(`${target.email} eliminado`)
-        setDeleteTarget(null)
-      },
-      onError: () => toast.error('No se pudo eliminar el usuario.'),
-    })
+  const startGuided = () => {
+    if (ownPrincipal) {
+      guided.start({ id: ownPrincipal.id, name: ownPrincipal.name })
+      return
+    }
+    const filteredPrincipal = principals.find(p => p.id === filter.principalId)
+    if (filteredPrincipal) guided.start({ id: filteredPrincipal.id, name: filteredPrincipal.name })
+    else setPickerOpen(true)
   }
 
-  // Org user management is SuperAdmin-only (API enforces it too via RolesGuard).
-  if (!roleLoading && !isSuperAdmin) {
-    return (
-      <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center md:px-8">
-        <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-            <ShieldCheck className="size-5" />
-          </div>
-          <h1 className="font-display text-[22px] text-ink">Acceso restringido</h1>
-          <p className="text-[14px] text-muted-foreground">
-            Solo un SuperAdmin puede gestionar usuarios y asignar códigos de productor.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const subtitle = isDeveloper
+    ? 'Los SuperAdmin y Admin de todos los principales. Polisend los invita por correo y nunca elige ni ve sus contraseñas; cada cambio le llega como aviso a su principal.'
+    : isOwner
+      ? 'Los SuperAdmin y Admin de los principales de tu red.'
+      : `Los SuperAdmin y Admin de ${ownPrincipal?.name ?? 'tu principal'}.`
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 py-8 md:px-8 md:py-10">
+    <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">Gestión</div>
-          <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">
-            Administradores
-          </h1>
-          <p className="mt-1.5 text-[14px] text-muted-foreground">
-            Creá, editá o eliminá los administradores de la plataforma.
-          </p>
+          <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
+            {isSuperAdmin ? 'Gestión' : 'Red'}
+          </div>
+          <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Usuarios</h1>
+          <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">{subtitle}</p>
         </div>
-        <Button onClick={openCreate} className="h-10">
-          <Plus className="size-4" />
-          Nuevo usuario
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {isDeveloper && (
+            <Button asChild variant="outline" className="h-10 border-line-2">
+              <Link href="/admin/owners">
+                <Network className="size-4" />
+                Owners y zonas
+              </Link>
+            </Button>
+          )}
+          {(isOwner || isSuperAdmin) && (
+            <Button variant="outline" className="h-10 border-line-2" onClick={startGuided}>
+              <Sparkles className="size-4" />
+              Alta guiada de productor
+            </Button>
+          )}
+          <Button onClick={openCreate} className="h-10">
+            <Plus className="size-4" />
+            Nuevo usuario
+          </Button>
+        </div>
       </div>
 
-      <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Usuario
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Rol</TableHead>
-              <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-muted-foreground sm:table-cell">
-                Alta
-              </TableHead>
-              <TableHead className="w-12 pr-5" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="pl-5">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="size-9 rounded-full" />
-                      <Skeleton className="h-4 w-40" />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-24 rounded-full" />
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell className="pr-5">
-                    <Skeleton className="ml-auto size-8 rounded-md" />
-                  </TableCell>
-                </TableRow>
-              ))}
+      {isSuperAdmin && (
+        <Tabs value={tab} onValueChange={value => setTab(value as (typeof TABS)[number])} className="mb-5">
+          <TabsList>
+            <TabsTrigger value="usuarios">Usuarios</TabsTrigger>
+            <TabsTrigger value="productores">Productores</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={4} className="py-14 text-center text-[14px] text-destructive">
-                  No se pudieron cargar los usuarios.
-                </TableCell>
-              </TableRow>
+      {isSuperAdmin && tab === 'productores' ? (
+        <div className="flex flex-col gap-4">
+          <p className="max-w-xl text-[13.5px] text-muted-foreground">
+            Los códigos de Triunfo de {ownPrincipal?.name ?? 'tu principal'}. Los SuperAdmin ven todos; cada Admin ve
+            los que le marques en Usuarios.
+          </p>
+          {tree.data?.home ? (
+            <PrincipalCodesBlock principalId={tree.data.home.id} codes={tree.data.home.codes} />
+          ) : tree.isLoading ? (
+            <Skeleton className="h-40 w-full rounded-lg" />
+          ) : (
+            <p className="text-[13px] text-muted-foreground">No se pudieron cargar los códigos.</p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {isSuperAdmin ? (
+              <Combobox
+                label="Productor"
+                placeholder="Todos los productores"
+                value={filter.producerCodeId === null ? ALL : String(filter.producerCodeId)}
+                options={[
+                  { value: ALL, label: 'Todos los productores' },
+                  ...(ownPrincipal?.codes ?? []).map(code => ({
+                    value: String(code.id),
+                    label: code.code,
+                    hint: code.holderName ?? undefined,
+                  })),
+                ]}
+                onChange={raw => changeFilter({ ...filter, producerCodeId: raw === ALL ? null : Number(raw) })}
+                className="w-64"
+              />
+            ) : (
+              <NetworkFilter mode="network" value={filter} onChange={changeFilter} />
             )}
+            <Combobox
+              label="Rol"
+              placeholder="Todos los roles"
+              value={role ?? ALL}
+              options={ROLE_OPTIONS}
+              onChange={raw => setRole(raw === ALL ? null : (raw as NetworkUserRole))}
+              className="w-44"
+            />
+            <div className="relative min-w-48 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar nombre o correo…"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                className="h-10 border-line-2 pl-9 text-[13px]"
+              />
+            </div>
+          </div>
 
-            {users && users.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                      <UserPlus className="size-5" />
-                    </div>
-                    <p className="text-[14px] text-muted-foreground">Todavía no hay administradores.</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-
-            {users?.map((user, index) => {
-              const isSelf = user.id === profile?.id
-              return (
-                <TableRow
-                  key={user.id}
-                  className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-both"
-                  style={{ animationDelay: `${index * 45}ms` }}
-                >
-                  <TableCell className="pl-5">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-9">
-                        <AvatarFallback className="bg-ember-soft text-[12px] font-semibold text-ember-2">
-                          {user.email.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[14px] font-medium text-ink">{user.name || user.email}</span>
-                        {user.name && <span className="text-[12px] text-muted-foreground">{user.email}</span>}
-                        {isSelf && (
-                          <Badge variant="secondary" className="bg-ember-soft text-ember-2">
-                            Vos
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Badge variant="secondary" className="w-fit gap-1 font-normal text-ink-3">
-                        <ShieldCheck className="size-3.5 text-ember-2" />
-                        {user.role === 'SUPERADMIN' ? 'SuperAdmin' : 'Administrador'}
-                      </Badge>
-                      {user.role === 'ADMIN' && (
-                        <span className="text-[11.5px] text-muted-foreground">
-                          {user.producerCodes && user.producerCodes.length > 0
-                            ? `${user.producerCodes.length} código${user.producerCodes.length > 1 ? 's' : ''}`
-                            : 'Sin códigos'}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
-                    {formatDate(user.createdAt)}
-                  </TableCell>
-                  <TableCell className="pr-5">
-                    <div className="flex justify-end">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
-                            <Ellipsis className="size-4" />
-                            <span className="sr-only">Acciones</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem onClick={() => openEdit(user)}>
-                            <SquarePen />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            disabled={isSelf}
-                            onClick={() => setDeleteTarget(user)}
-                          >
-                            <Trash2 />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+          <NetworkUsersTable
+            users={users}
+            isLoading={usersQuery.isLoading}
+            isError={usersQuery.isError}
+            selfId={profile?.id ?? null}
+            showPrincipal={!isSuperAdmin}
+            emptyText={emptyText}
+            onEdit={user => {
+              setEditing(user)
+              setFormOpen(true)
+            }}
+            onSendPasswordLink={user => setAccess({ action: 'password-setup', user })}
+            onResetTwoFactor={user => setAccess({ action: 'reset-two-factor', user })}
+            onDelete={setDeleteTarget}
+          />
+        </>
+      )}
 
       <UserFormDialog
         user={editing}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onStartBranch={() => setBranchOpen(true)}
+        open={formOpen}
+        onOpenChange={changeFormOpen}
+        defaultPrincipalId={filter.principalId}
+        defaultRole={linkedRole}
+        onEditCodes={isSuperAdmin ? () => setTab('productores') : undefined}
       />
-      <BranchOnboardingDialog open={branchOpen} onOpenChange={setBranchOpen} />
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará a <span className="font-medium text-ink">{deleteTarget?.email}</span>. Esta acción no se
-              puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteUser.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={e => {
-                e.preventDefault()
-                confirmDelete()
-              }}
-              disabled={deleteUser.isPending}
-              className="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/30"
-            >
-              {deleteUser.isPending ? 'Eliminando…' : 'Eliminar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteUserDialog user={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      <AccountAccessDialog
+        scope="network"
+        action={access?.action ?? 'password-setup'}
+        account={access?.user ?? null}
+        onClose={() => setAccess(null)}
+      />
+      {isOwner && (
+        <GuidedPrincipalPicker
+          key={pickerOpen ? 'open' : 'closed'}
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          principals={principals}
+          onPick={guided.start}
+        />
+      )}
+      <BranchOnboardingDialog
+        principal={guided.target}
+        open={guided.open}
+        onOpenChange={open => !open && guided.close()}
+      />
     </div>
   )
+}
+
+/**
+ * Usuarios (plan §6.3): one screen for the Developer, the Owner and the SuperAdmin against `/hierarchy/users`, with
+ * every principal the caller reaches (not only the active one). Owners are never listed or created here.
+ */
+export function UsersView() {
+  const { isDeveloper, isOwner, isSuperAdmin, isLoading } = useRole()
+  if (isLoading) return null
+  if (!isDeveloper && !isOwner && !isSuperAdmin) return <Restricted />
+  return <UsersScreen />
 }

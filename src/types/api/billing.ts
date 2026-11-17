@@ -12,7 +12,7 @@ export type PlanFeatureKey =
 /** Whether a plan (or the organization's plans) includes each function. */
 export type PlanFeatures = Record<PlanFeatureKey, boolean>
 
-/** A function of the catalog as the owner sees it in Planes. */
+/** A function of the catalog as the Developer sees it in Planes. */
 export interface PlanFeatureInfo {
   key: PlanFeatureKey
   label: string
@@ -28,7 +28,7 @@ export interface OrganizationFeatures {
   blockedByRole?: PlanFeatureKey[]
 }
 
-/** The roles a function can be turned off for, besides the plan (the owner always has everything). */
+/** The roles a function can be turned off for, besides the plan (the Developer always has everything). */
 export type FeatureRoleName = 'ADMIN' | 'SUPERADMIN'
 export type FeatureRoles = Record<FeatureRoleName, boolean>
 
@@ -36,18 +36,18 @@ export interface FeatureRolesResponse {
   roles: Record<PlanFeatureKey, FeatureRoles>
 }
 
-/** A plan of the platform's catalog: messages a month. Its price comes only for the OWNER. */
+/** A plan of the platform's catalog: messages a month. Its price comes only for the DEVELOPER. */
 export interface PlanOffer {
   id: number
   name: string
   messages: number
-  /** OWNER only: the organizations never see plan prices. */
+  /** DEVELOPER only: the organizations never see plan prices. */
   priceUsd?: number
   /** The free first-month plan of a new account's number. */
   isTrial: boolean
 }
 
-/** A plan of the catalog as the owner edits it. */
+/** A plan of the catalog as the Developer edits it. */
 export interface CatalogPlan extends PlanOffer {
   priceUsd: number
   /** Off: the numbers on it keep it, but no number moves to it. */
@@ -77,7 +77,7 @@ export interface BilledPlan {
   extraBlocks: number
 }
 
-/** A plan as `GET /admin/billing` and `GET /admin/phone-numbers` send it: the price only to the OWNER. */
+/** A plan as `GET /admin/billing` and `GET /admin/phone-numbers` send it: the price only to the DEVELOPER. */
 export type UnpricedPlan<T extends { priceUsd: number }> = Omit<T, 'priceUsd'> & { priceUsd?: number }
 
 /** Where a number stands against its plan's limit this month. */
@@ -115,7 +115,7 @@ export interface BillingNumber {
   percentUsed: number
   /** Where the number goes past this plan: the next of the catalog, or the next block. */
   nextPlan: { name: string; messages: number; priceUsd?: number } | null
-  /** OWNER only. The whole plan: the calendar month is always charged whole. */
+  /** DEVELOPER only. The whole plan: the calendar month is always charged whole. */
   billedUsd?: number
   /** Missing from an API older than the plan limit pause. */
   limit?: PlanLimit
@@ -129,7 +129,7 @@ export interface BillingOverview {
   /** The active plans of the catalog. */
   plans: PlanOffer[]
   numbers: BillingNumber[]
-  /** OWNER only: what the organization pays this month. */
+  /** DEVELOPER only: what the organization pays this month. */
   totalBilledUsd?: number
 }
 
@@ -153,8 +153,8 @@ export interface UpdatePlanRequest {
   features?: Partial<PlanFeatures>
 }
 
-/** The owner's month: billed vs what its messages cost, and what Meta and OpenAI really charged. */
-export interface OwnerBillingTotals {
+/** The platform's month (Developer): billed vs what its messages cost, and what Meta and OpenAI really charged. */
+export interface PlatformBillingTotals {
   /** Plan messages consumed: a campaign (marketing) message counts 2 from its start date; every other, 1. */
   messages: number
   /** Messages sent, one each. Missing from an API older than the template weight. */
@@ -179,7 +179,7 @@ export interface OwnerBillingTotals {
   profitUsd: number
 }
 
-export interface OwnerBillingNumber extends OwnerBillingTotals {
+export interface PlatformBillingNumber extends PlatformBillingTotals {
   id: number
   number: string
   /** The branch the number belongs to, as the office calls it ("27 de Febrero"); absent on older APIs. */
@@ -193,15 +193,26 @@ export interface OwnerBillingNumber extends OwnerBillingTotals {
   paused: boolean
 }
 
-export interface OwnerBillingOrganization {
+export interface PlatformBillingOrganization {
   id: number
   name: string
   isActive: boolean
-  numbers: OwnerBillingNumber[]
-  totals: OwnerBillingTotals
+  /** Where it sits today; null without a live zone. Missing from an API older than the zones. */
+  zone?: { id: number; name: string } | null
+  numbers: PlatformBillingNumber[]
+  totals: PlatformBillingTotals
 }
 
-export interface OwnerBilling {
+/** The month of one zone (or "Sin zona", id null), with its Owners and the sum of its organizations. */
+export interface PlatformBillingZone {
+  id: number | null
+  name: string
+  owners: Array<{ id: number; name: string | null; email: string }>
+  organizationIds: number[]
+  totals: PlatformBillingTotals & { organizations: number }
+}
+
+export interface PlatformBilling {
   period: string
   /** Read as frozen on the 1st of the next month. Missing from an API older than the monthly close. */
   closed?: boolean
@@ -210,8 +221,13 @@ export interface OwnerBilling {
   backfilled?: boolean
   /** What a message costs; null when the rate is not configured in the API. Missing from an older API. */
   messageCost?: { messageUsd: number; campaignMessageUsd: number } | null
-  organizations: OwnerBillingOrganization[]
-  totals: OwnerBillingTotals & {
+  organizations: PlatformBillingOrganization[]
+  /**
+   * The same organizations by zone, ordered by name, "Sin zona" last (a closed month is grouped by today's zones).
+   * Missing from an API older than the zones.
+   */
+  zones?: PlatformBillingZone[]
+  totals: PlatformBillingTotals & {
     organizations: number
     activeNumbers: number
     upgradedNumbers: number
@@ -219,7 +235,7 @@ export interface OwnerBilling {
   }
 }
 
-// ─── Liquidación (owner) ─────────────────────────────────────────────────────
+// ─── Liquidación (Developer) ─────────────────────────────────────────────────────
 
 /** How a month splits: the platform's cost per settled token and the partner's share of what is left. */
 export interface SettlementTerms {
