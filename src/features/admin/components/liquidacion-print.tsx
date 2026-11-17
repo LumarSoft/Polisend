@@ -5,10 +5,10 @@ import { int, usd } from './billing-ui'
 const COLUMNS: Array<[string, (amounts: SettlementAmounts) => string]> = [
   ['Tokens', a => int(settledTokensOf(a))],
   ['Facturado', a => usd(a.billedUsd)],
-  ['Costo', a => usd(a.serviceCostUsd)],
-  ['Remanente', a => usd(a.remainderUsd)],
-  ['Plataforma', a => usd(a.ownerShareUsd)],
-  ['Socio', a => usd(a.partnerShareUsd)],
+  ['Costo Lumarsoft', a => usd(a.serviceCostUsd)],
+  ['Margen de ganancia', a => usd(a.remainderUsd)],
+  ['Margen Lumarsoft', a => usd(a.ownerShareUsd)],
+  ['Margen Nico', a => usd(a.partnerShareUsd)],
 ]
 
 /** The month's settlement on paper: plain tables, no colours, every number listed. */
@@ -22,8 +22,8 @@ export function SettlementPrint({ month }: { month: SettlementMonth }) {
     <div className="mx-auto w-full max-w-[760px] p-6 text-[11px]">
       <h1 className="text-[18px] font-semibold">Liquidación · {capitalized(monthLabel(month.period))}</h1>
       <p className="mt-1">
-        {status} Costo de servicio: {usd(month.terms.costPerMessageUsd)} por mensaje consumido. Socio comercial:{' '}
-        {shareLabel(month.terms.partnerShare)} del remanente.
+        {status} Costo Lumarsoft: {usd(month.terms.costPerMessageUsd)} por token. Nico:{' '}
+        {shareLabel(month.terms.partnerShare)} del margen de ganancia.
       </p>
 
       <table className="mt-4 w-full border-collapse">
@@ -31,11 +31,11 @@ export function SettlementPrint({ month }: { month: SettlementMonth }) {
           {(
             [
               ['Facturado', month.totals.billedUsd],
-              ['Costo de servicio', month.totals.serviceCostUsd],
-              ['Remanente', month.totals.remainderUsd],
-              ['Parte plataforma', month.totals.ownerShareUsd],
-              ['Parte socio comercial', month.totals.partnerShareUsd],
-              ['Total plataforma', month.totals.ownerTotalUsd],
+              ['Costo Lumarsoft', month.totals.serviceCostUsd],
+              ['Margen de ganancia', month.totals.remainderUsd],
+              ['Margen Lumarsoft', month.totals.ownerShareUsd],
+              ['Margen Nico', month.totals.partnerShareUsd],
+              ['Total Lumarsoft', month.totals.ownerTotalUsd],
             ] as const
           ).map(([label, amount]) => (
             <tr key={label} className="border-b">

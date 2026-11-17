@@ -42,11 +42,11 @@ export const settledTokensOf = (amounts: SettlementAmounts): number => amounts.s
 const MONEY_COLUMNS: Array<[string, (amounts: SettlementAmounts) => number]> = [
   ['Tokens', settledTokensOf],
   ['Facturado USD', a => a.billedUsd],
-  ['Costo de servicio USD', a => a.serviceCostUsd],
-  ['Remanente USD', a => a.remainderUsd],
-  ['Parte plataforma USD', a => a.ownerShareUsd],
-  ['Parte socio comercial USD', a => a.partnerShareUsd],
-  ['Total plataforma USD', a => a.ownerTotalUsd],
+  ['Costo Lumarsoft USD', a => a.serviceCostUsd],
+  ['Margen de ganancia USD', a => a.remainderUsd],
+  ['Margen Lumarsoft USD', a => a.ownerShareUsd],
+  ['Margen Nico USD', a => a.partnerShareUsd],
+  ['Total Lumarsoft USD', a => a.ownerTotalUsd],
 ]
 
 /**

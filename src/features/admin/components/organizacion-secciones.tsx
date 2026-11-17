@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Phone } from 'lucide-react'
+import { Phone } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -11,8 +11,7 @@ import { MetaPortfolioLine } from './meta-portfolio-line'
 
 // ── helpers ────────────────────────────────────────────────
 
-/** Costs run to fractions of a cent, so a flat 2-decimal format would show 0.00. */
-const usd = (n: number) => (n === 0 ? 'USD 0' : n < 0.01 ? `USD ${n.toFixed(4)}` : `USD ${n.toFixed(2)}`)
+const usd = (n: number) => `USD ${n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 const int = (n: number) => n.toLocaleString('es-AR')
 
 function fecha(iso: string | null) {
@@ -22,23 +21,22 @@ function fecha(iso: string | null) {
 
 // ── resumen de facturación ─────────────────────────────────
 
-/** Month-to-date summary for the whole organization. */
-export function BillingSummary({ billing }: { billing: OrganizationBilling }) {
+/**
+ * Month-to-date summary for the whole organization: what it is billed and the tokens its numbers used. What Meta and
+ * OpenAI really cost is not shown (decision of 17/11): the Tablero has the cost Lumarsoft and the margins.
+ */
+export function BillingSummary({ billing, numbers }: { billing: OrganizationBilling; numbers: OrganizationNumber[] }) {
+  const used = numbers.reduce((sum, n) => sum + n.usage.messages, 0)
   const cards = [
     { label: 'Números activos', value: int(billing.activeNumbers) },
-    { label: 'Facturado del mes', value: usd(billing.billedUsd), hint: 'Planes de mensajes de sus números' },
-    {
-      label: 'Pago real a Meta',
-      value: usd(billing.metaCostUsd),
-      hint: `OpenAI aparte: ${usd(billing.openaiCostUsd)}`,
-    },
-    { label: 'Ganancia', value: usd(billing.marginUsd), hint: 'Facturado menos Meta' },
+    { label: 'Facturado del mes', value: usd(billing.billedUsd), hint: 'Los planes de tokens de sus números' },
+    { label: 'Tokens usados', value: int(used), hint: '1 por mensaje · 2 por mensaje de campaña' },
   ]
 
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-[13px] font-semibold text-ink">Facturación · {billing.period}</h3>
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
         {cards.map(c => (
           <Card key={c.label} className="flex flex-col gap-0.5 p-3">
             <span className="text-[11px] text-muted-foreground">{c.label}</span>
@@ -47,12 +45,6 @@ export function BillingSummary({ billing }: { billing: OrganizationBilling }) {
           </Card>
         ))}
       </div>
-      {billing.marginUsd < 0 && (
-        <p className="flex items-center gap-1.5 text-[12px] text-destructive">
-          <AlertTriangle className="size-3.5" />
-          Meta cobra más de lo facturado: ganancia {usd(billing.marginUsd)}
-        </p>
-      )}
     </section>
   )
 }
@@ -64,79 +56,59 @@ export function NumbersSection({ numbers }: { numbers: OrganizationNumber[] }) {
     <section className="flex flex-col gap-2">
       <h3 className="text-[13px] font-semibold text-ink">Números de WhatsApp ({numbers.length})</h3>
       <div className="overflow-x-auto rounded-md border border-line-2">
-        <Table className="min-w-[780px]">
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
               <TableHead>Número</TableHead>
               <TableHead>Código</TableHead>
-              <TableHead className="text-right">OpenAI (aparte)</TableHead>
-              <TableHead className="text-right">Mensajes · plan</TableHead>
-              <TableHead className="text-right">Meta</TableHead>
+              <TableHead className="text-right">Tokens · plan</TableHead>
               <TableHead className="text-right">Facturado</TableHead>
-              <TableHead className="text-right">Ganancia</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {numbers.map(n => {
-              const llmTokens = n.usage.openaiInputTokens + n.usage.openaiOutputTokens
-              return (
-                <TableRow key={n.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="size-3.5 text-muted-foreground" />
-                      <span className="text-[13px] font-medium text-ink">{numberLabel(n)}</span>
-                      {!n.isActive && (
-                        <Badge variant="destructive" className="text-[10px]">
-                          inactivo
-                        </Badge>
-                      )}
-                      {n.budget.exceededAt && (
-                        <Badge variant="destructive" className="text-[10px]">
-                          sin LLM
-                        </Badge>
-                      )}
-                    </div>
-                    <MetaPortfolioLine portfolio={n.portfolio} />
-                    <span className="text-[11px] text-muted-foreground">{n.phoneNumberId}</span>
-                  </TableCell>
-                  <TableCell className="text-[12px]">
-                    {n.responsibleCode ? (
-                      <>
-                        <span className="text-ink">{n.responsibleCode.code}</span>
-                        {n.servedCodes.length > 1 && (
-                          <span className="text-muted-foreground"> +{n.servedCodes.length - 1}</span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">sin asignar</span>
+            {numbers.map(n => (
+              <TableRow key={n.id}>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="size-3.5 text-muted-foreground" />
+                    <span className="text-[13px] font-medium text-ink">{numberLabel(n)}</span>
+                    {!n.isActive && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        inactivo
+                      </Badge>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right text-[12px] text-muted-foreground">
-                    {usd(n.usage.openaiCostUsd)}
-                    <div className="text-[11px]">
-                      {int(n.usage.openaiCalls)} llamadas · {int(llmTokens)} tokens
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right text-[12px] text-muted-foreground">
-                    {int(n.usage.messages)} · <span className="text-ink">{n.usage.plan.name}</span> (
-                    {usd(n.usage.plan.priceUsd)}){n.usage.upgraded && ' · subió'}
-                  </TableCell>
-                  <TableCell className="text-right text-[12px] text-muted-foreground">
-                    {usd(n.usage.metaCostUsd)}
-                    <div className="text-[11px]">{int(n.usage.metaBillableMessages)} con cargo</div>
-                  </TableCell>
-                  <TableCell className="text-right text-[13px] font-medium text-ink">
-                    {usd(n.usage.billedUsd)}
-                  </TableCell>
-                  <TableCell className="text-right text-[12px] text-muted-foreground">
-                    {usd(n.usage.marginUsd)}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
+                    {n.budget.exceededAt && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        sin LLM
+                      </Badge>
+                    )}
+                  </div>
+                  <MetaPortfolioLine portfolio={n.portfolio} />
+                  <span className="text-[11px] text-muted-foreground">{n.phoneNumberId}</span>
+                </TableCell>
+                <TableCell className="text-[12px]">
+                  {n.responsibleCode ? (
+                    <>
+                      <span className="text-ink">{n.responsibleCode.code}</span>
+                      {n.servedCodes.length > 1 && (
+                        <span className="text-muted-foreground"> +{n.servedCodes.length - 1}</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">sin asignar</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right text-[12px] text-muted-foreground">
+                  {int(n.usage.messages)} de {int(n.usage.plan.includedMessages)} ·{' '}
+                  <span className="text-ink">{n.usage.plan.name}</span> ({usd(n.usage.plan.priceUsd)})
+                  {n.usage.upgraded && ' · subió'}
+                </TableCell>
+                <TableCell className="text-right text-[13px] font-medium text-ink">{usd(n.usage.billedUsd)}</TableCell>
+              </TableRow>
+            ))}
             {numbers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-4 text-center text-[13px] text-muted-foreground">
+                <TableCell colSpan={4} className="py-4 text-center text-[13px] text-muted-foreground">
                   Sin números registrados.
                 </TableCell>
               </TableRow>

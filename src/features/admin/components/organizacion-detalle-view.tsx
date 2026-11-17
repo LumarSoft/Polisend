@@ -182,7 +182,7 @@ export function OrganizacionDetalleView({ orgId }: { orgId: number }) {
 
       <OrganizacionPlan org={org} />
 
-      <BillingSummary billing={org.billing} />
+      <BillingSummary billing={org.billing} numbers={org.numbers} />
 
       <NumbersSection numbers={org.numbers} />
 

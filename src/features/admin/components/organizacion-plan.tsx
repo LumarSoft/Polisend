@@ -53,7 +53,7 @@ export function OrganizacionPlan({ org }: { org: OrganizationDetail }) {
         <option value="">Automático{automatic}</option>
         {plans.map(p => (
           <option key={p.id} value={p.id}>
-            {p.name} · {int(p.messages)} mensajes · {usd(p.priceUsd)}
+            {p.name} · {int(p.messages)} tokens · {usd(p.priceUsd)}
           </option>
         ))}
       </select>

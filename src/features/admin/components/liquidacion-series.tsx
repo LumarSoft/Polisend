@@ -81,11 +81,11 @@ export function SettlementSeriesCard() {
             <TableRow className="border-line-2 hover:bg-transparent">
               <TableHead className={`h-11 pl-5 ${HEAD}`}>Mes</TableHead>
               <TableHead className={`text-right ${HEAD}`}>Facturado</TableHead>
-              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Costo</TableHead>
-              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Remanente</TableHead>
-              <TableHead className={`hidden text-right xl:table-cell ${HEAD}`}>Plataforma</TableHead>
-              <TableHead className={`hidden text-right xl:table-cell ${HEAD}`}>Socio</TableHead>
-              <TableHead className={`whitespace-normal text-right ${HEAD}`}>Total plataforma</TableHead>
+              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Costo Lumarsoft</TableHead>
+              <TableHead className={`hidden text-right sm:table-cell ${HEAD}`}>Margen de ganancia</TableHead>
+              <TableHead className={`hidden text-right xl:table-cell ${HEAD}`}>Margen Lumarsoft</TableHead>
+              <TableHead className={`hidden text-right xl:table-cell ${HEAD}`}>Margen Nico</TableHead>
+              <TableHead className={`whitespace-normal text-right ${HEAD}`}>Total Lumarsoft</TableHead>
               <TableHead className={`hidden text-right md:table-cell ${HEAD}`}>Activos</TableHead>
               <TableHead className={`hidden text-right md:table-cell ${HEAD}`}>Nuevos</TableHead>
               <TableHead className={`hidden pr-5 text-right md:table-cell ${HEAD}`}>Bajas</TableHead>
