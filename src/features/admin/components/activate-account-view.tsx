@@ -19,6 +19,13 @@ const INVALID_LINK_MESSAGE = 'El enlace no es válido o ya venció. Pedí uno nu
 const subscribeNothing = () => () => {}
 
 /**
+ * Whether this page load already ended the session the browser held when the link was opened. Module state, not
+ * component state: the panel content remounts on every session change (src/app/admin/providers.tsx), and a remount
+ * must not take a login made later in another tab for the opening session.
+ */
+let openingSessionChecked = false
+
+/**
  * /admin/activar: the person chooses its password from a mailed link (an invitation or a reset). Public: no session
  * is used, and one held in this browser ends before the form shows (the account's older sessions end on success
  * anyway). Every string from the API is plain text. Never logs in: success leads to /admin/login.
@@ -28,7 +35,9 @@ export function ActivateAccountView() {
   const token = useSyncExternalStore(subscribeNothing, readLinkToken, () => undefined)
   const { hydrated, isAuthenticated, logout } = useAuth()
   const activation = useAccountActivation(token ?? null)
-  const sessionCleared = hydrated && !isAuthenticated
+  // Only the session this browser held when the link was opened ends, once. A login made afterwards in another tab
+  // (this person's, after choosing the password, or anyone's) is not this page's to end, however long it stays open.
+  const sessionCleared = hydrated && (!isAuthenticated || openingSessionChecked)
 
   // The token never stays in the address bar, the history or a bookmark: it lives only in memory from here on.
   useEffect(() => {
@@ -36,7 +45,9 @@ export function ActivateAccountView() {
   }, [token])
 
   useEffect(() => {
-    if (hydrated && isAuthenticated) logout()
+    if (!hydrated || openingSessionChecked) return
+    openingSessionChecked = true
+    if (isAuthenticated) logout()
   }, [hydrated, isAuthenticated, logout])
 
   // A dead session held in this browser announces itself on the way out; on this page it is noise.
