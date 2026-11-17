@@ -119,6 +119,19 @@ function prepareRequest(token: string | null | undefined, headers: Record<string
   }
 }
 
+/**
+ * One line of a validation 400. The API answers class-validator's errors as objects (`{ property, constraints,
+ * children }`), not strings: their constraint texts are what is worth showing.
+ */
+function validationText(item: unknown): string {
+  if (typeof item === 'string') return item
+  if (!item || typeof item !== 'object') return ''
+  const { constraints, children } = item as { constraints?: Record<string, unknown>; children?: unknown[] }
+  const own = Object.values(constraints ?? {}).filter((text): text is string => typeof text === 'string')
+  const nested = Array.isArray(children) ? children.map(validationText) : []
+  return [...own, ...nested].filter(Boolean).join(', ')
+}
+
 async function readError(res: Response): Promise<ApiError> {
   let body: unknown
   try {
@@ -127,8 +140,9 @@ async function readError(res: Response): Promise<ApiError> {
     // response had no JSON body — fall through to the generic message
   }
   const data = (body && typeof body === 'object' ? body : {}) as { message?: unknown; code?: unknown }
-  const message = Array.isArray(data.message)
-    ? data.message.join(', ')
+  const joined = Array.isArray(data.message) ? data.message.map(validationText).filter(Boolean).join(', ') : ''
+  const message = joined
+    ? joined
     : typeof data.message === 'string'
       ? data.message
       : `Request failed with status ${res.status}`
