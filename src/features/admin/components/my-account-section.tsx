@@ -11,11 +11,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api-client'
 import type { UpdateProfileRequest } from '@/types/api/auth'
 import { useProfile } from '../hooks/use-profile'
+import { useRole } from '../hooks/use-role'
 import { useUpdateProfile } from '../hooks/use-update-profile'
 import { TwoFactorCard } from './two-factor-card'
 
 function AccountForm({ initialEmail, initialName }: { initialEmail: string; initialName: string }) {
   const updateProfile = useUpdateProfile()
+  // The office sees its own people by name in Tareas; an Owner shows there as "Owner", and the Developer has no Tareas.
+  const { isSuperAdmin, isAdmin } = useRole()
 
   const [email, setEmail] = useState(initialEmail)
   const [name, setName] = useState(initialName)
@@ -59,7 +62,8 @@ function AccountForm({ initialEmail, initialName }: { initialEmail: string; init
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <Label htmlFor="settings-name">
-              Nombre <span className="text-muted-foreground">(así te ven en Tareas)</span>
+              Nombre{' '}
+              {(isSuperAdmin || isAdmin) && <span className="text-muted-foreground">(así te ven en Tareas)</span>}
             </Label>
             <Input
               id="settings-name"

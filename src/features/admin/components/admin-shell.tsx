@@ -72,7 +72,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   // Nothing renders (nothing loads) until the role is known, nor a screen the Developer is being taken out of.
   if (!hydrated || !isAuthenticated || (roleLoading && !role) || developerOutside) return <ShellLoading />
 
-  const title = TITLES[pathname] ?? 'Panel'
+  const title =
+    TITLES[pathname] ?? (pathname.startsWith('/admin/organizaciones/') ? 'Organización' : undefined) ?? 'Panel'
   // The Whatsapp section fills the whole screen, like WhatsApp Web, and carries
   // the menu button in its own header.
   const fullScreen = pathname === '/admin/inbox'
