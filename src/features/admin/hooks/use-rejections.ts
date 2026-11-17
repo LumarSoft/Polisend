@@ -4,12 +4,12 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type { CreateRejectionImportRequest, RejectionImport } from '@/types/api/rejections'
 import { useAuth } from '../context/auth-context'
 
-export function useRejectionImports() {
+export function useRejectionImports(enabled = true) {
   const { token } = useAuth()
   return useQuery({
     queryKey: QUERY_KEYS.admin.rejectionImports,
     queryFn: () => rejectionsService.list(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
   })
 }
 

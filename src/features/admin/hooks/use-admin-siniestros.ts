@@ -3,13 +3,13 @@ import { adminSiniestrosService, type AdminSiniestrosQuery } from '@/services/si
 import { QUERY_KEYS } from '@/lib/query-keys'
 import { useAuth } from '../context/auth-context'
 
-export function useAdminSiniestros(params: AdminSiniestrosQuery) {
+export function useAdminSiniestros(params: AdminSiniestrosQuery, enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.siniestros(params),
     queryFn: () => adminSiniestrosService.list(params, token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
     placeholderData: keepPreviousData,
   })
 }

@@ -12,6 +12,7 @@ import {
 import { useImprovements } from '../hooks/use-improvements'
 import { useImprovementsVisit } from '../hooks/use-improvements-visit'
 import { useListPage } from '../hooks/use-list-page'
+import { useRole } from '../hooks/use-role'
 import { ImprovementCard } from './improvement-card'
 import { ListPagination } from './list-pagination'
 
@@ -51,7 +52,9 @@ export function MejorasView() {
     isError,
     isFetching,
   } = useImprovements({ page, pageSize: PAGE_SIZE, area: area || undefined })
-  const { previousVisitAt, newCount } = useImprovementsVisit()
+  // The "new" marks are per user: an Owner moving between principals would mix them, so it has none.
+  const { isOwner } = useRole()
+  const { previousVisitAt, newCount } = useImprovementsVisit(!isOwner)
   keepWithin(result?.totalPages)
 
   const improvements = result?.data ?? []
@@ -68,7 +71,9 @@ export function MejorasView() {
     <div ref={topRef} className="scroll-mt-20">
       <p className="mb-5 text-[13px] text-muted-foreground">
         Lo que fuimos cambiando en el bot y en el panel.
-        {newCount > 0 && ` ${newCount === 1 ? 'Hay 1 nueva' : `Hay ${newCount} nuevas`} desde tu última visita.`}
+        {!isOwner &&
+          newCount > 0 &&
+          ` ${newCount === 1 ? 'Hay 1 nueva' : `Hay ${newCount} nuevas`} desde tu última visita.`}
       </p>
 
       {areas.length > 1 && (
@@ -122,7 +127,7 @@ export function MejorasView() {
               <ImprovementCard
                 key={improvement.id}
                 improvement={improvement}
-                isNew={isNewSince(improvement, previousVisitAt)}
+                isNew={!isOwner && isNewSince(improvement, previousVisitAt)}
               />
             ))}
           </section>

@@ -54,6 +54,8 @@ import { numberLabel } from '../lib/number-label'
 import { PlanLimitActions } from './plan-limit-actions'
 import { HEAD, int, Kpi, MonthPicker, thisMonth, usd } from './billing-ui'
 import { LiquidacionTab } from './liquidacion-tab'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 import { useUrlTab } from '../hooks/use-panel-link'
 
 const price = (n: number) => (n === 0 ? 'Gratis' : usd(n))
@@ -770,7 +772,10 @@ export function FacturacionView() {
   const { isDeveloper, canManageOrg, isAdmin, isLoading: roleLoading } = useRole()
   // `?tab=` (the assistant's links) or the role's first tab.
   const [tab, setTab] = useUrlTab<BillingTab | 'auto'>(['consumo', 'planes', 'tablero', 'liquidacion'], 'auto')
-  const current: BillingTab = tab === 'auto' ? (isDeveloper ? 'tablero' : 'consumo') : tab
+  // A tab of the other side (an office link to Consumo opened by the Developer, a Tablero link opened by an office)
+  // falls back to the role's first tab: the money tabs only ever render for the Developer.
+  const roleTabs: BillingTab[] = isDeveloper ? ['tablero', 'liquidacion', 'planes'] : ['consumo', 'planes']
+  const current: BillingTab = tab !== 'auto' && roleTabs.includes(tab) ? tab : roleTabs[0]
 
   if (!roleLoading && !isDeveloper && !canManageOrg && !isAdmin) {
     return (
@@ -782,49 +787,55 @@ export function FacturacionView() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
-      <div className="mb-6">
-        <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
-          {isDeveloper ? 'Plataforma' : 'Planes y consumo'}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
+            {isDeveloper ? 'Plataforma' : 'Planes y consumo'}
+          </div>
+          <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Facturación</h1>
+          <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
+            {isDeveloper
+              ? 'Lo que se factura a cada organización contra lo que cuestan sus mensajes, cómo se reparte con el socio comercial y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes por mensajes.'
+              : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
+          </p>
         </div>
-        <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Facturación</h1>
-        <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
-          {isDeveloper
-            ? 'Lo que se factura a cada organización contra lo que cuestan sus mensajes, cómo se reparte con el socio comercial y el catálogo de planes. Los precios solo los ves vos: las organizaciones ven sus planes por mensajes.'
-            : 'Cada número tiene un plan de mensajes por mes: cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente. Se factura a mes vencido.'}
-        </p>
+        {/* An Owner's Zona › Principal: the plans and messages of that principal's numbers, never an amount. */}
+        <NetworkFilter showProducer={false} />
       </div>
 
-      {(isDeveloper || canManageOrg) && (
-        <Tabs value={current} onValueChange={v => setTab(v as BillingTab)} className="mb-5">
-          <TabsList>
-            {isDeveloper ? (
-              <>
-                <TabsTrigger value="tablero">Tablero</TabsTrigger>
-                <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
-              </>
-            ) : (
-              <TabsTrigger value="consumo">Consumo</TabsTrigger>
-            )}
-            <TabsTrigger value="planes">Planes</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
+      <RequirePrincipal showFilter={false}>
+        {(isDeveloper || canManageOrg) && (
+          <Tabs value={current} onValueChange={v => setTab(v as BillingTab)} className="mb-5">
+            <TabsList>
+              {isDeveloper ? (
+                <>
+                  <TabsTrigger value="tablero">Tablero</TabsTrigger>
+                  <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
+                </>
+              ) : (
+                <TabsTrigger value="consumo">Consumo</TabsTrigger>
+              )}
+              <TabsTrigger value="planes">Planes</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
-      {roleLoading ? (
-        <Skeleton className="h-[200px] rounded-xl" />
-      ) : isDeveloper ? (
-        current === 'planes' ? (
-          <PlatformPlansTab />
-        ) : current === 'liquidacion' ? (
-          <LiquidacionTab />
+        {roleLoading ? (
+          <Skeleton className="h-[200px] rounded-xl" />
+        ) : isDeveloper ? (
+          current === 'planes' ? (
+            <PlatformPlansTab />
+          ) : current === 'liquidacion' ? (
+            <LiquidacionTab />
+          ) : (
+            <PlatformDashboardTab />
+          )
+        ) : current === 'planes' && canManageOrg ? (
+          <OfferTab />
         ) : (
-          <PlatformDashboardTab />
-        )
-      ) : current === 'planes' && canManageOrg ? (
-        <OfferTab />
-      ) : (
-        <ConsumptionTab canAssign={canManageOrg} />
-      )}
+          <ConsumptionTab canAssign={canManageOrg} />
+        )}
+      </RequirePrincipal>
     </div>
   )
 }

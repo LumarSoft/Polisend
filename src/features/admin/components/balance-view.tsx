@@ -12,6 +12,7 @@ import type { BalanceMetricKey, BalanceMonth } from '@/types/api/balance'
 import { useBalance } from '../hooks/use-balance'
 import { useRole } from '../hooks/use-role'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import {
   BACKFILL_NOTE,
   BALANCE_METRIC_INFO,
@@ -23,7 +24,8 @@ import {
   type BalanceMetricInfo,
   type ChangeTone,
 } from '../lib/balance-format'
-import { ScopeFilter } from './scope-filter'
+import { RequirePrincipal } from './require-principal'
+import { SectionScopeFilter } from './section-scope-filter'
 
 // Recharts is heavy and never needed on first paint — load it lazily.
 const BalanceCharts = dynamic(() => import('./balance-charts').then(m => m.BalanceCharts), {
@@ -173,7 +175,8 @@ function BalanceContent() {
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
   const [scope, setScope] = useScopeFilterState()
   const [months, setMonths] = useState(12)
-  const { data, isLoading, isError, refetch } = useBalance({ months, ...scope })
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data, isLoading, isError, refetch } = useBalance({ months, ...scope }, tenantEnabled)
   const recorded = data?.months.filter(month => month.recorded) ?? []
   const latest = recorded.at(-1)
 
@@ -191,7 +194,7 @@ function BalanceContent() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ScopeFilter value={scope} onChange={setScope} />
+          <SectionScopeFilter value={scope} onChange={setScope} />
           <select
             value={months}
             onChange={e => setMonths(Number(e.target.value))}
@@ -216,60 +219,62 @@ function BalanceContent() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[112px] rounded-xl" />
-          ))}
-        </div>
-      ) : null}
+      <RequirePrincipal showFilter={false}>
+        {isLoading ? (
+          <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[112px] rounded-xl" />
+            ))}
+          </div>
+        ) : null}
 
-      {isError ? (
-        <Card className="mt-8 border-line-2 shadow-sm">
-          <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
-              <AlertTriangle className="size-6" />
-            </span>
-            <div>
-              <h2 className="font-display text-[20px] text-ink">No pudimos cargar el balance</h2>
-              <p className="mx-auto mt-1.5 max-w-[380px] text-[13.5px] text-muted-foreground">
-                Revisá tu conexión e intentá de nuevo.
+        {isError ? (
+          <Card className="mt-8 border-line-2 shadow-sm">
+            <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                <AlertTriangle className="size-6" />
+              </span>
+              <div>
+                <h2 className="font-display text-[20px] text-ink">No pudimos cargar el balance</h2>
+                <p className="mx-auto mt-1.5 max-w-[380px] text-[13.5px] text-muted-foreground">
+                  Revisá tu conexión e intentá de nuevo.
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => refetch()}>
+                Reintentar
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {data && !recorded.length ? (
+          <Card className="mt-8 border-line-2 shadow-sm">
+            <CardContent className="py-14 text-center">
+              <h2 className="font-display text-[20px] text-ink">Todavía no hay balances</h2>
+              <p className="mx-auto mt-1.5 max-w-[420px] text-[13.5px] text-muted-foreground">
+                El balance de cada mes se arma el día 1 del mes siguiente. Cuando esté el primero lo vas a ver acá.
               </p>
-            </div>
-            <Button variant="outline" onClick={() => refetch()}>
-              Reintentar
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
-      {data && !recorded.length ? (
-        <Card className="mt-8 border-line-2 shadow-sm">
-          <CardContent className="py-14 text-center">
-            <h2 className="font-display text-[20px] text-ink">Todavía no hay balances</h2>
-            <p className="mx-auto mt-1.5 max-w-[420px] text-[13.5px] text-muted-foreground">
-              El balance de cada mes se arma el día 1 del mes siguiente. Cuando esté el primero lo vas a ver acá.
+        {data && latest ? (
+          <>
+            <p className="mt-8 text-[12.5px] text-muted-foreground">
+              Último cierre: <span className="font-medium text-ink">{periodLabel(latest.period)}</span>
             </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {data && latest ? (
-        <>
-          <p className="mt-8 text-[12.5px] text-muted-foreground">
-            Último cierre: <span className="font-medium text-ink">{periodLabel(latest.period)}</span>
-          </p>
-          <Highlights month={latest} />
-          <BalanceCharts months={data.months} />
-          <BalanceTable months={data.months} />
-          <p className="mt-3 text-[12px] text-muted-foreground">
-            <span className="italic">sin dato</span>: ese mes no se registró. Los meses marcados{' '}
-            <span className="text-amber-700 dark:text-amber">reconstruido</span> se armaron después con lo que quedó
-            registrado: la deuda, las cuotas, los siniestros abiertos, las solicitudes cerradas y la prima vigente de
-            ese cierre no se pueden saber.
-          </p>
-        </>
-      ) : null}
+            <Highlights month={latest} />
+            <BalanceCharts months={data.months} />
+            <BalanceTable months={data.months} />
+            <p className="mt-3 text-[12px] text-muted-foreground">
+              <span className="italic">sin dato</span>: ese mes no se registró. Los meses marcados{' '}
+              <span className="text-amber-700 dark:text-amber">reconstruido</span> se armaron después con lo que quedó
+              registrado: la deuda, las cuotas, los siniestros abiertos, las solicitudes cerradas y la prima vigente de
+              ese cierre no se pueden saber.
+            </p>
+          </>
+        ) : null}
+      </RequirePrincipal>
     </div>
   )
 }

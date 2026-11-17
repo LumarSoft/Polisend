@@ -28,6 +28,9 @@ import { OwnNumberSettings } from './own-number-settings'
 import { TriunfoSettingsSection } from './triunfo-settings-section'
 import { splitNames } from '../lib/number-assistant-form'
 import { useUrlTab } from '../hooks/use-panel-link'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 
 /** "Mili, Milagros" → ["Mili", "Milagros"]. */
 /** How the bot names the organization: its name and an optional short name ("Seguros del Litoral (SDL)"). */
@@ -233,7 +236,9 @@ function FormSkeleton() {
 
 export function SettingsView() {
   const { data: profile } = useProfile()
-  const { data: config } = useProducerConfig()
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data: config } = useProducerConfig(tenantEnabled)
   const { canManageOrg, isAdmin } = useRole()
   // Only the SuperAdmin changes what applies to every number; a branch's admin changes their own number's
   // (from 28/10 to 10/11 any admin could, and branches saved their own data as the whole organization's).
@@ -261,60 +266,68 @@ export function SettingsView() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-5 py-8 md:px-8 md:py-10">
-      <div className="mb-7">
-        <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">Configuración</div>
-        <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">Configuración</h1>
-        <p className="mt-1.5 text-[14px] text-muted-foreground">
-          Gestioná tu cuenta, el asistente de WhatsApp, los horarios de atención y los precios.
-        </p>
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">Configuración</div>
+          <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">
+            Configuración
+          </h1>
+          <p className="mt-1.5 text-[14px] text-muted-foreground">
+            Gestioná tu cuenta, el asistente de WhatsApp, los horarios de atención y los precios.
+          </p>
+        </div>
+        {/* An Owner's Zona › Principal: these settings are the whole principal's. */}
+        <NetworkFilter showProducer={false} />
       </div>
 
-      <Tabs value={tab} onValueChange={value => setTab(value as (typeof TAB_VALUES)[number])}>
-        <TabsList variant="line" className="h-auto max-w-full flex-wrap justify-start gap-1">
-          {TABS.map(tab => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              data-help={`config-${tab.value}`}
-              className="gap-1.5 px-3 py-1.5 text-[13.5px]"
-            >
-              <tab.icon className="size-4" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <RequirePrincipal showFilter={false}>
+        <Tabs value={tab} onValueChange={value => setTab(value as (typeof TAB_VALUES)[number])}>
+          <TabsList variant="line" className="h-auto max-w-full flex-wrap justify-start gap-1">
+            {TABS.map(tab => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                data-help={`config-${tab.value}`}
+                className="gap-1.5 px-3 py-1.5 text-[13.5px]"
+              >
+                <tab.icon className="size-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <TabsContent value="cuenta" className="mt-6">
-          <MyAccountSection />
-        </TabsContent>
+          <TabsContent value="cuenta" className="mt-6">
+            <MyAccountSection />
+          </TabsContent>
 
-        <TabsContent value="asistente" className="mt-6">
-          {isAdmin ? <OwnNumberSettings fallback={organizationAssistant} /> : organizationAssistant}
-        </TabsContent>
+          <TabsContent value="asistente" className="mt-6">
+            {isAdmin ? <OwnNumberSettings fallback={organizationAssistant} /> : organizationAssistant}
+          </TabsContent>
 
-        <TabsContent value="marca" className="mt-6">
-          <LogoCard canEdit={canManageOrg} />
-        </TabsContent>
+          <TabsContent value="marca" className="mt-6">
+            <LogoCard canEdit={canManageOrg} />
+          </TabsContent>
 
-        <TabsContent value="horarios" className="mt-6 space-y-5">
-          {isAdmin && <OrganizationOnlyHint what="El horario y los feriados de tu número" />}
-          <BusinessHoursSection canEdit={canEditOrg} />
-        </TabsContent>
+          <TabsContent value="horarios" className="mt-6 space-y-5">
+            {isAdmin && <OrganizationOnlyHint what="El horario y los feriados de tu número" />}
+            <BusinessHoursSection canEdit={canEditOrg} />
+          </TabsContent>
 
-        <TabsContent value="coberturas" className="mt-6 space-y-5">
-          {isAdmin && <OrganizationOnlyHint what="Qué coberturas ofrece tu número, cuál recomienda y en qué orden" />}
-          <CoverageSettingsSection canEdit={canEditOrg} />
-          <MotoCoverageSettingsSection canEdit={canEditOrg} />
-        </TabsContent>
+          <TabsContent value="coberturas" className="mt-6 space-y-5">
+            {isAdmin && <OrganizationOnlyHint what="Qué coberturas ofrece tu número, cuál recomienda y en qué orden" />}
+            <CoverageSettingsSection canEdit={canEditOrg} />
+            <MotoCoverageSettingsSection canEdit={canEditOrg} />
+          </TabsContent>
 
-        <TabsContent value="precios" className="mt-6">
-          <PricingPlansSection canEdit={canEditOrg} />
-        </TabsContent>
+          <TabsContent value="precios" className="mt-6">
+            <PricingPlansSection canEdit={canEditOrg} />
+          </TabsContent>
 
-        <TabsContent value="triunfo" className="mt-6">
-          <TriunfoSettingsSection canEdit={canEditOrg} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="triunfo" className="mt-6">
+            <TriunfoSettingsSection canEdit={canEditOrg} />
+          </TabsContent>
+        </Tabs>
+      </RequirePrincipal>
     </div>
   )
 }

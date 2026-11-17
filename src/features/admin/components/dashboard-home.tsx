@@ -7,8 +7,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/features/admin/lib/asegurados-ui'
 import { useDashboard } from '../hooks/use-dashboard'
-import { ScopeFilter } from './scope-filter'
+import { SectionScopeFilter } from './section-scope-filter'
+import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import type { DashboardData } from '@/types/api/dashboard'
 import { PlanLimitAlerts } from './plan-limit-alerts'
 
@@ -131,7 +133,7 @@ function DashboardSkeleton() {
 export function DashboardHome() {
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
   const [scope, setScope] = useScopeFilterState()
-  const { data, isLoading, isError, refetch } = useDashboard(scope)
+  const { data, isLoading, isError, refetch } = useDashboard(scope, useTenantQueriesEnabled())
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
@@ -150,41 +152,43 @@ export function DashboardHome() {
             Un resumen en vivo de tu operación: asegurados, solicitudes, cobranzas y siniestros.
           </p>
         </div>
-        <ScopeFilter value={scope} onChange={setScope} />
+        <SectionScopeFilter value={scope} onChange={setScope} />
       </motion.div>
 
-      <PlanLimitAlerts />
+      <RequirePrincipal showFilter={false}>
+        <PlanLimitAlerts />
 
-      {isLoading ? <DashboardSkeleton /> : null}
+        {isLoading ? <DashboardSkeleton /> : null}
 
-      {isError ? (
-        <Card className="mt-8 border-line-2 shadow-sm">
-          <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
-              <AlertTriangle className="size-6" />
-            </span>
-            <div>
-              <h2 className="font-display text-[20px] text-ink">No pudimos cargar las métricas</h2>
-              <p className="mx-auto mt-1.5 max-w-[380px] text-[13.5px] text-muted-foreground">
-                Revisá tu conexión e intentá de nuevo.
-              </p>
-            </div>
-            <button
-              onClick={() => refetch()}
-              className="rounded-lg border border-ember-ring bg-ember-soft px-4 py-2 text-[13px] font-medium text-ember-2 transition-colors hover:bg-ember/15"
-            >
-              Reintentar
-            </button>
-          </CardContent>
-        </Card>
-      ) : null}
+        {isError ? (
+          <Card className="mt-8 border-line-2 shadow-sm">
+            <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                <AlertTriangle className="size-6" />
+              </span>
+              <div>
+                <h2 className="font-display text-[20px] text-ink">No pudimos cargar las métricas</h2>
+                <p className="mx-auto mt-1.5 max-w-[380px] text-[13.5px] text-muted-foreground">
+                  Revisá tu conexión e intentá de nuevo.
+                </p>
+              </div>
+              <button
+                onClick={() => refetch()}
+                className="rounded-lg border border-ember-ring bg-ember-soft px-4 py-2 text-[13px] font-medium text-ember-2 transition-colors hover:bg-ember/15"
+              >
+                Reintentar
+              </button>
+            </CardContent>
+          </Card>
+        ) : null}
 
-      {data ? (
-        <>
-          <KpiRow data={data} />
-          <DashboardCharts data={data} />
-        </>
-      ) : null}
+        {data ? (
+          <>
+            <KpiRow data={data} />
+            <DashboardCharts data={data} />
+          </>
+        ) : null}
+      </RequirePrincipal>
     </div>
   )
 }

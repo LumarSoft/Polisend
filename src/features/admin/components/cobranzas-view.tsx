@@ -28,8 +28,11 @@ import type { CobranzaCliente, CobranzaEstadoFilter, CobranzasStats } from '@/ty
 import { useCobranzas } from '../hooks/use-cobranzas'
 import { usePanelBrand } from '../hooks/use-panel-brand'
 import { useCobranzasStats } from '../hooks/use-cobranzas-stats'
-import { ScopeFilter, type ScopeFilterValue } from './scope-filter'
+import type { ScopeFilterValue } from './scope-filter'
+import { SectionScopeFilter } from './section-scope-filter'
+import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import {
   buildCobranzaWhatsappUrl,
   formatCurrency,
@@ -412,15 +415,13 @@ export function CobranzasView() {
     setPage(1)
   }
 
-  const { data, isLoading, isError, isFetching } = useCobranzas({
-    search,
-    status: filter,
-    ...scope,
-    paymentMethod: paymentMethod || undefined,
-    page,
-    pageSize: PAGE_SIZE,
-  })
-  const { data: stats } = useCobranzasStats({ ...scope, paymentMethod: paymentMethod || undefined })
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data, isLoading, isError, isFetching } = useCobranzas(
+    { search, status: filter, ...scope, paymentMethod: paymentMethod || undefined, page, pageSize: PAGE_SIZE },
+    tenantEnabled,
+  )
+  const { data: stats } = useCobranzasStats({ ...scope, paymentMethod: paymentMethod || undefined }, tenantEnabled)
 
   const rows = data?.data ?? []
   const total = data?.total ?? 0
@@ -439,207 +440,224 @@ export function CobranzasView() {
           </p>
         </div>
         <div className="flex w-full max-w-xs flex-col gap-2">
-          <ScopeFilter value={scope} onChange={handleScope} className="w-full" />
-          <PaymentMethodFilter
-            value={paymentMethod}
-            options={stats?.paymentMethods ?? []}
-            onChange={handlePaymentMethod}
+          {/* A narrow column: an Owner's Zona, Principal, Productor and number stack at its full width. */}
+          <SectionScopeFilter
+            value={scope}
+            onChange={handleScope}
+            className="w-full [&_button[role=combobox]]:w-full [&_select]:w-full"
           />
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar nombre, DNI, email, patente…"
-              value={searchInput}
-              onChange={e => handleSearch(e.target.value)}
-              className="h-10 border-line-2 px-9 text-[13px]"
-            />
-            {isFetching && !isLoading && searchInput ? (
-              <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-            ) : searchInput ? (
-              <button
-                type="button"
-                aria-label="Limpiar búsqueda"
-                onClick={() => handleSearch('')}
-                className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-              >
-                <X className="size-3.5" />
-              </button>
-            ) : null}
-          </div>
+          {tenantEnabled && (
+            <>
+              <PaymentMethodFilter
+                value={paymentMethod}
+                options={stats?.paymentMethods ?? []}
+                onChange={handlePaymentMethod}
+              />
+              <div className="relative w-full">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar nombre, DNI, email, patente…"
+                  value={searchInput}
+                  onChange={e => handleSearch(e.target.value)}
+                  className="h-10 border-line-2 px-9 text-[13px]"
+                />
+                {isFetching && !isLoading && searchInput ? (
+                  <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                ) : searchInput ? (
+                  <button
+                    type="button"
+                    aria-label="Limpiar búsqueda"
+                    onClick={() => handleSearch('')}
+                    className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={v => setTab(v as CobranzasTab)} className="mb-5">
-        <TabsList>
-          <TabsTrigger value="cuotas">Cuotas</TabsTrigger>
-          <TabsTrigger value="vencidas" data-help="cobranzas-vencidas">
-            Pólizas vencidas
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <RequirePrincipal showFilter={false}>
+        <Tabs value={tab} onValueChange={v => setTab(v as CobranzasTab)} className="mb-5">
+          <TabsList>
+            <TabsTrigger value="cuotas">Cuotas</TabsTrigger>
+            <TabsTrigger value="vencidas" data-help="cobranzas-vencidas">
+              Pólizas vencidas
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-      {tab === 'vencidas' ? (
-        <ExpiredPoliciesTab
-          scope={{ ...scope, paymentMethod: paymentMethod || undefined }}
-          search={search}
-          onSelectClient={setSelectedId}
-        />
-      ) : (
-        <>
-          <KpiRow stats={stats} />
+        {tab === 'vencidas' ? (
+          <ExpiredPoliciesTab
+            scope={{ ...scope, paymentMethod: paymentMethod || undefined }}
+            search={search}
+            onSelectClient={setSelectedId}
+          />
+        ) : (
+          <>
+            <KpiRow stats={stats} />
 
-          {/* Segmented filter — fixed equal-width columns, no reflow */}
-          <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-line-2 bg-secondary/50 p-1 sm:max-w-2xl sm:grid-cols-4">
-            {FILTERS.map(option => {
-              const active = filter === option.value
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => handleFilter(option.value)}
-                  className={`flex h-9 items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
-                    active
-                      ? 'bg-background text-ink shadow-sm dark:bg-canvas-3'
-                      : 'text-muted-foreground hover:text-ink'
-                  }`}
-                >
-                  {option.label}
-                  <span
-                    className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
-                      active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
+            {/* Segmented filter — fixed equal-width columns, no reflow */}
+            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-line-2 bg-secondary/50 p-1 sm:max-w-2xl sm:grid-cols-4">
+              {FILTERS.map(option => {
+                const active = filter === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => handleFilter(option.value)}
+                    className={`flex h-9 items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
+                      active
+                        ? 'bg-background text-ink shadow-sm dark:bg-canvas-3'
+                        : 'text-muted-foreground hover:text-ink'
                     }`}
                   >
-                    {filterCount(stats, option.value)}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+                    {option.label}
+                    <span
+                      className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+                        active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
+                      }`}
+                    >
+                      {filterCount(stats, option.value)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
 
-          <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-line-2 hover:bg-transparent">
-                  <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-faint">
-                    Asegurado
-                  </TableHead>
-                  <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint lg:table-cell">
-                    Pólizas
-                  </TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">Estado de deuda</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] text-faint">Monto</TableHead>
-                  <TableHead className="pr-5 text-right text-[11px] uppercase tracking-[0.12em] text-faint">
-                    Contacto
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className={isFetching && !isLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-                {isLoading &&
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="py-3 pl-5">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="size-9 rounded-full" />
-                          <div className="space-y-1.5">
-                            <Skeleton className="h-3.5 w-32" />
-                            <Skeleton className="h-3 w-20" />
+            <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-line-2 hover:bg-transparent">
+                    <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-faint">
+                      Asegurado
+                    </TableHead>
+                    <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint lg:table-cell">
+                      Pólizas
+                    </TableHead>
+                    <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">
+                      Estado de deuda
+                    </TableHead>
+                    <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] text-faint">
+                      Monto
+                    </TableHead>
+                    <TableHead className="pr-5 text-right text-[11px] uppercase tracking-[0.12em] text-faint">
+                      Contacto
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody
+                  className={isFetching && !isLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}
+                >
+                  {isLoading &&
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="py-3 pl-5">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="size-9 rounded-full" />
+                            <div className="space-y-1.5">
+                              <Skeleton className="h-3.5 w-32" />
+                              <Skeleton className="h-3 w-20" />
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <Skeleton className="h-6 w-24 rounded-md" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-28 rounded-full" />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="ml-auto h-5 w-20" />
-                      </TableCell>
-                      <TableCell className="pr-5">
-                        <Skeleton className="ml-auto h-8 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <Skeleton className="h-6 w-24 rounded-md" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-28 rounded-full" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="ml-auto h-5 w-20" />
+                        </TableCell>
+                        <TableCell className="pr-5">
+                          <Skeleton className="ml-auto h-8 w-16 rounded-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                  {isError && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-14 text-center text-[14px] text-destructive">
+                        No se pudo cargar la cartera de cobranzas.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
 
-                {isError && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-14 text-center text-[14px] text-destructive">
-                      No se pudo cargar la cartera de cobranzas.
-                    </TableCell>
-                  </TableRow>
-                )}
-
-                {!isLoading && !isError && rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
-                          <CheckCircle2 className="size-5" />
+                  {!isLoading && !isError && rows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                            <CheckCircle2 className="size-5" />
+                          </div>
+                          <p className="text-[14px] text-muted-foreground">
+                            {search
+                              ? 'No se encontraron asegurados con deuda para esa búsqueda.'
+                              : paymentMethod
+                                ? `No hay cuotas en este estado con ${paymentMethod}.`
+                                : 'No hay cuotas en este estado. Tu cartera está al día.'}
+                          </p>
                         </div>
-                        <p className="text-[14px] text-muted-foreground">
-                          {search
-                            ? 'No se encontraron asegurados con deuda para esa búsqueda.'
-                            : paymentMethod
-                              ? `No hay cuotas en este estado con ${paymentMethod}.`
-                              : 'No hay cuotas en este estado. Tu cartera está al día.'}
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {!isLoading &&
+                    rows.map(client => (
+                      <CobranzaRow key={client.id} client={client} onSelect={() => setSelectedId(client.id)} />
+                    ))}
+                </TableBody>
+              </Table>
+            </Card>
+
+            {!isLoading && !isError && total > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[12px] text-muted-foreground">
+                  Mostrando{' '}
+                  <span className="font-medium text-ink-3">
+                    {rangeStart}–{rangeEnd}
+                  </span>{' '}
+                  de <span className="font-medium text-ink-3">{total}</span> {total === 1 ? 'asegurado' : 'asegurados'}
+                </p>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={page <= 1}
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      className="h-8 border-line-2 px-2.5 text-[12.5px]"
+                    >
+                      <ChevronLeft className="size-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-[12.5px] text-muted-foreground">
+                      Página <span className="font-medium text-ink-3">{page}</span> de {totalPages}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      className="h-8 border-line-2 px-2.5 text-[12.5px]"
+                    >
+                      Siguiente
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
                 )}
-
-                {!isLoading &&
-                  rows.map(client => (
-                    <CobranzaRow key={client.id} client={client} onSelect={() => setSelectedId(client.id)} />
-                  ))}
-              </TableBody>
-            </Table>
-          </Card>
-
-          {!isLoading && !isError && total > 0 && (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[12px] text-muted-foreground">
-                Mostrando{' '}
-                <span className="font-medium text-ink-3">
-                  {rangeStart}–{rangeEnd}
-                </span>{' '}
-                de <span className="font-medium text-ink-3">{total}</span> {total === 1 ? 'asegurado' : 'asegurados'}
-              </p>
-
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    className="h-8 border-line-2 px-2.5 text-[12.5px]"
-                  >
-                    <ChevronLeft className="size-4" />
-                    Anterior
-                  </Button>
-                  <span className="text-[12.5px] text-muted-foreground">
-                    Página <span className="font-medium text-ink-3">{page}</span> de {totalPages}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    className="h-8 border-line-2 px-2.5 text-[12.5px]"
-                  >
-                    Siguiente
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
+              </div>
+            )}
+          </>
+        )}
+      </RequirePrincipal>
 
       <AseguradoSheet
         clientId={selectedId}

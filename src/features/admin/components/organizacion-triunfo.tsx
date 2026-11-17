@@ -58,20 +58,20 @@ export function OrganizacionTriunfo({ orgId }: { orgId: number }) {
                     onSuccess: next =>
                       toast.success(
                         next.quoteFallback
-                          ? 'Cotiza con la cuenta principal hasta tener la propia'
-                          : 'Ya no cotiza con la cuenta principal',
+                          ? 'Cotiza con la cuenta de Polisend hasta tener la propia'
+                          : 'Ya no cotiza con la cuenta de Polisend',
                       ),
                     onError: error =>
                       toast.error(error instanceof ApiError ? error.message : 'No se pudo guardar. Intentá de nuevo.'),
                   })
                 }
               />
-              Cotizar con la cuenta principal mientras llegan sus credenciales
+              Cotizar con la cuenta de Polisend mientras llegan sus credenciales
             </label>
             <p className="text-[12px] text-muted-foreground">
-              Provisorio. Las cotizaciones de autos y motos de esta organización salen con la cuenta de Triunfo de la
-              organización principal y quedan registradas en Triunfo a su nombre. La cartera y los documentos siguen
-              esperando las credenciales propias. Se desactiva solo al guardarlas.
+              Provisorio. Las cotizaciones de autos y motos de esta organización salen con la cuenta de Triunfo de
+              Polisend y quedan registradas en Triunfo a su nombre. La cartera y los documentos siguen esperando las
+              credenciales propias. Se desactiva solo al guardarlas.
             </p>
           </div>
         )}
