@@ -40,7 +40,12 @@ export function useOrganizationMutations(orgId?: number) {
 
   const create = useMutation({
     mutationFn: (data: CreateOrganizationRequest) => organizationsService.create(token as string, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      // A new organization may land in a zone: the zones and the network list it too.
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.platform.zones })
+      void qc.invalidateQueries({ queryKey: QUERY_KEYS.hierarchy.all })
+    },
   })
   /** Switch on or off, or move between zones (Developer). */
   const update = useMutation({
