@@ -168,14 +168,16 @@ export function useNetworkUserForm({ user, defaultPrincipalId, defaultRole = ROL
       ? accessSummary({ who, role, principalName, codes: seenCodes, newPrincipal: usingNewPrincipal })
       : null
 
-  const invitation = `Le llega un correo${email.trim() ? ` a ${email.trim()}` : ''} con un enlace para elegir su contraseña (vence en 72 horas).`
+  // The Developer's "Datos" block already says every account of its is invited by mail: said once, there.
   const credentialsNote = isEdit
     ? password
       ? 'Va a entrar con la contraseña nueva: sus sesiones abiertas se cierran.'
       : null
-    : isDeveloper || !password
-      ? invitation
-      : 'Va a entrar con la contraseña que le pases.'
+    : isDeveloper
+      ? null
+      : password
+        ? 'Va a entrar con la contraseña que le pases.'
+        : `Le llega un correo${email.trim() ? ` a ${email.trim()}` : ''} con un enlace para elegir su contraseña (vence en 72 horas).`
   const moveNote = movedFrom
     ? `Pasa de ${movedFrom.name} a ${principal?.name}: deja de ver lo de ${movedFrom.name} y pierde los códigos que tenía ahí.`
     : null

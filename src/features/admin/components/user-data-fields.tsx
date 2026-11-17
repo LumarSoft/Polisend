@@ -179,7 +179,7 @@ export function UserDataFields({
           <p className="text-[12px] text-muted-foreground">
             {passwordMode === 'change'
               ? `Mínimo ${MIN_PASSWORD_LENGTH} caracteres. Al cambiarla se cierran sus sesiones abiertas.`
-              : `Si la dejás vacía, le llega un correo para que elija la suya (vence en 72 horas). Si la escribís, mínimo ${MIN_PASSWORD_LENGTH} caracteres: pasásela vos.`}
+              : `Si la escribís, mínimo ${MIN_PASSWORD_LENGTH} caracteres: pasásela vos.`}
           </p>
         </div>
       )}
