@@ -29,8 +29,9 @@ function confirmErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.code === PASSWORD_RESET_INVALID) {
     return 'El código no es válido o venció. Revisalo, o pedí uno nuevo con «Reenviar código».'
   }
+  // Too many confirms from this connection (the API's per-IP limit): a calm wait, like the e-mail step's 429.
   if (error instanceof ApiError && error.status === 429) {
-    return 'Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.'
+    return 'Probaste muchas veces. Esperá unos minutos y volvé a intentar.'
   }
   // The code's format is checked before sending, so any other 400 is about the password.
   if (error instanceof ApiError && error.status === 400) {

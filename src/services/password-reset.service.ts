@@ -14,7 +14,10 @@ export const passwordResetService = {
   request: (data: PasswordResetRequest): Promise<PasswordResetResponse> =>
     apiRequest<PasswordResetResponse>('/auth/password-reset/request', { method: 'POST', body: data }),
 
-  /** 200: the password is set and every older session of the account ended. 400 PASSWORD_RESET_INVALID otherwise. */
+  /**
+   * 200: the password is set and every older session of the account ended. 400 PASSWORD_RESET_INVALID otherwise; 429
+   * when this connection sent too many.
+   */
   confirm: (data: PasswordResetConfirmRequest): Promise<PasswordResetResponse> =>
     apiRequest<PasswordResetResponse>('/auth/password-reset/confirm', { method: 'POST', body: data }),
 }

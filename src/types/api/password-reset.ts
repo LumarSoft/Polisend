@@ -8,7 +8,10 @@ export interface PasswordResetRequest {
   email: string
 }
 
-/** `POST /auth/password-reset/confirm` → 200 `{ ok: true }`. Every session of the account opened before it ends. */
+/**
+ * `POST /auth/password-reset/confirm` → 200 `{ ok: true }`. Every session of the account opened before it ends. 429
+ * when one connection sends too many confirms.
+ */
 export interface PasswordResetConfirmRequest {
   email: string
   /** The 6 digits of the mail. */
