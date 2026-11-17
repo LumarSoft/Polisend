@@ -34,7 +34,8 @@ export function useRejectionActions() {
   }
 
   const create = useMutation({
-    mutationFn: (data: CreateRejectionImportRequest) => rejectionsService.create(token as string, data),
+    mutationFn: ({ data, startedIn }: { data: CreateRejectionImportRequest; startedIn: number | null }) =>
+      rejectionsService.create(token as string, data, startedIn),
     onSuccess: settle,
   })
 

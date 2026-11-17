@@ -188,18 +188,34 @@ async function ensureResponse(
   }
 }
 
+/** `code` of the request the panel did not send because the Owner changed principal after starting it. */
+export const ACTING_PRINCIPAL_CHANGED = 'ACTING_PRINCIPAL_CHANGED'
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   token?: string | null
   body?: unknown
+  /**
+   * The acting principal the action was started in (`actingPrincipalFor(token)` when the person acted), for a write
+   * created only after slow work in the browser (reading a file). If the Owner changed principal in between, the
+   * request is not sent: it would carry the new principal and land one principal's data in another.
+   */
+  startedIn?: number | null
 }
 
 async function send(path: string, options: RequestOptions, checkPrincipal: boolean) {
-  const { method = 'GET', token, body } = options
+  const { method = 'GET', token, body, startedIn } = options
   // A FormData body (file uploads) goes as is: the browser sets the multipart
   // Content-Type with its boundary.
   const isForm = body instanceof FormData
   const prepared = prepareRequest(token, isForm ? {} : { 'Content-Type': 'application/json' })
+  if (startedIn !== undefined && prepared.actingPrincipalId !== startedIn) {
+    throw new ApiError(
+      0,
+      'Cambiaste de principal antes de que terminara: no se guardó nada. Hacelo de nuevo en este principal.',
+      ACTING_PRINCIPAL_CHANGED,
+    )
+  }
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers: prepared.headers,
