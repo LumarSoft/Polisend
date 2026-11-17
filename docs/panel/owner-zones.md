@@ -141,8 +141,9 @@ Plan: `docs/PLAN-TOKENS-Y-RECUPERACION.md` in the `john/` folder above (§1 deci
 - Tablero: cards Facturado, Costo Lumarsoft, Margen de ganancia, Margen Lumarsoft and Margen Nico; the table, grouped
   Owner › Zona › Organización › Número, has exactly Tokens usados, Tokens del plan, Costo Lumarsoft, Margen de
   ganancia, Margen Lumarsoft and Margen Nico (`settledTokens`, `planTokens`, `costUsd`, `marginUsd`,
-  `lumarsoftMarginUsd`, `nicoMarginUsd`; a null amount renders «—»). The real Meta and OpenAI cost is shown nowhere,
-  the organization's detail included.
+  `lumarsoftMarginUsd`, `nicoMarginUsd`; a null amount renders «—»). An Owner's row sums its zones with the API's rule
+  (`sumBillingTotals`, `lib/platform-billing-groups.ts`): an amount is null as soon as one part is null, and an empty
+  group sums to 0. The real Meta and OpenAI cost is shown nowhere, the organization's detail included.
 - Liquidación: Costo Lumarsoft (per token), Margen de ganancia, Margen Lumarsoft, Margen Nico and Total Lumarsoft
   (the API's settlement fields keep their names). Planes: «Tokens» and «Por token».
 
@@ -155,6 +156,9 @@ Plan: `docs/PLAN-TOKENS-Y-RECUPERACION.md` in the `john/` folder above (§1 deci
   principal's `/admin/billing` and sends the change with `forPrincipal` (`lib/api-client.ts`): X-Acting-Principal
   carries the number's principal **for that request only**, the answer must echo it like any other, and the panel
   stays on its acting principal (no remount). `forPrincipal` is ignored outside an Owner's session.
+- «Cambiar» shows only when the answer on screen is for the chosen month, the API has not closed it and it is
+  Argentina's running month (`thisMonth()` in `billing-ui.tsx`, the API's `currentPeriod()`; never the browser's local
+  clock). The popover checks again that `/admin/billing` (the API's running month) answers that same month.
 
 ### Por administrador (SuperAdmin, and an Owner inside a principal)
 
@@ -169,13 +173,16 @@ Plan: `docs/PLAN-TOKENS-Y-RECUPERACION.md` in the `john/` folder above (§1 deci
   `/admin/activar`; no session is read or ended). Step 1: the e-mail → `POST /auth/password-reset/request`, always
   the neutral «Si el correo tiene una cuenta, te mandamos un código». Step 2: the 6 digits, the new password twice
   (the activation's rules) → `POST /auth/password-reset/confirm`; `PASSWORD_RESET_INVALID` says the code is wrong or
-  expired. «Reenviar código» unlocks after 60 s. Success leaves the e-mail for the login form (tab storage, never the
-  URL). No retries; the e-mail and the code live only in memory.
+  expired; a 429 on either step (too many requests or confirms from one connection) asks calmly to wait a few minutes.
+  «Reenviar código» unlocks after 60 s. Success leaves the e-mail for the login form (tab storage, never the URL). No
+  retries; the e-mail and the code live only in memory.
 
 ### Usuarios (Owner)
 
-- `GET /hierarchy/users` adds, for an Owner only, rows with `readOnly: true` (role `DEVELOPER` or `OWNER`, no
-  principal, zone or codes). They render after the managed accounts under «Solo lectura», with «—» in those columns,
-  a lock instead of the actions menu, and only when no zone, principal, productor or role filter is on (the search
-  still applies). `isManagedUser` / `isReadOnlyUser` (`lib/network-users.ts`) split the list; every form and dialog
+- `GET /hierarchy/users?includeReadOnly=true` adds, for an Owner only, rows with `readOnly: true` (role `DEVELOPER` or
+  `OWNER`, no principal, zone or codes, `twoFactorEnabled: null`); the panel asks for them only in an Owner's session
+  and only when it shows them. The Rol column shows the API's `label` («Lumarsoft · Developer», «Owner · <shared
+  zones>»), or the role's name without one. They render after the managed accounts under «Solo lectura», with «—» in
+  those columns, a lock instead of the actions menu, and only when no zone, principal, productor or role filter is on
+  (the search still applies). `isManagedUser` / `isReadOnlyUser` (`lib/network-users.ts`) split the list; every form and dialog
   only ever gets managed accounts.
