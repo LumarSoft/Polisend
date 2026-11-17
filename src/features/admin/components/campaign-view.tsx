@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { CampaignKind } from '@/types/api/campaigns'
 import { useCampaigns } from '../hooks/use-campaigns'
 import { useRole } from '../hooks/use-role'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { campaignPageByKind } from '../lib/campaign-pages'
 import { sendBlockedReason } from '../lib/campaigns-format'
 import { CampaignChips, CampaignHowItWorks, CampaignSwitch } from './campaign-controls'
@@ -14,13 +15,16 @@ import { CampaignClientsTab } from './campaign-clients-tab'
 import { CampaignMessageTab } from './campaign-message-tab'
 import { useUrlTab } from '../hooks/use-panel-link'
 import { CampaignResultsTab } from './campaign-results-tab'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 
 type DetailTab = 'clientes' | 'mensaje' | 'resultados'
 
 /** One campaign's page: the portfolio suggests whom to offer something to, the office picks whom to write and follows each one. */
 export function CampaignView({ kind }: { kind: CampaignKind }) {
   const { isDeveloper, isLoading: roleLoading } = useRole()
-  const { data, isLoading, isError } = useCampaigns()
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const { data, isLoading, isError } = useCampaigns(useTenantQueriesEnabled())
   const [tab, setTab] = useUrlTab<DetailTab>(['clientes', 'mensaje', 'resultados'], 'clientes')
 
   const campaign = data?.campaigns.find(c => c.kind === kind) ?? null
@@ -57,40 +61,46 @@ export function CampaignView({ kind }: { kind: CampaignKind }) {
             </>
           )}
         </div>
-        {campaign && <CampaignSwitch campaign={campaign} />}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* An Owner's Zona › Principal › Productor; each tab keeps its own number filter. */}
+          <NetworkFilter />
+          {campaign && <CampaignSwitch campaign={campaign} />}
+        </div>
       </div>
 
-      {campaign?.howItWorks && <CampaignHowItWorks steps={campaign.howItWorks} />}
+      <RequirePrincipal showFilter={false}>
+        {campaign?.howItWorks && <CampaignHowItWorks steps={campaign.howItWorks} />}
 
-      {isError && <p className="mt-6 text-[14px] text-destructive">No se pudo cargar la campaña.</p>}
-      {isLoading && <Skeleton className="mt-6 h-[320px] rounded-xl" />}
+        {isError && <p className="mt-6 text-[14px] text-destructive">No se pudo cargar la campaña.</p>}
+        {isLoading && <Skeleton className="mt-6 h-[320px] rounded-xl" />}
 
-      {campaign && (
-        <>
-          {blocked && (
-            <p className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
-              <Info className="mt-0.5 size-4 shrink-0" />
-              {blocked}
-            </p>
-          )}
-          <Tabs value={tab} onValueChange={value => setTab(value as DetailTab)} className="mt-4">
-            <TabsList>
-              <TabsTrigger value="clientes">Clientes</TabsTrigger>
-              <TabsTrigger value="mensaje">Mensaje</TabsTrigger>
-              <TabsTrigger value="resultados">Resultados</TabsTrigger>
-            </TabsList>
-            <TabsContent value="clientes" className="mt-4">
-              <CampaignClientsTab campaign={campaign} />
-            </TabsContent>
-            <TabsContent value="mensaje" className="mt-4">
-              <CampaignMessageTab key={campaign.updatedAt ?? ''} campaign={campaign} />
-            </TabsContent>
-            <TabsContent value="resultados" className="mt-4">
-              <CampaignResultsTab campaign={campaign} />
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+        {campaign && (
+          <>
+            {blocked && (
+              <p className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                <Info className="mt-0.5 size-4 shrink-0" />
+                {blocked}
+              </p>
+            )}
+            <Tabs value={tab} onValueChange={value => setTab(value as DetailTab)} className="mt-4">
+              <TabsList>
+                <TabsTrigger value="clientes">Clientes</TabsTrigger>
+                <TabsTrigger value="mensaje">Mensaje</TabsTrigger>
+                <TabsTrigger value="resultados">Resultados</TabsTrigger>
+              </TabsList>
+              <TabsContent value="clientes" className="mt-4">
+                <CampaignClientsTab campaign={campaign} />
+              </TabsContent>
+              <TabsContent value="mensaje" className="mt-4">
+                <CampaignMessageTab key={campaign.updatedAt ?? ''} campaign={campaign} />
+              </TabsContent>
+              <TabsContent value="resultados" className="mt-4">
+                <CampaignResultsTab campaign={campaign} />
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </RequirePrincipal>
     </div>
   )
 }

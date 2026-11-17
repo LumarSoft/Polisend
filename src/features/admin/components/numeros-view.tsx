@@ -41,6 +41,9 @@ import { NumberAssistantSheet } from './number-assistant-sheet'
 import { MetaPortfolioLine } from './meta-portfolio-line'
 import { numberSetupFrom } from './number-setup-fields'
 import { useLinkedId } from '../hooks/use-panel-link'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
+import { NetworkFilter } from './network-filter'
+import { RequirePrincipal } from './require-principal'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 
@@ -293,7 +296,9 @@ export function NumerosView() {
   const canView = canManageOrg || isAdmin
   const currentMonth = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Cordoba' }).slice(0, 7)
   const [period, setPeriod] = useState(currentMonth)
-  const { data: numbers, isLoading, isError } = usePhoneNumbers(canView, period)
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data: numbers, isLoading, isError } = usePhoneNumbers(canView && tenantEnabled, period)
   const { remove } = usePhoneNumberMutations()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminPhoneNumber | null>(null)
@@ -334,255 +339,261 @@ export function NumerosView() {
               : 'Los números de WhatsApp a tu cargo y los mensajes que enviaron en el mes.'}
           </p>
         </div>
-        {canManageOrg && (
-          <Button
-            onClick={() => {
-              setEditing(null)
-              setDialogOpen(true)
-            }}
-            className="h-10"
-          >
-            <Plus className="size-4" /> Registrar número
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* An Owner's Zona › Principal: the numbers are the whole principal's. */}
+          <NetworkFilter showProducer={false} />
+          {canManageOrg && tenantEnabled && (
+            <Button
+              onClick={() => {
+                setEditing(null)
+                setDialogOpen(true)
+              }}
+              className="h-10"
+            >
+              <Plus className="size-4" /> Registrar número
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Embedded Signup leaves the number connected and subscribed to the
+      <RequirePrincipal showFilter={false}>
+        {/* Embedded Signup leaves the number connected and subscribed to the
           webhooks with nothing typed by hand. "Registrar número" (SuperAdmin) is
           for numbers that already exist in Meta. An admin connects numbers for
           their own codes. */}
-      {canView && (
-        <Card
-          className={`mb-4 p-4 ${disconnected.length > 0 ? 'border-destructive/40 bg-destructive/5' : 'border-line-2'}`}
-        >
-          {disconnected.length > 0 ? (
-            <DisconnectedNotice numbers={disconnected} />
-          ) : (
-            <div className="mb-3">
-              <h2 className="font-display text-[15px] text-ink">Conectar un número desde Meta</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Abre el alta de Meta y deja el número listo para recibir mensajes. El número sigue funcionando en la app
-                de WhatsApp Business del celular.
-              </p>
-            </div>
-          )}
-          {canManageOrg ? <ConnectNumber dropped={disconnected} /> : <AdminConnect dropped={disconnected} />}
-        </Card>
-      )}
+        {canView && (
+          <Card
+            className={`mb-4 p-4 ${disconnected.length > 0 ? 'border-destructive/40 bg-destructive/5' : 'border-line-2'}`}
+          >
+            {disconnected.length > 0 ? (
+              <DisconnectedNotice numbers={disconnected} />
+            ) : (
+              <div className="mb-3">
+                <h2 className="font-display text-[15px] text-ink">Conectar un número desde Meta</h2>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Abre el alta de Meta y deja el número listo para recibir mensajes. El número sigue funcionando en la
+                  app de WhatsApp Business del celular.
+                </p>
+              </div>
+            )}
+            {canManageOrg ? <ConnectNumber dropped={disconnected} /> : <AdminConnect dropped={disconnected} />}
+          </Card>
+        )}
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div>
-          <Label htmlFor="billing-period">Mes de consumo</Label>
-          <Input
-            id="billing-period"
-            type="month"
-            value={period}
-            max={currentMonth}
-            onChange={event => {
-              if (event.target.value) setPeriod(event.target.value)
-            }}
-            className="mt-1 w-48"
-          />
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="billing-period">Mes de consumo</Label>
+            <Input
+              id="billing-period"
+              type="month"
+              value={period}
+              max={currentMonth}
+              onChange={event => {
+                if (event.target.value) setPeriod(event.target.value)
+              }}
+              className="mt-1 w-48"
+            />
+          </div>
+          <p className="text-[13px] text-muted-foreground">
+            Cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Los planes están en
+            Facturación.
+          </p>
         </div>
-        <p className="text-[13px] text-muted-foreground">
-          Cuenta cada mensaje que envía el asistente, la oficina desde el panel o un aviso. Los planes están en
-          Facturación.
-        </p>
-      </div>
-      {isError && (
-        <p role="alert" className="mb-4 text-destructive">
-          No se pudo cargar el consumo de este mes.
-        </p>
-      )}
-      {period < '2026-10' && (
-        <p className="mb-4 text-[13px] text-muted-foreground">
-          El conteo de mensajes y llamadas comienza con la actualización de octubre. Los meses anteriores conservan el
-          consumo registrado.
-        </p>
-      )}
-      <Card className="mb-4 flex items-center justify-between border-line-2 p-4">
-        <span className="text-[13px] text-muted-foreground">
-          Mensajes del mes · {period} ({canManageOrg ? 'todos los números' : 'tus números'})
-        </span>
-        <span className="font-display text-[20px] text-ink">{numbers && !isError ? int(totalMessages) : '—'}</span>
-      </Card>
+        {isError && (
+          <p role="alert" className="mb-4 text-destructive">
+            No se pudo cargar el consumo de este mes.
+          </p>
+        )}
+        {period < '2026-10' && (
+          <p className="mb-4 text-[13px] text-muted-foreground">
+            El conteo de mensajes y llamadas comienza con la actualización de octubre. Los meses anteriores conservan el
+            consumo registrado.
+          </p>
+        )}
+        <Card className="mb-4 flex items-center justify-between border-line-2 p-4">
+          <span className="text-[13px] text-muted-foreground">
+            Mensajes del mes · {period} ({canManageOrg ? 'todos los números' : 'tus números'})
+          </span>
+          <span className="font-display text-[20px] text-ink">{numbers && !isError ? int(totalMessages) : '—'}</span>
+        </Card>
 
-      <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Número
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Responsable
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Mensajes del mes
-              </TableHead>
-              {canManageOrg && (
-                <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Uso de IA
+        <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Número
                 </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Responsable
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Mensajes del mes
+                </TableHead>
+                {canManageOrg && (
+                  <TableHead className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                    Uso de IA
+                  </TableHead>
+                )}
+                <TableHead className="w-24 pr-5" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading &&
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: columns }).map((_, j) => (
+                      <TableCell key={j} className={j === 0 ? 'pl-5' : undefined}>
+                        <Skeleton className={j === 0 ? 'h-4 w-40' : 'h-4 w-20'} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+
+              {numbers && numbers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                        <Phone className="size-5" />
+                      </div>
+                      <p className="text-[14px] text-muted-foreground">
+                        {canManageOrg ? 'Todavía no hay números registrados.' : 'Todavía no tenés números a tu cargo.'}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               )}
-              <TableHead className="w-24 pr-5" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: columns }).map((_, j) => (
-                    <TableCell key={j} className={j === 0 ? 'pl-5' : undefined}>
-                      <Skeleton className={j === 0 ? 'h-4 w-40' : 'h-4 w-20'} />
+
+              {numbers?.map(n => (
+                <TableRow key={n.id}>
+                  <TableCell className="pl-5">
+                    <div className="flex flex-col">
+                      <span className="text-[14px] font-medium text-ink">{numberLabel(n)}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">{n.phoneNumberId}</span>
+                      <MetaPortfolioLine portfolio={n.portfolio} />
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {n.disconnectedAt && (
+                          <Badge variant="destructive" title={n.disconnectReasonLabel ?? undefined}>
+                            Desconectado de WhatsApp
+                          </Badge>
+                        )}
+                        {!n.isActive && (
+                          <Badge variant="secondary" className="text-faint-2">
+                            Inactivo
+                          </Badge>
+                        )}
+                        {n.budgetExceededAt && (
+                          <Badge
+                            className="bg-destructive/15 text-destructive"
+                            title="Se alcanzó el límite de IA del mes: el asistente sigue atendiendo con los menús."
+                          >
+                            IA en pausa
+                          </Badge>
+                        )}
+                        {n.servedCodes.length > 0 && (
+                          <Badge variant="secondary" className="text-ink-3">
+                            {n.servedCodes.length} código(s) servidos
+                          </Badge>
+                        )}
+                        {n.assistant?.customized && (
+                          <Badge
+                            className="gap-1 bg-ember-soft text-ember-2"
+                            title="Este número tiene su propio asistente"
+                          >
+                            <Bot className="size-3" />
+                            {n.assistant.botName ?? 'Asistente propio'}
+                          </Badge>
+                        )}
+                        {n.usage.planPaused && (
+                          <Badge
+                            className="gap-1 bg-amber/15 text-ink-3"
+                            title="Llegó al límite de su plan este mes: se elige en Inicio o en Facturación si sigue en el plan siguiente"
+                          >
+                            <PowerOff className="size-3" />
+                            En pausa por el plan
+                          </Badge>
+                        )}
+                        {n.botEnabled === false && (
+                          <Badge
+                            className="gap-1 bg-destructive/10 text-destructive"
+                            title="El bot está apagado en este número: la oficina responde sus chats"
+                          >
+                            <PowerOff className="size-3" />
+                            Bot apagado
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-[13px] text-ink-3">
+                    {n.responsibleCode
+                      ? `${n.responsibleCode.code}${n.responsibleCode.holderName ? ` · ${n.responsibleCode.holderName}` : ''}`
+                      : '—'}
+                  </TableCell>
+                  <TableCell className="text-[13px]">
+                    <span className="font-medium text-ink">{int(n.usage.messages)}</span>
+                    <div className="text-[11px] text-muted-foreground">
+                      {n.usage.plan ? `plan ${n.usage.plan.trial ? 'Prueba' : n.usage.plan.name}` : 'mensajes enviados'}
+                      {n.usage.upgraded && ' · subió de plan'}
+                    </div>
+                  </TableCell>
+                  {canManageOrg && (
+                    <TableCell className="text-[13px]">
+                      <span className="text-ink">{int(n.usage.openaiCalls ?? 0)} consultas a la IA</span>
+                      <div className="text-[11px] text-muted-foreground">respuestas que no resolvieron los menús</div>
                     </TableCell>
-                  ))}
+                  )}
+                  <TableCell className="pr-5">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                        title={
+                          n.canConfigureAssistant
+                            ? 'Nombre, personas, horario y datos propios de este número'
+                            : 'Ver el asistente de este número'
+                        }
+                        data-help="numero-asistente"
+                        onClick={() => {
+                          setAssistantId(n.id)
+                          setAssistantOpen(true)
+                        }}
+                      >
+                        <Bot className="size-4" /> Asistente
+                      </Button>
+                      {canManageOrg && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => {
+                              setEditing(n)
+                              setDialogOpen(true)
+                            }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground"
+                            onClick={() => setDeleteTarget(n)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
-
-            {numbers && numbers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={columns} className="py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                      <Phone className="size-5" />
-                    </div>
-                    <p className="text-[14px] text-muted-foreground">
-                      {canManageOrg ? 'Todavía no hay números registrados.' : 'Todavía no tenés números a tu cargo.'}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-
-            {numbers?.map(n => (
-              <TableRow key={n.id}>
-                <TableCell className="pl-5">
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-medium text-ink">{numberLabel(n)}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">{n.phoneNumberId}</span>
-                    <MetaPortfolioLine portfolio={n.portfolio} />
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {n.disconnectedAt && (
-                        <Badge variant="destructive" title={n.disconnectReasonLabel ?? undefined}>
-                          Desconectado de WhatsApp
-                        </Badge>
-                      )}
-                      {!n.isActive && (
-                        <Badge variant="secondary" className="text-faint-2">
-                          Inactivo
-                        </Badge>
-                      )}
-                      {n.budgetExceededAt && (
-                        <Badge
-                          className="bg-destructive/15 text-destructive"
-                          title="Se alcanzó el límite de IA del mes: el asistente sigue atendiendo con los menús."
-                        >
-                          IA en pausa
-                        </Badge>
-                      )}
-                      {n.servedCodes.length > 0 && (
-                        <Badge variant="secondary" className="text-ink-3">
-                          {n.servedCodes.length} código(s) servidos
-                        </Badge>
-                      )}
-                      {n.assistant?.customized && (
-                        <Badge
-                          className="gap-1 bg-ember-soft text-ember-2"
-                          title="Este número tiene su propio asistente"
-                        >
-                          <Bot className="size-3" />
-                          {n.assistant.botName ?? 'Asistente propio'}
-                        </Badge>
-                      )}
-                      {n.usage.planPaused && (
-                        <Badge
-                          className="gap-1 bg-amber/15 text-ink-3"
-                          title="Llegó al límite de su plan este mes: se elige en Inicio o en Facturación si sigue en el plan siguiente"
-                        >
-                          <PowerOff className="size-3" />
-                          En pausa por el plan
-                        </Badge>
-                      )}
-                      {n.botEnabled === false && (
-                        <Badge
-                          className="gap-1 bg-destructive/10 text-destructive"
-                          title="El bot está apagado en este número: la oficina responde sus chats"
-                        >
-                          <PowerOff className="size-3" />
-                          Bot apagado
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-[13px] text-ink-3">
-                  {n.responsibleCode
-                    ? `${n.responsibleCode.code}${n.responsibleCode.holderName ? ` · ${n.responsibleCode.holderName}` : ''}`
-                    : '—'}
-                </TableCell>
-                <TableCell className="text-[13px]">
-                  <span className="font-medium text-ink">{int(n.usage.messages)}</span>
-                  <div className="text-[11px] text-muted-foreground">
-                    {n.usage.plan ? `plan ${n.usage.plan.trial ? 'Prueba' : n.usage.plan.name}` : 'mensajes enviados'}
-                    {n.usage.upgraded && ' · subió de plan'}
-                  </div>
-                </TableCell>
-                {canManageOrg && (
-                  <TableCell className="text-[13px]">
-                    <span className="text-ink">{int(n.usage.openaiCalls ?? 0)} consultas a la IA</span>
-                    <div className="text-[11px] text-muted-foreground">respuestas que no resolvieron los menús</div>
-                  </TableCell>
-                )}
-                <TableCell className="pr-5">
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 gap-1.5"
-                      title={
-                        n.canConfigureAssistant
-                          ? 'Nombre, personas, horario y datos propios de este número'
-                          : 'Ver el asistente de este número'
-                      }
-                      data-help="numero-asistente"
-                      onClick={() => {
-                        setAssistantId(n.id)
-                        setAssistantOpen(true)
-                      }}
-                    >
-                      <Bot className="size-4" /> Asistente
-                    </Button>
-                    {canManageOrg && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => {
-                            setEditing(n)
-                            setDialogOpen(true)
-                          }}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-muted-foreground"
-                          onClick={() => setDeleteTarget(n)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+            </TableBody>
+          </Table>
+        </Card>
+      </RequirePrincipal>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[480px]">

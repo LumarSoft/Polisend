@@ -3,12 +3,12 @@ import { adminConfigService } from '@/services/admin-config.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
 import { useAuth } from '../context/auth-context'
 
-export function useProducerConfig() {
+export function useProducerConfig(enabled = true) {
   const { token } = useAuth()
 
   return useQuery({
     queryKey: QUERY_KEYS.admin.config,
     queryFn: () => adminConfigService.get(token as string),
-    enabled: !!token,
+    enabled: !!token && enabled,
   })
 }

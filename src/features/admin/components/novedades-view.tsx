@@ -31,7 +31,11 @@ import { useNovedades } from '../hooks/use-novedades'
 import { useNovedadesStats } from '../hooks/use-novedades-stats'
 import { useNovedadesActions } from '../hooks/use-novedades-actions'
 import { ScopeFilter } from './scope-filter'
+import { SectionScopeFilter } from './section-scope-filter'
+import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
+import { useRole } from '../hooks/use-role'
 import { SiniestroSheet } from './siniestro-sheet'
 import { AseguradoSheet } from './asegurado-sheet'
 import { BlockedClaimBadge } from './blocked-claim-badge'
@@ -56,26 +60,32 @@ export function NovedadesView() {
   const search = useDebouncedValue(searchInput, 350)
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
   const [scope, setScope] = useScopeFilterState()
+  // An Owner moves between principals: the per-user "since my last visit" mark would mix them, so it has none.
+  const { isOwner } = useRole()
+  const tenantEnabled = useTenantQueriesEnabled()
   const {
     data: page,
     isLoading,
     isError,
     isFetching,
-  } = useNovedades({
-    category: category || undefined,
-    status: status === 'actionable' || status === 'all' ? undefined : status,
-    actionable: status === 'actionable',
-    since: sinceVisit ? (previousVisit ?? undefined) : undefined,
-    search,
-    ...scope,
-    page: pageNumber,
-    pageSize: 20,
-  })
-  const { data: stats } = useNovedadesStats(scope)
+  } = useNovedades(
+    {
+      category: category || undefined,
+      status: status === 'actionable' || status === 'all' ? undefined : status,
+      actionable: status === 'actionable',
+      since: sinceVisit ? (previousVisit ?? undefined) : undefined,
+      search,
+      ...scope,
+      page: pageNumber,
+      pageSize: 20,
+    },
+    tenantEnabled,
+  )
+  const { data: stats } = useNovedadesStats(scope, tenantEnabled)
   const { markRead, updateMatter, clearAll } = useNovedadesActions()
 
   useEffect(() => {
-    if (!token || visitStarted.current) return
+    if (!token || !tenantEnabled || isOwner || visitStarted.current) return
     visitStarted.current = true
     void novedadesService
       .visit(token)
@@ -83,7 +93,7 @@ export function NovedadesView() {
       .catch(() => {
         toast.error('No se pudo registrar la visita. Podés seguir viendo todos los asuntos.')
       })
-  }, [token])
+  }, [token, tenantEnabled, isOwner])
 
   const handleOpen = (matter: NovedadItem) => {
     if (!matter.readAt) markRead.mutate(matter.id, { onError: () => toast.error('No se pudo marcar como leído') })
@@ -120,220 +130,240 @@ export function NovedadesView() {
             Lo que necesita atención del equipo. Leer una conversación no resuelve el asunto.
           </p>
         </div>
-        <Button variant="outline" className="text-destructive" onClick={() => setConfirmClear(true)}>
-          <Trash2 className="size-4" /> Limpiar todas
-        </Button>
-      </header>
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-6">
-        {categories.map(key => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => {
-              setCategory(category === key ? '' : key)
-              setStatus('actionable')
-              resetPage()
-            }}
-            className={cn(
-              'rounded-xl border bg-card p-4 text-left transition-colors hover:border-ember/50',
-              category === key ? 'border-ember bg-ember-soft' : 'border-line-2',
-            )}
-          >
-            <span className="block text-[12px] text-muted-foreground">{MATTER_LABELS[key]}</span>
-            <span className="mt-2 block text-2xl font-semibold tabular-nums text-ink">
-              {stats?.actionableByCategory[key] ?? '—'}
-            </span>
-            <span className="text-[11px] text-muted-foreground">por atender</span>
-          </button>
-        ))}
-      </div>
-      <div className="overflow-hidden rounded-xl border border-line-2 bg-card">
-        <div className="flex flex-wrap items-center gap-2 border-b border-line-2 p-3">
-          <select
-            aria-label="Filtrar por asunto"
-            className={selectClass}
-            value={category}
-            onChange={e => {
-              setCategory(e.target.value as MatterCategory | '')
-              resetPage()
-            }}
-          >
-            <option value="">Todos los asuntos</option>
-            {categories.map(key => (
-              <option key={key} value={key}>
-                {MATTER_LABELS[key]}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar por estado"
-            className={selectClass}
-            value={status}
-            onChange={e => {
-              setStatus(e.target.value as typeof status)
-              resetPage()
-            }}
-          >
-            <option value="actionable">Por atender</option>
-            <option value="all">Todos los estados</option>
-            {Object.entries(MATTER_STATUS_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <ScopeFilter
-            value={scope}
-            onChange={value => {
-              setScope(value)
-              resetPage()
-            }}
-            className="!h-9"
-          />
-          <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={sinceVisit}
-              disabled={!previousVisit}
-              onChange={e => {
-                setSinceVisit(e.target.checked)
+        <div className="flex flex-wrap items-center gap-2">
+          {/* An Owner's Zona › Principal › Productor; the office keeps its filter in the list's toolbar. */}
+          {isOwner && (
+            <SectionScopeFilter
+              value={scope}
+              onChange={value => {
+                setScope(value)
                 resetPage()
               }}
             />
-            Desde mi última visita
-          </label>
-          <div className="relative sm:ml-auto sm:w-72">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              onChange={e => {
-                setSearchInput(e.target.value)
-                resetPage()
-              }}
-              placeholder="Buscar cliente, teléfono o motivo"
-              className="h-9 pl-8.5 text-[13px]"
-            />
-          </div>
+          )}
+          {tenantEnabled && (
+            <Button variant="outline" className="text-destructive" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="size-4" /> Limpiar todas
+            </Button>
+          )}
         </div>
-        {isError ? (
-          <p role="alert" className="p-10 text-center text-destructive">
-            No se pudieron cargar los asuntos.
-          </p>
-        ) : isLoading ? (
-          <p className="p-10 text-center text-muted-foreground">Cargando asuntos…</p>
-        ) : !page?.data.length ? (
-          <p className="p-10 text-center text-muted-foreground">No hay asuntos que coincidan con estos filtros.</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {page.data.map(matter => (
-              <li
-                key={matter.id}
-                className={cn('flex flex-wrap items-start gap-4 p-4', !matter.readAt && 'bg-ember-soft/25')}
-              >
-                <div className="min-w-0 flex-1 basis-64">
-                  <button
-                    type="button"
-                    onClick={() => handleOpen(matter)}
-                    className="text-left text-[14px] font-semibold text-ink hover:text-ember-2"
-                  >
-                    {!matter.readAt && (
-                      <span className="mr-2 inline-block size-2 rounded-full bg-ember-2" aria-label="No leído" />
+      </header>
+      <RequirePrincipal showFilter={false}>
+        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-6">
+          {categories.map(key => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setCategory(category === key ? '' : key)
+                setStatus('actionable')
+                resetPage()
+              }}
+              className={cn(
+                'rounded-xl border bg-card p-4 text-left transition-colors hover:border-ember/50',
+                category === key ? 'border-ember bg-ember-soft' : 'border-line-2',
+              )}
+            >
+              <span className="block text-[12px] text-muted-foreground">{MATTER_LABELS[key]}</span>
+              <span className="mt-2 block text-2xl font-semibold tabular-nums text-ink">
+                {stats?.actionableByCategory[key] ?? '—'}
+              </span>
+              <span className="text-[11px] text-muted-foreground">por atender</span>
+            </button>
+          ))}
+        </div>
+        <div className="overflow-hidden rounded-xl border border-line-2 bg-card">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line-2 p-3">
+            <select
+              aria-label="Filtrar por asunto"
+              className={selectClass}
+              value={category}
+              onChange={e => {
+                setCategory(e.target.value as MatterCategory | '')
+                resetPage()
+              }}
+            >
+              <option value="">Todos los asuntos</option>
+              {categories.map(key => (
+                <option key={key} value={key}>
+                  {MATTER_LABELS[key]}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filtrar por estado"
+              className={selectClass}
+              value={status}
+              onChange={e => {
+                setStatus(e.target.value as typeof status)
+                resetPage()
+              }}
+            >
+              <option value="actionable">Por atender</option>
+              <option value="all">Todos los estados</option>
+              {Object.entries(MATTER_STATUS_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            {!isOwner && (
+              <ScopeFilter
+                value={scope}
+                onChange={value => {
+                  setScope(value)
+                  resetPage()
+                }}
+                className="!h-9"
+              />
+            )}
+            {!isOwner && (
+              <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={sinceVisit}
+                  disabled={!previousVisit}
+                  onChange={e => {
+                    setSinceVisit(e.target.checked)
+                    resetPage()
+                  }}
+                />
+                Desde mi última visita
+              </label>
+            )}
+            <div className="relative sm:ml-auto sm:w-72">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={e => {
+                  setSearchInput(e.target.value)
+                  resetPage()
+                }}
+                placeholder="Buscar cliente, teléfono o motivo"
+                className="h-9 pl-8.5 text-[13px]"
+              />
+            </div>
+          </div>
+          {isError ? (
+            <p role="alert" className="p-10 text-center text-destructive">
+              No se pudieron cargar los asuntos.
+            </p>
+          ) : isLoading ? (
+            <p className="p-10 text-center text-muted-foreground">Cargando asuntos…</p>
+          ) : !page?.data.length ? (
+            <p className="p-10 text-center text-muted-foreground">No hay asuntos que coincidan con estos filtros.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {page.data.map(matter => (
+                <li
+                  key={matter.id}
+                  className={cn('flex flex-wrap items-start gap-4 p-4', !matter.readAt && 'bg-ember-soft/25')}
+                >
+                  <div className="min-w-0 flex-1 basis-64">
+                    <button
+                      type="button"
+                      onClick={() => handleOpen(matter)}
+                      className="text-left text-[14px] font-semibold text-ink hover:text-ember-2"
+                    >
+                      {!matter.readAt && (
+                        <span className="mr-2 inline-block size-2 rounded-full bg-ember-2" aria-label="No leído" />
+                      )}
+                      {matter.title}
+                    </button>
+                    {matter.blockedClaimReason && (
+                      <div className="mt-1.5">
+                        <BlockedClaimBadge reason={matter.blockedClaimReason} />
+                      </div>
                     )}
-                    {matter.title}
-                  </button>
-                  {matter.blockedClaimReason && (
-                    <div className="mt-1.5">
-                      <BlockedClaimBadge reason={matter.blockedClaimReason} />
+                    <p className="mt-1 line-clamp-3 max-w-2xl whitespace-pre-wrap break-words text-[13px] text-muted-foreground">
+                      {matter.body || 'Pidió atención de un asesor. Revisar la conversación para precisar el motivo.'}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                      <span>
+                        Recibido: {formatDate(matter.createdAt)} ·{' '}
+                        {new Date(matter.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {matter.client && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedClientId(matter.client!.id)}
+                          className="hover:text-ember-2"
+                        >
+                          DNI {matter.client.dni}
+                        </button>
+                      )}
+                      {matter.status === 'resolved' && (
+                        <span className="text-emerald-700 dark:text-emerald-400">Resuelto</span>
+                      )}
                     </div>
-                  )}
-                  <p className="mt-1 line-clamp-3 max-w-2xl whitespace-pre-wrap break-words text-[13px] text-muted-foreground">
-                    {matter.body || 'Pidió atención de un asesor. Revisar la conversación para precisar el motivo.'}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                    <span>
-                      Recibido: {formatDate(matter.createdAt)} ·{' '}
-                      {new Date(matter.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    {matter.client && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedClientId(matter.client!.id)}
-                        className="hover:text-ember-2"
-                      >
-                        DNI {matter.client.dni}
-                      </button>
-                    )}
-                    {matter.status === 'resolved' && (
-                      <span className="text-emerald-700 dark:text-emerald-400">Resuelto</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      aria-label={`Categoría de ${matter.title}`}
+                      className={selectClass}
+                      value={matter.category}
+                      disabled={updateMatter.isPending}
+                      onChange={e => changeMatter(matter.id, { category: e.target.value as MatterCategory })}
+                    >
+                      {categories.map(key => (
+                        <option key={key} value={key}>
+                          {MATTER_LABELS[key]}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      data-help="asunto-estado"
+                      aria-label={`Estado de ${matter.title}`}
+                      className={selectClass}
+                      value={matter.status}
+                      disabled={updateMatter.isPending}
+                      onChange={e => changeMatter(matter.id, { status: e.target.value as MatterStatus })}
+                    >
+                      {Object.entries(MATTER_STATUS_LABELS).map(([key, label]) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {matter.type !== 'triunfo' && (
+                      <Button size="sm" variant="outline" onClick={() => handleOpen(matter)}>
+                        {matter.type === 'handoff' || matter.type === 'baja_poliza'
+                          ? 'Ver chat'
+                          : matter.type === 'plan'
+                            ? 'Ver facturación'
+                            : 'Ver detalle'}
+                      </Button>
                     )}
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    aria-label={`Categoría de ${matter.title}`}
-                    className={selectClass}
-                    value={matter.category}
-                    disabled={updateMatter.isPending}
-                    onChange={e => changeMatter(matter.id, { category: e.target.value as MatterCategory })}
-                  >
-                    {categories.map(key => (
-                      <option key={key} value={key}>
-                        {MATTER_LABELS[key]}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    data-help="asunto-estado"
-                    aria-label={`Estado de ${matter.title}`}
-                    className={selectClass}
-                    value={matter.status}
-                    disabled={updateMatter.isPending}
-                    onChange={e => changeMatter(matter.id, { status: e.target.value as MatterStatus })}
-                  >
-                    {Object.entries(MATTER_STATUS_LABELS).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  {matter.type !== 'triunfo' && (
-                    <Button size="sm" variant="outline" onClick={() => handleOpen(matter)}>
-                      {matter.type === 'handoff' || matter.type === 'baja_poliza'
-                        ? 'Ver chat'
-                        : matter.type === 'plan'
-                          ? 'Ver facturación'
-                          : 'Ver detalle'}
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex items-center justify-between border-t border-line-2 p-3 text-[12px] text-muted-foreground">
-          <span>
-            {page?.total ?? 0} asuntos · Página {page?.page ?? 1} de {page?.totalPages ?? 1}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pageNumber === 1 || isFetching}
-              onClick={() => setPageNumber(n => n - 1)}
-            >
-              Anterior
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!page || pageNumber >= page.totalPages || isFetching}
-              onClick={() => setPageNumber(n => n + 1)}
-            >
-              Siguiente
-            </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex items-center justify-between border-t border-line-2 p-3 text-[12px] text-muted-foreground">
+            <span>
+              {page?.total ?? 0} asuntos · Página {page?.page ?? 1} de {page?.totalPages ?? 1}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pageNumber === 1 || isFetching}
+                onClick={() => setPageNumber(n => n - 1)}
+              >
+                Anterior
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!page || pageNumber >= page.totalPages || isFetching}
+                onClick={() => setPageNumber(n => n + 1)}
+              >
+                Siguiente
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </RequirePrincipal>
       <AlertDialog
         open={confirmClear}
         onOpenChange={open => {

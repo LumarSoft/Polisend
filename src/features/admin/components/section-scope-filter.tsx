@@ -25,7 +25,8 @@ export function SectionScopeFilter({ value, onChange, className, allLabel }: Sec
   if (!isOwner) return <ScopeFilter value={value} onChange={onChange} className={className} allLabel={allLabel} />
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+    // max-w-full: next to a search box (a shrink-0 slot), the three levels wrap inside the header instead of overflowing.
+    <div className={cn('flex max-w-full flex-wrap items-center gap-2', className)}>
       <NetworkFilter
         producerCodeId={value.producerCodeId ?? null}
         onProducerCodeChange={id => onChange(id !== null ? { producerCodeId: id } : {})}

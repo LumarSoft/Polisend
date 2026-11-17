@@ -24,7 +24,24 @@ export const OWNER_NETWORK_PATHS = ['/admin/red', '/admin/usuarios', '/admin/cue
  * themselves. For an Owner without a principal, the shell shows RequirePrincipal's message (with the filter) in place
  * of any other work screen, so none loads data without a principal. Add a screen here when it gets its filter.
  */
-export const SCREENS_WITH_NETWORK_FILTER: readonly string[] = ['/admin/asegurados']
+export const SCREENS_WITH_NETWORK_FILTER: readonly string[] = [
+  '/admin/asegurados',
+  // Inicio ('/admin') is not listed: matchesPath would take every path below it. The shell's guard covers it.
+  '/admin/cobranzas',
+  '/admin/balance',
+  '/admin/inbox',
+  '/admin/novedades',
+  '/admin/siniestros',
+  '/admin/solicitudes',
+  '/admin/campanas',
+  '/admin/rechazos',
+  '/admin/numeros',
+  '/admin/tareas',
+  '/admin/facturacion',
+  '/admin/configuracion',
+  '/admin/status',
+  '/admin/mejoras',
+]
 
 /** Whether `pathname` is one of `paths` or below one ("/admin/red" covers "/admin/red/consumo"). */
 export function matchesPath(pathname: string, paths: readonly string[]): boolean {

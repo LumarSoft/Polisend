@@ -25,8 +25,11 @@ import { EstadoBadge, formatOccurredDate, tipoLabel } from '../lib/siniestros-ui
 import { useAdminSiniestros } from '../hooks/use-admin-siniestros'
 import { useAdminSiniestrosStats } from '../hooks/use-admin-siniestros-stats'
 import { SiniestroSheet } from './siniestro-sheet'
-import { ScopeFilter, type ScopeFilterValue } from './scope-filter'
+import type { ScopeFilterValue } from './scope-filter'
+import { SectionScopeFilter } from './section-scope-filter'
+import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
+import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { useLinkedId } from '../hooks/use-panel-link'
 import { ClaimCoverageBadge } from './claim-coverage-banner'
 
@@ -234,14 +237,13 @@ export function SiniestrosView() {
     setPage(1)
   }
 
-  const { data, isLoading, isError, isFetching } = useAdminSiniestros({
-    search,
-    status: filter === 'todos' ? undefined : filter,
-    ...scope,
-    page,
-    pageSize: PAGE_SIZE,
-  })
-  const { data: stats } = useAdminSiniestrosStats()
+  // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
+  const tenantEnabled = useTenantQueriesEnabled()
+  const { data, isLoading, isError, isFetching } = useAdminSiniestros(
+    { search, status: filter === 'todos' ? undefined : filter, ...scope, page, pageSize: PAGE_SIZE },
+    tenantEnabled,
+  )
+  const { data: stats } = useAdminSiniestrosStats(tenantEnabled)
 
   const rows = data?.data ?? []
   const total = data?.total ?? 0
@@ -259,179 +261,185 @@ export function SiniestrosView() {
             Seguí las denuncias de tu cartera, cargá el número de compañía y actualizá su estado.
           </p>
         </div>
-        <div className="flex w-full max-w-md items-center gap-2">
-          <ScopeFilter value={scope} onChange={handleScope} className="shrink-0" />
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar nombre, DNI, patente, certificado o N°…"
-              value={searchInput}
-              onChange={e => handleSearch(e.target.value)}
-              className="h-10 border-line-2 px-9 text-[13px]"
-            />
-            {isFetching && !isLoading && searchInput ? (
-              <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-            ) : searchInput ? (
-              <button
-                type="button"
-                aria-label="Limpiar búsqueda"
-                onClick={() => handleSearch('')}
-                className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-              >
-                <X className="size-3.5" />
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <KpiRow stats={stats} />
-
-      <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-line-2 bg-secondary/50 p-1 sm:max-w-2xl sm:grid-cols-4">
-        {FILTERS.map(option => {
-          const active = filter === option.value
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => handleFilter(option.value)}
-              className={`flex h-9 items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
-                active ? 'bg-background text-ink shadow-sm dark:bg-canvas-3' : 'text-muted-foreground hover:text-ink'
-              }`}
-            >
-              {option.label}
-              <span
-                className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
-                  active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
-                }`}
-              >
-                {filterCount(stats, option.value)}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-line-2 hover:bg-transparent">
-              <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-faint">
-                Asegurado / Patente
-              </TableHead>
-              <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint md:table-cell">
-                Póliza
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">
-                Tipo / Fecha del hecho
-              </TableHead>
-              <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">Estado</TableHead>
-              <TableHead className="pr-5 text-right text-[11px] uppercase tracking-[0.12em] text-faint">
-                N° compañía
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className={isFetching && !isLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-            {isLoading &&
-              Array.from({ length: 6 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="py-3 pl-5">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="size-9 rounded-full" />
-                      <div className="space-y-1.5">
-                        <Skeleton className="h-3.5 w-32" />
-                        <Skeleton className="h-3 w-20" />
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Skeleton className="h-6 w-28 rounded-md" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                  </TableCell>
-                  <TableCell className="pr-5">
-                    <Skeleton className="ml-auto h-5 w-20" />
-                  </TableCell>
-                </TableRow>
-              ))}
-
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-14 text-center text-[14px] text-destructive">
-                  No se pudieron cargar los siniestros.
-                </TableCell>
-              </TableRow>
-            )}
-
-            {!isLoading && !isError && rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                      <CheckCircle2 className="size-5" />
-                    </div>
-                    <p className="text-[14px] text-muted-foreground">
-                      {search ? 'No se encontraron siniestros para esa búsqueda.' : 'No hay siniestros en este estado.'}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-
-            {!isLoading &&
-              rows.map(siniestro => (
-                <SiniestroRow key={siniestro.id} siniestro={siniestro} onSelect={() => setSelectedId(siniestro.id)} />
-              ))}
-          </TableBody>
-        </Table>
-      </Card>
-
-      {!isLoading && !isError && total > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[12px] text-muted-foreground">
-            Mostrando{' '}
-            <span className="font-medium text-ink-3">
-              {rangeStart}–{rangeEnd}
-            </span>{' '}
-            de <span className="font-medium text-ink-3">{total}</span> {total === 1 ? 'siniestro' : 'siniestros'}
-          </p>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="h-8 border-line-2 px-2.5 text-[12.5px]"
-              >
-                <ChevronLeft className="size-4" />
-                Anterior
-              </Button>
-              <span className="text-[12.5px] text-muted-foreground">
-                Página <span className="font-medium text-ink-3">{page}</span> de {totalPages}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="h-8 border-line-2 px-2.5 text-[12.5px]"
-              >
-                Siguiente
-                <ChevronRight className="size-4" />
-              </Button>
+        <div className="flex w-full max-w-md flex-wrap items-center gap-2">
+          <SectionScopeFilter value={scope} onChange={handleScope} className="shrink-0" />
+          {tenantEnabled && (
+            <div className="relative min-w-48 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar nombre, DNI, patente, certificado o N°…"
+                value={searchInput}
+                onChange={e => handleSearch(e.target.value)}
+                className="h-10 border-line-2 px-9 text-[13px]"
+              />
+              {isFetching && !isLoading && searchInput ? (
+                <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              ) : searchInput ? (
+                <button
+                  type="button"
+                  aria-label="Limpiar búsqueda"
+                  onClick={() => handleSearch('')}
+                  className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
             </div>
           )}
         </div>
-      )}
+      </div>
+
+      <RequirePrincipal showFilter={false}>
+        <KpiRow stats={stats} />
+
+        <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-line-2 bg-secondary/50 p-1 sm:max-w-2xl sm:grid-cols-4">
+          {FILTERS.map(option => {
+            const active = filter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => handleFilter(option.value)}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
+                  active ? 'bg-background text-ink shadow-sm dark:bg-canvas-3' : 'text-muted-foreground hover:text-ink'
+                }`}
+              >
+                {option.label}
+                <span
+                  className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+                    active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
+                  }`}
+                >
+                  {filterCount(stats, option.value)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-line-2 hover:bg-transparent">
+                <TableHead className="h-11 pl-5 text-[11px] uppercase tracking-[0.12em] text-faint">
+                  Asegurado / Patente
+                </TableHead>
+                <TableHead className="hidden text-[11px] uppercase tracking-[0.12em] text-faint md:table-cell">
+                  Póliza
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">
+                  Tipo / Fecha del hecho
+                </TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.12em] text-faint">Estado</TableHead>
+                <TableHead className="pr-5 text-right text-[11px] uppercase tracking-[0.12em] text-faint">
+                  N° compañía
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className={isFetching && !isLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+              {isLoading &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="py-3 pl-5">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-9 rounded-full" />
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-3.5 w-32" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Skeleton className="h-6 w-28 rounded-md" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      <Skeleton className="ml-auto h-5 w-20" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+              {isError && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-14 text-center text-[14px] text-destructive">
+                    No se pudieron cargar los siniestros.
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!isLoading && !isError && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                        <CheckCircle2 className="size-5" />
+                      </div>
+                      <p className="text-[14px] text-muted-foreground">
+                        {search
+                          ? 'No se encontraron siniestros para esa búsqueda.'
+                          : 'No hay siniestros en este estado.'}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!isLoading &&
+                rows.map(siniestro => (
+                  <SiniestroRow key={siniestro.id} siniestro={siniestro} onSelect={() => setSelectedId(siniestro.id)} />
+                ))}
+            </TableBody>
+          </Table>
+        </Card>
+
+        {!isLoading && !isError && total > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[12px] text-muted-foreground">
+              Mostrando{' '}
+              <span className="font-medium text-ink-3">
+                {rangeStart}–{rangeEnd}
+              </span>{' '}
+              de <span className="font-medium text-ink-3">{total}</span> {total === 1 ? 'siniestro' : 'siniestros'}
+            </p>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="h-8 border-line-2 px-2.5 text-[12.5px]"
+                >
+                  <ChevronLeft className="size-4" />
+                  Anterior
+                </Button>
+                <span className="text-[12.5px] text-muted-foreground">
+                  Página <span className="font-medium text-ink-3">{page}</span> de {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="h-8 border-line-2 px-2.5 text-[12.5px]"
+                >
+                  Siguiente
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </RequirePrincipal>
 
       <SiniestroSheet
         siniestroId={selectedId}
