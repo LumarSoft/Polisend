@@ -12,6 +12,7 @@ import { ApiError } from '@/lib/api-client'
 import type { UpdateProfileRequest } from '@/types/api/auth'
 import { useProfile } from '../hooks/use-profile'
 import { useUpdateProfile } from '../hooks/use-update-profile'
+import { TwoFactorCard } from './two-factor-card'
 
 function AccountForm({ initialEmail, initialName }: { initialEmail: string; initialName: string }) {
   const updateProfile = useUpdateProfile()
@@ -33,6 +34,8 @@ function AccountForm({ initialEmail, initialName }: { initialEmail: string; init
 
     updateProfile.mutate(data, {
       onSuccess: () => {
+        // A new password logs out (useUpdateProfile says why): nothing more to show here.
+        if (data.password) return
         setPassword('')
         toast.success('Cambios guardados')
       },
@@ -101,6 +104,10 @@ function AccountForm({ initialEmail, initialName }: { initialEmail: string; init
                 onChange={e => setPassword(e.target.value)}
               />
             </div>
+            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+              Al cambiarla se cierran todas tus sesiones, también esta: después ingresás de nuevo con la contraseña
+              nueva.
+            </p>
           </div>
         </CardContent>
         <CardFooter>
@@ -136,8 +143,8 @@ function AccountSkeleton() {
 
 /**
  * The logged-in user's own account, for every role: Configuración → Mi cuenta for the office and an Owner, and its
- * own page (/admin/cuenta) for the Developer, who has no Configuración. Only /users/me: no principal data. The
- * two-step verification card goes here too.
+ * own page (/admin/cuenta) for the Developer, who has no Configuración. Only /users/me and /auth/2fa/*: no principal
+ * data. The two-step card shows only when the API reports `twoFactorEnabled` (an API without 2FA leaves it out).
  */
 export function MyAccountSection() {
   const { data: profile, isLoading, isError } = useProfile()
@@ -146,6 +153,9 @@ export function MyAccountSection() {
   return (
     <div className="flex flex-col gap-5">
       <AccountForm key={profile.id} initialEmail={profile.email} initialName={profile.name ?? ''} />
+      {typeof profile.twoFactorEnabled === 'boolean' && (
+        <TwoFactorCard email={profile.email} enabled={profile.twoFactorEnabled} />
+      )}
     </div>
   )
 }
