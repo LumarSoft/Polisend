@@ -93,6 +93,10 @@ export interface NetworkUsageNumber {
   responsibleCode: { code: string; holderName: string | null } | null
   /** The plan's name. */
   plan: string | null
+  /** The catalog id of the plan the month is counted on (null past the largest plan). Missing from an older API. */
+  planId?: number | null
+  /** The catalog plan the number is on; null in a closed month or past the largest plan. Missing from an older API. */
+  assignedPlanId?: number | null
   planMessages: number
   /** What the plan counts (a campaign message counts 2 from the commercial weight date). */
   consumedMessages: number

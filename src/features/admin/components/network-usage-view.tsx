@@ -95,12 +95,20 @@ function PlanBar({ row }: { row: NetworkUsageNumber }) {
 /**
  * The plan of one number of the network for the running month. It reads and changes it on the number's own principal
  * (`/admin/billing` with that principal in X-Acting-Principal for these requests only): the panel stays where it is.
+ * `/admin/billing` answers the API's running month: if it is no longer the month on screen, nothing is offered.
  */
-function NumberPlanForm({ principalId, numberId }: { principalId: number; numberId: number }) {
+function NumberPlanForm({ principalId, numberId, period }: { principalId: number; numberId: number; period: string }) {
   const { data, isLoading, isError } = usePrincipalBillingOverview(principalId)
   const row = data?.numbers.find(n => n.id === numberId)
   if (isLoading) return <Loader2 className="m-2 size-4 animate-spin text-muted-foreground" />
   if (isError || !data) return <p className="text-[12.5px] text-destructive">No se pudo cargar el plan del número.</p>
+  if (data.period !== period) {
+    return (
+      <p className="text-[12.5px] text-muted-foreground">
+        Este mes ya terminó y su plan no cambia más. Elegí el mes en curso para cambiarle el plan.
+      </p>
+    )
+  }
   if (!row) return <p className="text-[12.5px] text-muted-foreground">Este número no tiene un plan para elegir.</p>
   return (
     <div className="flex flex-col gap-2.5">
@@ -112,7 +120,15 @@ function NumberPlanForm({ principalId, numberId }: { principalId: number; number
   )
 }
 
-function NumberPlanPopover({ principalId, row }: { principalId: number; row: NetworkUsageNumber }) {
+function NumberPlanPopover({
+  principalId,
+  row,
+  period,
+}: {
+  principalId: number
+  row: NetworkUsageNumber
+  period: string
+}) {
   const [open, setOpen] = useState(false)
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -130,7 +146,7 @@ function NumberPlanPopover({ principalId, row }: { principalId: number; row: Net
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 p-3.5">
         <div className="mb-2 font-mono text-[13px] font-medium text-ink">{numberLabel(row)}</div>
-        {open && <NumberPlanForm principalId={principalId} numberId={row.id} />}
+        {open && <NumberPlanForm principalId={principalId} numberId={row.id} period={period} />}
       </PopoverContent>
     </Popover>
   )
@@ -139,12 +155,12 @@ function NumberPlanPopover({ principalId, row }: { principalId: number; row: Net
 function NumberRow({
   row,
   principalId,
-  canChangePlan,
+  runningPeriod,
 }: {
   row: NetworkUsageNumber
   principalId: number
-  /** The running month: the plan can still change. */
-  canChangePlan: boolean
+  /** The month on screen when it is the running one (the plan can still change), else null. */
+  runningPeriod: string | null
 }) {
   return (
     <TableRow>
@@ -178,7 +194,7 @@ function NumberRow({
       <TableCell className="text-[13px] text-ink-3">
         <div className="flex flex-wrap items-center gap-1">
           {row.plan ?? '—'}
-          {canChangePlan && <NumberPlanPopover principalId={principalId} row={row} />}
+          {runningPeriod !== null && <NumberPlanPopover principalId={principalId} row={row} period={runningPeriod} />}
         </div>
       </TableCell>
       <TableCell>
@@ -190,7 +206,13 @@ function NumberRow({
   )
 }
 
-function PrincipalRows({ principal, canChangePlan }: { principal: NetworkUsagePrincipal; canChangePlan: boolean }) {
+function PrincipalRows({
+  principal,
+  runningPeriod,
+}: {
+  principal: NetworkUsagePrincipal
+  runningPeriod: string | null
+}) {
   return (
     <>
       <TableRow className="bg-secondary/40 hover:bg-secondary/40">
@@ -228,7 +250,7 @@ function PrincipalRows({ principal, canChangePlan }: { principal: NetworkUsagePr
         </TableRow>
       ) : (
         principal.numbers.map(row => (
-          <NumberRow key={row.id} row={row} principalId={principal.id} canChangePlan={canChangePlan} />
+          <NumberRow key={row.id} row={row} principalId={principal.id} runningPeriod={runningPeriod} />
         ))
       )}
     </>
@@ -262,8 +284,12 @@ export function NetworkUsageView() {
   }
 
   const groups = data ? filterGroups(groupsOf(data, isDeveloper), filter, code) : []
-  // A closed month keeps the plans it had; only the running month's can change (on the API too).
-  const running = period === thisMonth() && data?.closed !== true
+  // A closed month keeps the plans it had; only the running month's can change (on the API too). The month is the
+  // API's: the answer on screen is for the chosen month (not the previous one kept while loading), the API has not
+  // closed it, and it is Argentina's running month (`thisMonth`, the API's `currentPeriod`), never the browser's
+  // local one. The popover checks it again against `/admin/billing`, which answers the API's running month.
+  const runningPeriod =
+    data && data.period === period && !data.closed && data.period === thisMonth() ? data.period : null
   const filtered = filter.zoneKey !== null || filter.principalId !== null
   const totals = !data
     ? null
@@ -369,7 +395,7 @@ export function NetworkUsageView() {
                       </TableCell>
                     </TableRow>
                     {group.principals.map(principal => (
-                      <PrincipalRows key={principal.id} principal={principal} canChangePlan={running} />
+                      <PrincipalRows key={principal.id} principal={principal} runningPeriod={runningPeriod} />
                     ))}
                   </Fragment>
                 )

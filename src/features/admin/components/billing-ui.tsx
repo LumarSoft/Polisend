@@ -10,10 +10,20 @@ export const int = (n: number) => n.toLocaleString('es-AR')
 export const usd = (n: number) =>
   `USD ${n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 
-/** The running month, "YYYY-MM". */
-export const thisMonth = () => {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+const ARGENTINA_MONTH = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  year: 'numeric',
+  month: '2-digit',
+})
+
+/**
+ * The running month, "YYYY-MM", in Argentina: the API's `currentPeriod()`, whatever the browser's clock and time zone
+ * (a browser elsewhere would otherwise ask for a month the API has not started, or call a finished one running).
+ */
+export const thisMonth = (now = new Date()) => {
+  const parts = ARGENTINA_MONTH.formatToParts(now)
+  const part = (type: 'year' | 'month') => parts.find(p => p.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}`
 }
 
 /** The class of a table header cell in Facturación. */
