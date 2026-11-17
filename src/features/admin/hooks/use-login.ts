@@ -104,7 +104,7 @@ export function useLoginSubmit() {
 
 const LOGIN_EMAIL_KEY = 'panel.login.email'
 
-/** /admin/activar and a password change hand the e-mail to the login form this way (never in the URL). */
+/** /admin/activar, /admin/recuperar and a password change hand the e-mail to the login form this way (never in the URL). */
 export function rememberLoginEmail(email: string): void {
   try {
     sessionStorage.setItem(LOGIN_EMAIL_KEY, email)
