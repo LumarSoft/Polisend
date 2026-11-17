@@ -68,3 +68,18 @@ pnpm exec tsc --noEmit
 - Rutas: `/admin/red`, `/admin/red/consumo` (Owner), `/admin/owners` (Developer), `/admin/cuenta` ("Mi cuenta", todos
   los roles; es la única de Configuración que tiene el Developer) y `/admin/activar` (pública, fuera de `(panel)`).
 - Pantallas de plataforma contra `/platform/*` (la API mantiene `/owner/*` como alias); la red, contra `/hierarchy/*`.
+
+## Ingreso, verificación en dos pasos y enlaces de contraseña (plan §6.6)
+
+- Login en dos pasos: `useLoginSubmit()` (`hooks/use-login.ts`) devuelve `step` (`password` | `two-factor`) y
+  `submitCode`; la segunda pantalla es `login-two-factor-step.tsx` (código de la app o de recuperación). Un código
+  incorrecto deja reintentar; un desafío vencido o quemado (5 códigos mal) vuelve a la contraseña con el mensaje de la API.
+- Mi cuenta (`MyAccountSection`): tarjeta «Verificación en dos pasos» (`two-factor-card.tsx`): QR local con
+  `qrcode.react`, clave manual, confirmación y los 10 códigos de recuperación una sola vez (copiar y descargar). Solo se
+  muestra si `/users/me` trae `twoFactorEnabled`. Cambiar la propia contraseña cierra la sesión a propósito
+  (`useUpdateProfile`), deja el correo para el login y lo explica; otra sesión cerrada por un cambio de contraseña ve
+  «Tu sesión terminó».
+- `/admin/activar` (pública): lee el token en el navegador (`lib/link-token.ts`), lo saca de la URL, cierra cualquier
+  sesión guardada antes de mostrar el formulario y nunca inicia sesión sola. Todo texto de la API va como texto plano.
+- Usuarios y Owners: `<AccountAccessDialog scope="network" | "owner" action="password-setup" | "reset-two-factor">`
+  y la insignia `<TwoFactorBadge>` (`account-access-dialog.tsx`), con `useAccountAccess` por debajo.
