@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { ReactNode } from "react";
 import { ImageResponse } from "next/og";
 import { MARK_PATH } from "@/components/brand/logo";
-import { paidPlans, usd } from "@/lib/plan-format";
+import { int, paidPlans } from "@/lib/plan-format";
 import { getPlans } from "@/lib/plans";
 
 export const alt =
@@ -72,7 +72,7 @@ export default async function Image() {
           fontFamily: "Inter Tight",
         }}
       >
-        {/* left: what it is, what it does, what it costs */}
+        {/* left: what it is, what it does, its plans */}
         <div
           style={{
             display: "flex",
@@ -127,7 +127,7 @@ export default async function Image() {
 
           <div style={{ display: "flex", gap: 12, fontSize: 21, fontWeight: 700, whiteSpace: "nowrap" }}>
             <span style={{ padding: "11px 20px", borderRadius: 999, background: BLUE, color: "#ffffff" }}>
-              {from ? `Desde ${usd(from.priceUsd)}/mes` : "WhatsApp 24/7"}
+              {from ? `Planes desde ${int(from.tokens)} tokens` : "WhatsApp 24/7"}
             </span>
             <span style={{ padding: "11px 20px", borderRadius: 999, background: "#ffffff", border: "1px solid #dfe5ee" }}>
               Atiende 24/7

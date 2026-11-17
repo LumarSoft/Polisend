@@ -65,7 +65,7 @@ export function Footer() {
             ["/#asesor", "Asesor humano"],
             ["/#panel", "Panel"],
             ["/#integraciones", "Integraciones"],
-            ["/#precio", "Precio"],
+            ["/#precio", "Planes"],
             ["/#faq", "Preguntas"],
             ["/#empezar", "Cómo empezás"],
             ["/privacidad", "Privacidad"],

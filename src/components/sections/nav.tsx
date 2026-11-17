@@ -9,7 +9,7 @@ const LINKS = [
   { href: "#bot", label: "El bot" },
   { href: "#velocidad", label: "Velocidad" },
   { href: "#panel", label: "Panel" },
-  { href: "#precio", label: "Precio" },
+  { href: "#precio", label: "Planes" },
   { href: "#faq", label: "Preguntas" },
 ];
 

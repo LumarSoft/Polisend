@@ -42,7 +42,7 @@ export function faqFor(catalog: PlanCatalog) {
     a: "Atiende igual, las 24 horas, fines de semana y feriados. Vos configurás tus horarios y cierres; cuando la oficina está cerrada, el bot avisa cuándo va a responder una persona.",
   },
   {
-    q: "¿Cuánto cuesta?",
+    q: "¿Cómo son los planes?",
     a: pricingSentence(catalog),
   },
   {

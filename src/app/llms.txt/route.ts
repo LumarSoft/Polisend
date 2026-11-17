@@ -34,7 +34,7 @@ ${FEATURES.map((f) => `- ${f}`).join("\n")}
 - WhatsApp: API oficial de WhatsApp Business (Meta).
 - Catálogo de vehículos: InfoAuto.
 
-## Precio
+## Planes
 
 ${pricingSentence(catalog)}
 
@@ -48,7 +48,7 @@ ${faqFor(catalog).map((f) => `### ${f.q}\n\n${f.a}`).join("\n\n")}
 - [Denuncia de siniestro de punta a punta](${SITE.url}/#historia)
 - [Funciones del bot](${SITE.url}/#bot)
 - [Panel de gestión](${SITE.url}/#panel)
-- [Precio](${SITE.url}/#precio)
+- [Planes](${SITE.url}/#precio)
 - [Preguntas frecuentes](${SITE.url}/#faq)
 - [Política de privacidad](${SITE.url}/privacidad)
 - [Términos del servicio](${SITE.url}/terminos)
