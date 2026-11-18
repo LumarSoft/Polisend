@@ -58,6 +58,8 @@ export interface ActingPrincipalContextValue {
   selectGroup: (principalId: number, groupId: number | null) => void
   /** A filter of the active principal: nothing remounts. */
   selectProducerCode: (id: number | null) => void
+  /** «Todos» in the zone: no principal chosen, the zone kept (Inicio shows the whole zone). */
+  clearPrincipal: () => void
   /** After creating, renaming or moving a principal or a code: the filter's list lives outside each principal's cache. */
   refreshPrincipals: () => Promise<void>
 }
@@ -224,6 +226,9 @@ export function ActingPrincipalProvider({ children }: { children: ReactNode }) {
         }
       : noop,
     selectProducerCode: ownerReady ? id => change({ ...selection, producerCodeId: id }) : noop,
+    clearPrincipal: ownerReady
+      ? () => change({ zoneKey: selection.zoneKey, principalId: null, groupId: null, producerCodeId: null })
+      : noop,
     refreshPrincipals: async () => {
       if (isOwnerSession) await principalsQuery.refetch()
     },

@@ -33,6 +33,8 @@ interface WorkModeProps {
   onProducerCodeChange?: (id: number | null) => void
   /** Hide the Productor level where the screen's data is not by code. */
   showProducer?: boolean
+  /** Inicio: «Todos» at the principal level, the whole chosen zone added up. */
+  allowZoneTotal?: boolean
   className?: string
 }
 
@@ -154,6 +156,7 @@ function WorkNetworkFilter({
   producerCodeId,
   onProducerCodeChange,
   showProducer = true,
+  allowZoneTotal = false,
   className,
 }: Omit<WorkModeProps, 'mode'>) {
   const acting = useActingPrincipal()
@@ -182,11 +185,22 @@ function WorkNetworkFilter({
         placeholder="Elegí un principal"
         value={
           acting.selection.principalId === null
-            ? null
+            ? allowZoneTotal && typeof acting.zone?.key === 'number'
+              ? ALL
+              : null
             : principalValue(acting.selection.principalId, acting.selection.groupId ?? null)
         }
-        options={workPrincipalOptions(acting.zone?.principals ?? [])}
+        options={[
+          ...(allowZoneTotal && typeof acting.zone?.key === 'number'
+            ? [{ value: ALL, label: 'Todos', hint: 'Toda la zona sumada' }]
+            : []),
+          ...workPrincipalOptions(acting.zone?.principals ?? []),
+        ]}
         onChange={raw => {
+          if (raw === ALL) {
+            acting.clearPrincipal()
+            return
+          }
           const [principalId, groupId] = raw.split(':').map(Number)
           acting.selectGroup(principalId, groupId || null)
         }}

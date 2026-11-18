@@ -236,3 +236,7 @@ Inicio. Reclassifying is moving codes between groups in Mi red: no data moves.
   accounts only with «Mostrar también las cuentas de Lumarsoft…».
 - Facturación: search (number, branch, principal, productor), «Estado» (con consumo, cerca del límite, límite,
   pausado, sin consumo) and principals without numbers only with «Mostrar principales sin números».
+- Inicio, «Todos» in a zone (18/11): `SectionScopeFilter allowZoneTotal` adds «Todos · Toda la zona sumada» at the
+  principal level; choosing it clears the principal (`clearPrincipal`) and Inicio shows `GET /hierarchy/dashboard
+  ?zoneId=` (every principal of the zone added up, counts only). The shell does not ask for a principal on Inicio with
+  a zone chosen; the other work screens still do.
