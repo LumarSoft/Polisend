@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { AlertTriangle, FileText, ShieldAlert, Users, Wallet, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Bot, FileText, ShieldAlert, Users, Wallet, type LucideIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/features/admin/lib/asegurados-ui'
@@ -13,6 +13,7 @@ import { useScopeFilterState } from '../hooks/use-scope-filter-state'
 import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import type { DashboardData } from '@/types/api/dashboard'
 import { PlanLimitAlerts } from './plan-limit-alerts'
+import { useRole } from '../hooks/use-role'
 
 // Recharts is heavy and never needed on first paint — load it lazily.
 const DashboardCharts = dynamic(() => import('./dashboard-charts').then(m => m.DashboardCharts), {
@@ -76,6 +77,52 @@ function buildKpis(data: DashboardData): Kpi[] {
   ]
 }
 
+/**
+ * The Owner's Inicio (Lucas, 18/11/2026): counts only, so it sees the panel is used in the principal: insured clients,
+ * new requests, how much the bot attends this month and open claims. No amount.
+ */
+function buildOwnerKpis(data: DashboardData): Kpi[] {
+  const { kpis, bot } = data
+  const botKpi: Kpi = {
+    key: 'bot',
+    label: 'Uso del bot',
+    value: bot?.rate == null ? '—' : `${bot.rate}%`,
+    hint:
+      !bot || bot.conversations === 0
+        ? 'Sin conversaciones este mes'
+        : `${bot.handledByBot} de ${bot.conversations} chats del mes sin pedir una persona`,
+    icon: Bot,
+    tone: 'emerald',
+  }
+  return [
+    {
+      key: 'asegurados',
+      label: 'Asegurados',
+      value: String(kpis.insuredClients),
+      hint: 'Clientes activos',
+      icon: Users,
+      tone: 'ember',
+    },
+    {
+      key: 'solicitudes',
+      label: 'Solicitudes nuevas',
+      value: String(kpis.newRequests),
+      hint: 'Sin contactar todavía',
+      icon: FileText,
+      tone: 'amber',
+    },
+    botKpi,
+    {
+      key: 'siniestros',
+      label: 'Siniestros abiertos',
+      value: String(kpis.openClaims),
+      hint: 'Pendientes o en proceso',
+      icon: ShieldAlert,
+      tone: 'red',
+    },
+  ]
+}
+
 function KpiCard({ kpi }: { kpi: Kpi }) {
   const Icon = kpi.icon
   return (
@@ -94,10 +141,10 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
   )
 }
 
-function KpiRow({ data }: { data: DashboardData }) {
+function KpiRow({ data, owner }: { data: DashboardData; owner: boolean }) {
   return (
     <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {buildKpis(data).map(kpi => (
+      {(owner ? buildOwnerKpis(data) : buildKpis(data)).map(kpi => (
         <KpiCard key={kpi.key} kpi={kpi} />
       ))}
     </div>
@@ -134,6 +181,7 @@ export function DashboardHome() {
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
   const [scope, setScope] = useScopeFilterState()
   const { data, isLoading, isError, refetch } = useDashboard(scope, useTenantQueriesEnabled())
+  const { isOwner } = useRole()
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
@@ -149,7 +197,9 @@ export function DashboardHome() {
             Hola de nuevo 👋
           </h1>
           <p className="mt-2 text-[14.5px] text-muted-foreground">
-            Un resumen en vivo de tu operación: asegurados, solicitudes, cobranzas y siniestros.
+            {isOwner
+              ? 'Cuánto se usa el panel en este principal: asegurados, solicitudes, el bot y siniestros. Solo cantidades.'
+              : 'Un resumen en vivo de tu operación: asegurados, solicitudes, cobranzas y siniestros.'}
           </p>
         </div>
         <SectionScopeFilter value={scope} onChange={setScope} />
@@ -184,8 +234,8 @@ export function DashboardHome() {
 
         {data ? (
           <>
-            <KpiRow data={data} />
-            <DashboardCharts data={data} />
+            <KpiRow data={data} owner={isOwner} />
+            <DashboardCharts data={data} amounts={!isOwner} />
           </>
         ) : null}
       </RequirePrincipal>

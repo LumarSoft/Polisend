@@ -220,3 +220,19 @@ principal itself. Choosing a group sets `selection.groupId` (kept in the stored 
 when the principal changes, the productor level offers the group's codes, the sidebar section and the brand take the
 group's name, and `useScopeFilterState` sends `codeGroupId` to Asegurados (list and KPIs), Cobranzas, Balance and
 Inicio. Reclassifying is moving codes between groups in Mi red: no data moves.
+
+## Owner: Inicio, Mi red, Usuarios and Facturación (18/11/2026, night)
+
+- Tareas joins `OWNER_HIDDEN_PATHS`: it is the office's own work.
+- Inicio for the Owner: counts only (Asegurados, Solicitudes nuevas, Uso del bot, Siniestros abiertos) and charts
+  without premium. «Uso del bot» = `GET /admin/dashboard` `bot`: chats of the month the bot handled without a request
+  for a person.
+- Mi red: a principal with `groupsAsPrincipals` is not a card: its groups are shown as the zone's principals
+  (`PrincipalCodesBlock asPrincipals`) with Entrar (`selectGroup`), rename, «Fusionar» (merge into another one,
+  `POST …/groups/:groupId/merge`) and delete; the zone header counts principals and independent productores. Its
+  Principal filter lists the groups too (`NetworkFilter expandGroups`); Usuarios and Facturación leave such a
+  principal out.
+- Usuarios: rows grouped by principal (a heading per principal), a «Dos pasos» filter, and the Owner's read-only
+  accounts only with «Mostrar también las cuentas de Lumarsoft…».
+- Facturación: search (number, branch, principal, productor), «Estado» (con consumo, cerca del límite, límite,
+  pausado, sin consumo) and principals without numbers only with «Mostrar principales sin números».

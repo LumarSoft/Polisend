@@ -16,6 +16,7 @@ import { NO_ZONE, noZoneLabel, type ZoneKey } from '../lib/network'
 import { ConfirmActionDialog } from './confirm-action-dialog'
 import { EMPTY_NETWORK_FILTER, NetworkFilter, type NetworkListFilterValue } from './network-filter'
 import { NetworkPrincipalCard } from './network-principal-card'
+import { PrincipalCodesBlock } from './principal-codes-block'
 import { PrincipalFormDialog, type PrincipalFormValues } from './principal-form-dialog'
 import { ZoneFormDialog } from './zone-form-dialog'
 
@@ -52,6 +53,21 @@ function filterGroups(groups: NetworkGroup[], filter: NetworkListFilterValue): N
 
 const PAGE = 'mx-auto w-full max-w-5xl px-5 py-8 md:px-8 md:py-10'
 
+/** A zone's principals as the Owner sees them: a principal holding the zone's productores counts as its groups. */
+function principalCount(principals: NetworkTreePrincipal[]): string {
+  const groups = principals.filter(p => p.groupsAsPrincipals).flatMap(p => p.groups ?? [])
+  const multi = groups.filter(group =>
+    principals.some(p => p.codes.filter(code => code.groupId === group.id).length > 1),
+  ).length
+  const real = principals.filter(p => !p.groupsAsPrincipals).length
+  const independents = groups.length - multi
+  const count = real + multi
+  const text = count === 1 ? '1 principal' : `${count} principales`
+  return independents > 0
+    ? `${text} · ${independents === 1 ? '1 productor independiente' : `${independents} productores independientes`}`
+    : text
+}
+
 /**
  * "Mi red" (plan §6.2), the Owner's home: Zona → Principal → Productores with the counters of `GET /hierarchy/tree`
  * (message counts, never an amount). From here it creates zones, principals and codes, enters a principal (makes it
@@ -84,6 +100,11 @@ export function NetworkView() {
 
   const enter = (principal: NetworkTreePrincipal) => {
     acting.selectPrincipal(principal.id)
+    router.push('/admin')
+  }
+  // One of a zone's principals (a group of the principal that holds the zone's productores).
+  const enterGroup = (principal: NetworkTreePrincipal, groupId: number) => {
+    acting.selectGroup(principal.id, groupId)
     router.push('/admin')
   }
 
@@ -156,7 +177,7 @@ export function NetworkView() {
       </div>
 
       {tree && (hasZones || tree.home) && (
-        <NetworkFilter mode="network" value={filter} onChange={setFilter} className="mb-5" />
+        <NetworkFilter mode="network" value={filter} onChange={setFilter} expandGroups className="mb-5" />
       )}
 
       {isError && <p className="mb-4 text-[14px] text-destructive">No se pudo cargar tu red.</p>}
@@ -197,9 +218,7 @@ export function NetworkView() {
                         Triunfo {group.zone.code}
                       </Badge>
                     )}
-                    <span className="text-[12px] text-muted-foreground">
-                      {group.principals.length === 1 ? '1 principal' : `${group.principals.length} principales`}
-                    </span>
+                    <span className="text-[12px] text-muted-foreground">{principalCount(group.principals)}</span>
                   </div>
                   {group.zone && (
                     <div className="flex items-center gap-1">
@@ -244,16 +263,31 @@ export function NetworkView() {
                     Esta zona todavía no tiene principales.
                   </p>
                 ) : (
-                  group.principals.map(principal => (
-                    <NetworkPrincipalCard
-                      key={principal.id}
-                      principal={principal}
-                      onlyCodeId={filter.principalId === principal.id ? filter.producerCodeId : null}
-                      isActing={acting.hasPrincipal && acting.actingPrincipalId === principal.id}
-                      canEnter={acting.principals.some(p => p.id === principal.id)}
-                      onEnter={() => enter(principal)}
-                    />
-                  ))
+                  group.principals.map(principal =>
+                    principal.groupsAsPrincipals ? (
+                      // The zone's productores: each group is one of its principals (or an independent productor),
+                      // at the level of the other principals; the holding principal itself never shows.
+                      <PrincipalCodesBlock
+                        key={principal.id}
+                        principalId={principal.id}
+                        codes={principal.codes}
+                        groups={principal.groups}
+                        asPrincipals
+                        onEnterGroup={groupId => enterGroup(principal, groupId)}
+                        onlyGroupId={filter.principalId === principal.id ? (filter.groupId ?? null) : null}
+                        onlyCodeId={filter.principalId === principal.id ? filter.producerCodeId : null}
+                      />
+                    ) : (
+                      <NetworkPrincipalCard
+                        key={principal.id}
+                        principal={principal}
+                        onlyCodeId={filter.principalId === principal.id ? filter.producerCodeId : null}
+                        isActing={acting.hasPrincipal && acting.actingPrincipalId === principal.id}
+                        canEnter={acting.principals.some(p => p.id === principal.id)}
+                        onEnter={() => enter(principal)}
+                      />
+                    ),
+                  )
                 )}
               </section>
             ))}
