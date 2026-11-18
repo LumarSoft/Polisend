@@ -176,25 +176,34 @@ export function TriunfoCredentialForm({
         {children}
       </form>
 
-      <div className="flex items-start gap-2 rounded-lg border border-line-2 bg-paper-2 p-3 text-[12px] text-muted-foreground">
-        <LockKeyhole className="mt-0.5 size-4 shrink-0 text-ember-2" />
-        <div className="flex flex-col gap-1">
-          <p>
-            Son el usuario y la contraseña con los que entrás a TriunfoNet: escribila tal cual, sin convertirla. El
-            usuario de web service que muestra TriunfoNet (empieza con WS) todavía no sirve para esto.
-          </p>
-          <p>
-            <span className="font-medium text-ink">La contraseña no sale de este navegador.</span> Antes de enviarse se
-            convierte acá mismo a un código (MD5), que es lo que piden los servicios de Triunfo. De la contraseña solo
-            se envía ese código: se valida con Triunfo, queda guardado cifrado y no se vuelve a mostrar.
-          </p>
-          <p>
-            Usá una contraseña larga, de 12 caracteres o más: de una corta se puede deducir la original a partir de su
-            código. Después de tres intentos rechazados hay que esperar 15 minutos, para que Triunfo no bloquee el
-            acceso.
-          </p>
-        </div>
-      </div>
+      <TriunfoPasswordNote>
+        Son el usuario y la contraseña con los que entrás a TriunfoNet: escribila tal cual, sin convertirla. El usuario
+        de web service (empieza con WS) no sirve para esto: no saca el permiso para cotizar ni bajar documentos.
+      </TriunfoPasswordNote>
     </>
+  )
+}
+
+/**
+ * How a Triunfo password travels: hashed to MD5 in this browser, validated, stored encrypted, never shown again.
+ * `children` is what the user and password are, for the form it is under.
+ */
+export function TriunfoPasswordNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-line-2 bg-paper-2 p-3 text-[12px] text-muted-foreground">
+      <LockKeyhole className="mt-0.5 size-4 shrink-0 text-ember-2" />
+      <div className="flex flex-col gap-1">
+        <p>{children}</p>
+        <p>
+          <span className="font-medium text-ink">La contraseña no sale de este navegador.</span> Antes de enviarse se
+          convierte acá mismo a un código (MD5), que es lo que piden los servicios de Triunfo. De la contraseña solo se
+          envía ese código: se valida con Triunfo, queda guardado cifrado y no se vuelve a mostrar.
+        </p>
+        <p>
+          Usá una contraseña larga, de 12 caracteres o más: de una corta se puede deducir la original a partir de su
+          código. Después de tres intentos rechazados hay que esperar 15 minutos, para que Triunfo no bloquee el acceso.
+        </p>
+      </div>
+    </div>
   )
 }
