@@ -11,7 +11,13 @@ import { useActingPrincipal } from '../context/acting-principal-context'
 import { useAuth } from '../context/auth-context'
 import { useRole } from '../hooks/use-role'
 import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
-import { DEVELOPER_PATHS, OWNER_NETWORK_PATHS, SCREENS_WITH_NETWORK_FILTER, matchesPath } from '../lib/panel-areas'
+import {
+  DEVELOPER_PATHS,
+  OWNER_HIDDEN_PATHS,
+  OWNER_NETWORK_PATHS,
+  SCREENS_WITH_NETWORK_FILTER,
+  matchesPath,
+} from '../lib/panel-areas'
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
 import { AppSidebar } from './app-sidebar'
 import { AssistantFab, AssistantLauncher } from './assistant-launcher'
@@ -60,6 +66,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const tenant = useTenantQueriesEnabled()
   // A pasted cartera URL: the Developer never enters one.
   const developerOutside = isDeveloper && !matchesPath(pathname, DEVELOPER_PATHS)
+  // A pasted URL of a screen the Owner does not use goes back to Inicio.
+  const ownerOutside = isOwner && matchesPath(pathname, OWNER_HIDDEN_PATHS)
 
   useEffect(() => {
     if (hydrated && !isAuthenticated) router.replace('/admin/login')
@@ -69,8 +77,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
     if (developerOutside) router.replace('/admin/organizaciones')
   }, [developerOutside, router])
 
+  useEffect(() => {
+    if (ownerOutside) router.replace('/admin')
+  }, [ownerOutside, router])
+
   // Nothing renders (nothing loads) until the role is known, nor a screen the Developer is being taken out of.
-  if (!hydrated || !isAuthenticated || (roleLoading && !role) || developerOutside) return <ShellLoading />
+  if (!hydrated || !isAuthenticated || (roleLoading && !role) || developerOutside || ownerOutside) {
+    return <ShellLoading />
+  }
 
   const title =
     TITLES[pathname] ?? (pathname.startsWith('/admin/organizaciones/') ? 'Organización' : undefined) ?? 'Panel'

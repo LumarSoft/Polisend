@@ -9,6 +9,8 @@ export interface HierarchyPrincipalCode {
   id: number
   code: string
   holderName: string | null
+  /** Triunfo blocks new policies, renewals and endorsements for it. Absent on older APIs. */
+  triunfoBlocked?: boolean
 }
 
 /** `GET /hierarchy/principals` (Developer, Owner, SuperAdmin): the cascading filter's data, ordered by name. */
@@ -35,6 +37,8 @@ export interface NetworkTreeCode {
   holderName: string | null
   isMaster: boolean
   isActive: boolean
+  /** Triunfo blocks new policies, renewals and endorsements for it. Absent on older APIs. */
+  triunfoBlocked?: boolean
   /** The principal's Admins granted this code ([] = "sin usuario"). */
   admins: Array<{ id: number; name: string | null }>
 }

@@ -8,7 +8,7 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
 | Role | Who | Panel |
 |---|---|---|
 | `DEVELOPER` | Lumar, the platform | Platform screens only. Sees money. Never enters a cartera. |
-| `OWNER` | Owner of a network of zones | "Mi red", "Usuarios" and "Consumo de la red", then the SuperAdmin menu of the acting principal. Never sees an amount. |
+| `OWNER` | Owner of a network of zones | "Mi red", "Usuarios" and Administración (Facturación, Configuración) of the whole network, then a trimmed SuperAdmin menu of the acting principal (Inicio, Tareas, Asegurados, Cobranzas, Balance mensual, Ayuda). Never sees an amount. |
 | `SUPERADMIN` | Runs one principal | As before. "Usuarios" adds a "Productores" tab. |
 | `ADMIN` | Works some codes of one principal | Unchanged. |
 
@@ -73,7 +73,22 @@ folder above; the API contract is `docs/handoff/owner-zones-step3/contract-final
   - New screens: Owners y zonas, and Usuarios for every principal.
 - **Owner.**
   - Home is Mi red.
-  - Above the SuperAdmin menu of the acting principal, a "Mi red" group: Mi red, Usuarios and Consumo de la red.
+  - Above the menu of the acting principal, a "Mi red" group: Mi red, Usuarios and Administración (Facturación,
+    Configuración).
+
+## The Owner's trimmed panel (18/11/2026)
+
+- The Owner does not use an office's day: `OWNER_HIDDEN_PATHS` (`lib/panel-areas.ts`) leaves Asuntos pendientes,
+  Whatsapp, Campañas, Solicitudes, Siniestros, Rechazos and Números out of its menu, the shell sends a pasted URL of
+  them to Inicio, and the sidebar does not load their pending counts.
+- Facturación (`/admin/facturacion`) renders `NetworkUsageView variant="billing"`: the network's tokens with
+  Todas/Todos at every level of `<NetworkFilter mode="network">`. `/admin/red/consumo` still answers, out of the menu.
+- Configuración is global (`OwnerSettingsView`, no filter, no principal): Cuenta (with the codes preference), Logo
+  (its own principal's, sent with `forPrincipal` = home) and Triunfo (only the web-service user). Assistant, hours,
+  prices, coverages and each principal's Triunfo access stay with the SuperAdmins.
+- Inactive codes and the ones Triunfo blocks (`triunfoBlocked` from `/hierarchy/tree` and `/hierarchy/principals`)
+  are hidden in Mi red, Usuarios › Productores and the filters unless «Mostrar códigos inactivos y bloqueados» is on
+  (Configuración › Cuenta, Owner and SuperAdmin; `hooks/use-hidden-codes.ts`, per browser).
   - The sidebar header shows the active zone and principal.
   - Tareas opens on "Todo el equipo"; the Owner is never an assignee.
   - The "nuevo" marks of Novedades and Mejoras are hidden.

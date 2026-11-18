@@ -29,8 +29,11 @@ export const adminAuthService = {
    * longer an Owner (the Developer took it back to SuperAdmin) is taken as it is: the API ignores the principal it
    * sent, and this profile is what makes the panel stop sending one.
    */
-  getProfile: async (token: string): Promise<AdminUser> => {
-    const { data, actingPrincipalId } = await apiRequestReportingPrincipal<AdminUser>('/users/me', { token })
+  getProfile: async (token: string, forPrincipal?: number): Promise<AdminUser> => {
+    const { data, actingPrincipalId } = await apiRequestReportingPrincipal<AdminUser>('/users/me', {
+      token,
+      forPrincipal,
+    })
     if (actingPrincipalId !== null && isOwnerRole(data.role)) {
       if (data.actingInvalid) reportActingPrincipalInvalid(actingPrincipalId)
       else if (data.actingProducerId !== actingPrincipalId) {

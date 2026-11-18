@@ -16,8 +16,31 @@ export const DEVELOPER_PATHS = [
   '/admin/cuenta',
 ] as const
 
-/** An Owner's screens of the whole network (and its own account): not tied to the acting principal. */
-export const OWNER_NETWORK_PATHS = ['/admin/red', '/admin/usuarios', '/admin/cuenta'] as const
+/**
+ * An Owner's screens of the whole network (and its own account): not tied to the acting principal. Its Facturación is
+ * the network's (every zone, principal and productor) and its Configuración is global (account, logo, web-service user).
+ */
+export const OWNER_NETWORK_PATHS = [
+  '/admin/red',
+  '/admin/usuarios',
+  '/admin/cuenta',
+  '/admin/facturacion',
+  '/admin/configuracion',
+] as const
+
+/**
+ * Screens of an office's day an Owner does not use (18/11/2026): the menu leaves them out and a pasted URL goes back to
+ * Inicio. The Owner keeps Inicio, Tareas, Asegurados, Cobranzas and Balance mensual of the acting principal.
+ */
+export const OWNER_HIDDEN_PATHS = [
+  '/admin/novedades',
+  '/admin/inbox',
+  '/admin/campanas',
+  '/admin/solicitudes',
+  '/admin/siniestros',
+  '/admin/rechazos',
+  '/admin/numeros',
+] as const
 
 /**
  * Work screens that render the cascading filter (`SectionScopeFilter` or `NetworkFilter`) and `RequirePrincipal`

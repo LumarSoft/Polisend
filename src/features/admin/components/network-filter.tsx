@@ -6,6 +6,7 @@ import type { HierarchyPrincipal } from '@/types/api/hierarchy'
 import { useActingPrincipal } from '../context/acting-principal-context'
 import { useHierarchyPrincipals } from '../hooks/use-hierarchy'
 import { useRole } from '../hooks/use-role'
+import { useShowHiddenCodes, visibleCodes } from '../hooks/use-hidden-codes'
 import { NO_ZONE, noZoneLabel, zoneKeyOf, zonesOf, type NetworkZone, type ZoneKey } from '../lib/network'
 
 const ALL = 'all'
@@ -71,13 +72,19 @@ function principalOptions(principals: HierarchyPrincipal[]): ComboboxOption[] {
   }))
 }
 
-function producerOptions(principal: HierarchyPrincipal | null): ComboboxOption[] {
+/** The principal's codes; blocked ones only with the preference on (or when already chosen). */
+function producerOptions(
+  principal: HierarchyPrincipal | null,
+  showHidden: boolean,
+  chosen: number | null,
+): ComboboxOption[] {
   return [
     { value: ALL, label: 'Todos' },
-    ...(principal?.codes ?? []).map(code => ({
+    ...visibleCodes(principal?.codes ?? [], showHidden, chosen).map(code => ({
       value: String(code.id),
       label: code.code,
-      hint: code.holderName ?? undefined,
+      hint:
+        [code.holderName, code.triunfoBlocked ? 'Bloqueado en Triunfo' : null].filter(Boolean).join(' · ') || undefined,
     })),
   ]
 }
@@ -98,6 +105,7 @@ function WorkNetworkFilter({
   className,
 }: Omit<WorkModeProps, 'mode'>) {
   const acting = useActingPrincipal()
+  const [showHidden] = useShowHiddenCodes()
   if (!acting.isOwnerSession) return null
 
   const producer = producerCodeId !== undefined ? producerCodeId : acting.selection.producerCodeId
@@ -131,7 +139,7 @@ function WorkNetworkFilter({
           label="Productor"
           placeholder="Todos"
           value={producer === null ? ALL : String(producer)}
-          options={producerOptions(acting.principal)}
+          options={producerOptions(acting.principal, showHidden, producer)}
           onChange={raw => setProducer(parseId(raw))}
           disabled={!acting.principal}
           className="w-52"
@@ -144,6 +152,7 @@ function WorkNetworkFilter({
 function NetworkListFilter({ value, onChange, showProducer = true, className }: Omit<NetworkModeProps, 'mode'>) {
   const { isDeveloper, isOwner, isSuperAdmin } = useRole()
   const { data: principals = [], isLoading } = useHierarchyPrincipals(isDeveloper || isOwner || isSuperAdmin)
+  const [showHidden] = useShowHiddenCodes()
   const zones = zonesOf(principals, noZoneLabel(isDeveloper))
   const zone = zones.find(z => z.key === value.zoneKey) ?? null
   const inZone = zone ? zone.principals : principals
@@ -179,7 +188,7 @@ function NetworkListFilter({ value, onChange, showProducer = true, className }: 
           label="Productor"
           placeholder="Todos"
           value={value.producerCodeId === null ? ALL : String(value.producerCodeId)}
-          options={producerOptions(principal)}
+          options={producerOptions(principal, showHidden, value.producerCodeId)}
           onChange={raw => onChange({ ...value, producerCodeId: parseId(raw) })}
           disabled={!principal}
           className="w-52"

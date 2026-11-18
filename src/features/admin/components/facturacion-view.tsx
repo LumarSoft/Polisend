@@ -52,7 +52,7 @@ import { ConsumptionBar, PlanSelect } from './billing-number-parts'
 import { HEAD, int, Kpi, MonthPicker, thisMonth, TokensHint, usd } from './billing-ui'
 import { BillingByAdminTab } from './billing-by-admin-tab'
 import { LiquidacionTab } from './liquidacion-tab'
-import { NetworkFilter } from './network-filter'
+import { NetworkUsageView } from './network-usage-view'
 import { RequirePrincipal } from './require-principal'
 import { useUrlTab } from '../hooks/use-panel-link'
 
@@ -841,6 +841,13 @@ function PlatformDashboardTab() {
 type BillingTab = 'consumo' | 'administradores' | 'planes' | 'tablero' | 'liquidacion'
 
 export function FacturacionView() {
+  const { isOwner } = useRole()
+  // The Owner's Facturación is its whole network's: every zone, principal and productor, with "Todos" at each level.
+  return isOwner ? <NetworkUsageView variant="billing" /> : <PrincipalBillingView />
+}
+
+/** The Developer's platform billing, or a principal's plans and consumption (SuperAdmin, Admin). */
+function PrincipalBillingView() {
   const { isDeveloper, canManageOrg, isAdmin, isLoading: roleLoading } = useRole()
   // `?tab=` (the assistant's links) or the role's first tab.
   const [tab, setTab] = useUrlTab<BillingTab | 'auto'>(
@@ -878,8 +885,6 @@ export function FacturacionView() {
               : 'Cada número tiene un plan de tokens por mes: cada mensaje que envía el asistente, la oficina desde el panel o un aviso cuenta 1 token, y cada mensaje de campaña, 2. Cuando un número llega al límite de su plan, el asistente se pausa y elegís si pasa al siguiente.'}
           </p>
         </div>
-        {/* An Owner's Zona › Principal: the plans and tokens of that principal's numbers, never an amount. */}
-        <NetworkFilter showProducer={false} />
       </div>
 
       <RequirePrincipal showFilter={false}>
