@@ -26,3 +26,6 @@ export interface DashboardData {
    */
   bot?: { conversations: number; handoffs: number; handledByBot: number; rate: number | null }
 }
+
+/** `GET /hierarchy/dashboard?zoneId=` (Owner): the dashboard of every principal of a zone added up, counts only. */
+export type ZoneDashboardData = DashboardData & { principals: number }

@@ -6,7 +6,8 @@ import { AlertTriangle, Bot, FileText, ShieldAlert, Users, Wallet, type LucideIc
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/features/admin/lib/asegurados-ui'
-import { useDashboard } from '../hooks/use-dashboard'
+import { useDashboard, useZoneDashboard } from '../hooks/use-dashboard'
+import { useActingPrincipal } from '../context/acting-principal-context'
 import { SectionScopeFilter } from './section-scope-filter'
 import { RequirePrincipal } from './require-principal'
 import { useScopeFilterState } from '../hooks/use-scope-filter-state'
@@ -180,8 +181,13 @@ function DashboardSkeleton() {
 export function DashboardHome() {
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
   const [scope, setScope] = useScopeFilterState()
-  const { data, isLoading, isError, refetch } = useDashboard(scope, useTenantQueriesEnabled())
   const { isOwner } = useRole()
+  const acting = useActingPrincipal()
+  // An Owner with a zone and «Todos»: the whole zone added up instead of one principal.
+  const zoneId = isOwner && !acting.hasPrincipal && typeof acting.zone?.key === 'number' ? acting.zone.key : null
+  const tenant = useTenantQueriesEnabled()
+  const { data, isLoading, isError, refetch } = useDashboard(scope, tenant && zoneId === null)
+  const zoneQuery = useZoneDashboard(zoneId)
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10">
@@ -198,47 +204,81 @@ export function DashboardHome() {
           </h1>
           <p className="mt-2 text-[14.5px] text-muted-foreground">
             {isOwner
-              ? 'Cuánto se usa el panel en este principal: asegurados, solicitudes, el bot y siniestros. Solo cantidades.'
+              ? `Cuánto se usa el panel en ${zoneId !== null ? 'toda la zona' : 'este principal'}: asegurados, solicitudes, el bot y siniestros. Solo cantidades.`
               : 'Un resumen en vivo de tu operación: asegurados, solicitudes, cobranzas y siniestros.'}
           </p>
         </div>
-        <SectionScopeFilter value={scope} onChange={setScope} />
+        <SectionScopeFilter value={scope} onChange={setScope} allowZoneTotal={isOwner} />
       </motion.div>
 
-      <RequirePrincipal showFilter={false}>
-        <PlanLimitAlerts />
+      {zoneId !== null ? (
+        <ZoneTotal zoneName={acting.zone?.name ?? ''} query={zoneQuery} />
+      ) : (
+        <RequirePrincipal showFilter={false}>
+          <PlanLimitAlerts />
 
-        {isLoading ? <DashboardSkeleton /> : null}
+          {isLoading ? <DashboardSkeleton /> : null}
 
-        {isError ? (
-          <Card className="mt-8 border-line-2 shadow-sm">
-            <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-              <span className="flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
-                <AlertTriangle className="size-6" />
-              </span>
-              <div>
-                <h2 className="font-display text-[20px] text-ink">No pudimos cargar las métricas</h2>
-                <p className="mx-auto mt-1.5 max-w-[380px] text-[13.5px] text-muted-foreground">
-                  Revisá tu conexión e intentá de nuevo.
-                </p>
-              </div>
-              <button
-                onClick={() => refetch()}
-                className="rounded-lg border border-ember-ring bg-ember-soft px-4 py-2 text-[13px] font-medium text-ember-2 transition-colors hover:bg-ember/15"
-              >
-                Reintentar
-              </button>
-            </CardContent>
-          </Card>
-        ) : null}
+          {isError ? (
+            <Card className="mt-8 border-line-2 shadow-sm">
+              <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+                <span className="flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                  <AlertTriangle className="size-6" />
+                </span>
+                <div>
+                  <h2 className="font-display text-[20px] text-ink">No pudimos cargar las métricas</h2>
+                  <p className="mx-auto mt-1.5 max-w-[380px] text-[13.5px] text-muted-foreground">
+                    Revisá tu conexión e intentá de nuevo.
+                  </p>
+                </div>
+                <button
+                  onClick={() => refetch()}
+                  className="rounded-lg border border-ember-ring bg-ember-soft px-4 py-2 text-[13px] font-medium text-ember-2 transition-colors hover:bg-ember/15"
+                >
+                  Reintentar
+                </button>
+              </CardContent>
+            </Card>
+          ) : null}
 
-        {data ? (
-          <>
-            <KpiRow data={data} owner={isOwner} />
-            <DashboardCharts data={data} amounts={!isOwner} />
-          </>
-        ) : null}
-      </RequirePrincipal>
+          {data ? (
+            <>
+              <KpiRow data={data} owner={isOwner} />
+              <DashboardCharts data={data} amounts={!isOwner} />
+            </>
+          ) : null}
+        </RequirePrincipal>
+      )}
     </div>
+  )
+}
+
+/** The Owner's Inicio for a whole zone: the counts of every principal of it added up, no amount. */
+function ZoneTotal({ zoneName, query }: { zoneName: string; query: ReturnType<typeof useZoneDashboard> }) {
+  const { data, isLoading, isError, refetch } = query
+  if (isLoading) return <DashboardSkeleton />
+  if (isError || !data) {
+    return (
+      <Card className="mt-8 border-line-2 shadow-sm">
+        <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+          <h2 className="font-display text-[20px] text-ink">No pudimos sumar la zona</h2>
+          <button
+            onClick={() => refetch()}
+            className="rounded-lg border border-ember-ring bg-ember-soft px-4 py-2 text-[13px] font-medium text-ember-2 transition-colors hover:bg-ember/15"
+          >
+            Reintentar
+          </button>
+        </CardContent>
+      </Card>
+    )
+  }
+  return (
+    <>
+      <p className="mt-6 text-[13px] text-muted-foreground">
+        Toda la zona {zoneName} sumada: sus principales y sus productores independientes. Solo cantidades.
+      </p>
+      <KpiRow data={data} owner />
+      <DashboardCharts data={data} amounts={false} />
+    </>
   )
 }

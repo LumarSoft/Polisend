@@ -62,7 +62,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { isAuthenticated, hydrated } = useAuth()
   const { role, isDeveloper, isOwner, isLoading: roleLoading } = useRole()
-  const { hasPrincipal } = useActingPrincipal()
+  const { hasPrincipal, zone } = useActingPrincipal()
   const tenant = useTenantQueriesEnabled()
   // A pasted cartera URL: the Developer never enters one.
   const developerOutside = isDeveloper && !matchesPath(pathname, DEVELOPER_PATHS)
@@ -93,9 +93,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const fullScreen = pathname === '/admin/inbox'
   // An Owner whose zone change left it without a principal: a work screen that does not show the cascading filter
   // itself shows RequirePrincipal's message (with the filter) instead of loading anything.
+  // Inicio with a zone and «Todos»: the whole zone added up (DashboardHome), not a request to choose a principal.
+  const zoneHome = pathname === '/admin' && typeof zone?.key === 'number'
   const guardPrincipal =
     isOwner &&
     !hasPrincipal &&
+    !zoneHome &&
     !matchesPath(pathname, OWNER_NETWORK_PATHS) &&
     !matchesPath(pathname, SCREENS_WITH_NETWORK_FILTER)
 
