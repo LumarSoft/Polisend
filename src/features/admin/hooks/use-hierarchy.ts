@@ -145,6 +145,21 @@ export function usePrincipalCodeActions() {
       }) => hierarchyService.updateCode(token as string, principalId, codeId, data),
       onSuccess: refresh,
     }),
+    createGroup: useMutation({
+      mutationFn: ({ principalId, name }: { principalId: number; name: string }) =>
+        hierarchyService.createGroup(token as string, principalId, { name }),
+      onSuccess: refreshNetwork,
+    }),
+    renameGroup: useMutation({
+      mutationFn: ({ principalId, groupId, name }: { principalId: number; groupId: number; name: string }) =>
+        hierarchyService.renameGroup(token as string, principalId, groupId, { name }),
+      onSuccess: refreshNetwork,
+    }),
+    removeGroup: useMutation({
+      mutationFn: ({ principalId, groupId }: { principalId: number; groupId: number }) =>
+        hierarchyService.removeGroup(token as string, principalId, groupId),
+      onSuccess: refreshNetwork,
+    }),
   }
 }
 

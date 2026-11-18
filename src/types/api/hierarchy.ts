@@ -39,8 +39,23 @@ export interface NetworkTreeCode {
   isActive: boolean
   /** Triunfo blocks new policies, renewals and endorsements for it. Absent on older APIs. */
   triunfoBlocked?: boolean
+  /** Its group among the principal's `groups`; null or absent = "Sin grupo". */
+  groupId?: number | null
   /** The principal's Admins granted this code ([] = "sin usuario"). */
   admins: Array<{ id: number; name: string | null }>
+}
+
+/** A group of a principal's codes ("Mi red"), made from a Triunfo organizer or by hand. */
+export interface CodeGroup {
+  id: number
+  name: string
+  /** The Triunfo organizer it was made from, if it was. */
+  organizerCode: string | null
+}
+
+/** `POST /hierarchy/principals/:id/groups` and `PATCH …/groups/:groupId`. */
+export interface CodeGroupRequest {
+  name: string
 }
 
 export interface NetworkTreePrincipal {
@@ -60,6 +75,8 @@ export interface NetworkTreePrincipal {
   /** `failingSince`: ISO date of the open Triunfo outage, or null. */
   triunfo: { configured: boolean; failingSince: string | null }
   codes: NetworkTreeCode[]
+  /** The groups its codes are ordered in, by name. Absent on older APIs. */
+  groups?: CodeGroup[]
 }
 
 export interface NetworkTreeZone {
@@ -222,6 +239,8 @@ export interface UpdatePrincipalCodeRequest {
   isActive?: boolean
   /** Developer only, only true: moves the master mark. */
   isMaster?: true
+  /** A group of the same principal; null takes the code out of its group. */
+  groupId?: number | null
 }
 
 // ─── Users (GET/POST/PATCH/DELETE /hierarchy/users) ────────────────────────────

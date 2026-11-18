@@ -201,3 +201,12 @@ Plan: `docs/PLAN-TOKENS-Y-RECUPERACION.md` in the `john/` folder above (§1 deci
   those columns, a lock instead of the actions menu, and only when no zone, principal, productor or role filter is on
   (the search still applies). `isManagedUser` / `isReadOnlyUser` (`lib/network-users.ts`) split the list; every form and dialog
   only ever gets managed accounts.
+
+## Code groups (18/11/2026)
+
+A principal with hundreds of codes (a zone's) orders them in groups: `PrincipalCodesBlock` (Mi red, Usuarios ›
+Productores) shows a search box, «Nuevo grupo», one collapsible section per group (rename, delete; deleting leaves its
+codes «Sin grupo») and «Sin grupo». A code moves by dragging its row onto a section or with its «Grupo» selector
+(`PATCH /hierarchy/principals/:id/codes/:codeId` with `groupId`). The grouped layout shows when the principal has
+groups or more than 20 codes; the first groups come from an operations script, one per Triunfo organizer with two or
+more productores.

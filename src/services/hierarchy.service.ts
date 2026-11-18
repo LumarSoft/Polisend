@@ -1,6 +1,8 @@
 import { apiRequest } from '@/lib/api-client'
 import { queryString } from '@/lib/query-string'
 import type {
+  CodeGroup,
+  CodeGroupRequest,
   CreateNetworkUserRequest,
   CreateNetworkUserResponse,
   CreatePrincipalCodeRequest,
@@ -61,6 +63,21 @@ export const hierarchyService = {
   /** The single place where producer codes are created. */
   createCode: (token: string, principalId: number, data: CreatePrincipalCodeRequest): Promise<PrincipalCode> =>
     apiRequest<PrincipalCode>(`/hierarchy/principals/${principalId}/codes`, { method: 'POST', token, body: data }),
+
+  /** A group of a principal's codes; codes move into it with updateCode (`groupId`). */
+  createGroup: (token: string, principalId: number, data: CodeGroupRequest): Promise<CodeGroup> =>
+    apiRequest<CodeGroup>(`/hierarchy/principals/${principalId}/groups`, { method: 'POST', token, body: data }),
+
+  renameGroup: (token: string, principalId: number, groupId: number, data: CodeGroupRequest): Promise<CodeGroup> =>
+    apiRequest<CodeGroup>(`/hierarchy/principals/${principalId}/groups/${groupId}`, {
+      method: 'PATCH',
+      token,
+      body: data,
+    }),
+
+  /** Its codes are left without a group. */
+  removeGroup: (token: string, principalId: number, groupId: number): Promise<{ id: number }> =>
+    apiRequest<{ id: number }>(`/hierarchy/principals/${principalId}/groups/${groupId}`, { method: 'DELETE', token }),
 
   /** The single place where producer codes are edited. */
   updateCode: (

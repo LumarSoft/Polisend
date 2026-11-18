@@ -154,7 +154,12 @@ export function NetworkPrincipalCard({
         </button>
         {showCodes && (
           <div className="mt-3">
-            <PrincipalCodesBlock principalId={principal.id} codes={principal.codes} onlyCodeId={onlyCodeId} />
+            <PrincipalCodesBlock
+              principalId={principal.id}
+              codes={principal.codes}
+              groups={principal.groups}
+              onlyCodeId={onlyCodeId}
+            />
           </div>
         )}
       </div>
