@@ -85,6 +85,8 @@ export interface NetworkTreePrincipal {
   codes: NetworkTreeCode[]
   /** The groups its codes are ordered in, by name. Absent on older APIs. */
   groups?: CodeGroup[]
+  /** It holds a zone's productores: Mi red shows each of its groups as a principal. Absent on older APIs. */
+  groupsAsPrincipals?: boolean
 }
 
 export interface NetworkTreeZone {

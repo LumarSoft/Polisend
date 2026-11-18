@@ -30,10 +30,12 @@ export const OWNER_NETWORK_PATHS = [
 
 /**
  * Screens of an office's day an Owner does not use (18/11/2026): the menu leaves them out and a pasted URL goes back to
- * Inicio. The Owner keeps Inicio, Tareas, Asegurados, Cobranzas and Balance mensual of the acting principal.
+ * Inicio. The Owner keeps Inicio, Asegurados, Cobranzas and Balance mensual of the acting principal; Tareas is the
+ * office's own work (Lucas, 18/11).
  */
 export const OWNER_HIDDEN_PATHS = [
   '/admin/novedades',
+  '/admin/tareas',
   '/admin/inbox',
   '/admin/campanas',
   '/admin/solicitudes',

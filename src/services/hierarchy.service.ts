@@ -75,6 +75,19 @@ export const hierarchyService = {
       body: data,
     }),
 
+  /** Its codes move into `intoGroupId` and it is deleted. */
+  mergeGroup: (
+    token: string,
+    principalId: number,
+    groupId: number,
+    intoGroupId: number,
+  ): Promise<CodeGroup & { moved: number }> =>
+    apiRequest<CodeGroup & { moved: number }>(`/hierarchy/principals/${principalId}/groups/${groupId}/merge`, {
+      method: 'POST',
+      token,
+      body: { intoGroupId },
+    }),
+
   /** Its codes are left without a group. */
   removeGroup: (token: string, principalId: number, groupId: number): Promise<{ id: number }> =>
     apiRequest<{ id: number }>(`/hierarchy/principals/${principalId}/groups/${groupId}`, { method: 'DELETE', token }),

@@ -511,7 +511,7 @@ function useAlertCounts(): (href: string) => number {
   // An Owner has no Asuntos pendientes, Whatsapp or Solicitudes in its menu: their counts are not loaded.
   const office = tenant && !isOwner
   const { data: novedadesStats } = useNovedadesStats({}, office)
-  const { data: taskStats } = useTaskStats(tenant)
+  const { data: taskStats } = useTaskStats(office)
   // "Pending" conversations = a client asked for a human agent → needs attention.
   const { data: inboxConversations } = useInboxConversations(undefined, undefined, undefined, office)
   useInboxMessageSound(inboxConversations)

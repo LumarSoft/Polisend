@@ -57,7 +57,15 @@ function ChartTooltip({ active, payload, label, suffix }: ChartTooltipProps) {
   )
 }
 
-function RenovacionesTooltip({ active, payload }: { active?: boolean; payload?: { payload: RenewalPoint }[] }) {
+function RenovacionesTooltip({
+  active,
+  payload,
+  amounts = true,
+}: {
+  active?: boolean
+  payload?: { payload: RenewalPoint }[]
+  amounts?: boolean
+}) {
   if (!active || !payload?.length) return null
   const point = payload[0].payload
   return (
@@ -67,10 +75,12 @@ function RenovacionesTooltip({ active, payload }: { active?: boolean; payload?: 
         <span className="text-muted-foreground">Pólizas</span>
         <span className="ml-auto font-medium text-ink">{point.total}</span>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="text-muted-foreground">Prima</span>
-        <span className="ml-auto font-medium text-ink">{formatCurrency(point.premium)}</span>
-      </div>
+      {amounts && (
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground">Prima</span>
+          <span className="ml-auto font-medium text-ink">{formatCurrency(point.premium)}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -168,7 +178,8 @@ function Bars({ data, empty }: { data: Slice[]; empty: string }) {
   )
 }
 
-export function DashboardCharts({ data }: { data: DashboardData }) {
+/** `amounts: false` (the Owner's Inicio): counts only, no premium. */
+export function DashboardCharts({ data, amounts = true }: { data: DashboardData; amounts?: boolean }) {
   const cartera: Slice[] = [
     { name: 'Vigentes', value: data.portfolio.inForce, color: COLORS.emerald },
     { name: 'Por vencer', value: data.portfolio.expiringSoon, color: COLORS.amber },
@@ -197,7 +208,11 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
     <div className="mt-5 grid gap-4">
       <ChartCard
         title="Próximas renovaciones"
-        subtitle={`Pólizas que vencen · próximos 6 meses · prima en riesgo ${formatCurrency(premiumAtRisk)}`}
+        subtitle={
+          amounts
+            ? `Pólizas que vencen · próximos 6 meses · prima en riesgo ${formatCurrency(premiumAtRisk)}`
+            : 'Pólizas que vencen · próximos 6 meses'
+        }
       >
         {renovacionesEmpty ? (
           <EmptyChart message="No hay pólizas por vencer en los próximos 6 meses." />
@@ -218,7 +233,10 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
                   width={36}
                   tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }}
                 />
-                <Tooltip cursor={{ fill: 'var(--color-ember-soft)' }} content={<RenovacionesTooltip />} />
+                <Tooltip
+                  cursor={{ fill: 'var(--color-ember-soft)' }}
+                  content={<RenovacionesTooltip amounts={amounts} />}
+                />
                 <Bar dataKey="total" name="Pólizas" radius={[6, 6, 0, 0]} maxBarSize={72}>
                   {timeline.map((point, i) => (
                     // The current month is the most urgent renewal window — flag it red.

@@ -15,6 +15,8 @@ const ALL = 'all'
 export interface NetworkListFilterValue {
   zoneKey: ZoneKey | null
   principalId: number | null
+  /** With `expandGroups`: a group of a principal shown as its groups, chosen at the level of a principal. */
+  groupId?: number | null
   producerCodeId: number | null
 }
 
@@ -39,6 +41,11 @@ interface NetworkModeProps {
   mode: 'network'
   value: NetworkListFilterValue
   onChange: (value: NetworkListFilterValue) => void
+  /**
+   * Mi red: a principal that holds a zone's productores shows as its groups, each one at the level of a principal.
+   * Elsewhere (Usuarios, Facturación) such a principal is left out: it has no users nor numbers of its own.
+   */
+  expandGroups?: boolean
   showProducer?: boolean
   className?: string
 }
@@ -201,7 +208,13 @@ function WorkNetworkFilter({
   )
 }
 
-function NetworkListFilter({ value, onChange, showProducer = true, className }: Omit<NetworkModeProps, 'mode'>) {
+function NetworkListFilter({
+  value,
+  onChange,
+  showProducer = true,
+  expandGroups = false,
+  className,
+}: Omit<NetworkModeProps, 'mode'>) {
   const { isDeveloper, isOwner, isSuperAdmin } = useRole()
   const { data: principals = [], isLoading } = useHierarchyPrincipals(isDeveloper || isOwner || isSuperAdmin)
   const [showHidden] = useShowHiddenCodes()
@@ -212,8 +225,13 @@ function NetworkListFilter({ value, onChange, showProducer = true, className }: 
 
   const changeZone = (key: ZoneKey | null) => {
     const keeps = principal !== null && (key === null || zoneKeyOf(principal) === key)
-    onChange(keeps ? { ...value, zoneKey: key } : { zoneKey: key, principalId: null, producerCodeId: null })
+    onChange(
+      keeps ? { ...value, zoneKey: key } : { zoneKey: key, principalId: null, groupId: null, producerCodeId: null },
+    )
   }
+  const principalLevel = expandGroups
+    ? workPrincipalOptions(inZone)
+    : principalOptions(inZone.filter(p => !p.groupsAsPrincipals))
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)} data-help="filtro-red">
@@ -229,18 +247,25 @@ function NetworkListFilter({ value, onChange, showProducer = true, className }: 
       <Combobox
         label="Principal"
         placeholder="Todos"
-        value={value.principalId === null ? ALL : String(value.principalId)}
-        options={[{ value: ALL, label: 'Todos' }, ...principalOptions(inZone)]}
-        onChange={raw => onChange({ ...value, principalId: parseId(raw), producerCodeId: null })}
+        value={value.principalId === null ? ALL : principalValue(value.principalId, value.groupId ?? null)}
+        options={[{ value: ALL, label: 'Todos' }, ...principalLevel]}
+        onChange={raw => {
+          if (raw === ALL) {
+            onChange({ ...value, principalId: null, groupId: null, producerCodeId: null })
+            return
+          }
+          const [principalId, groupId] = raw.split(':').map(Number)
+          onChange({ ...value, principalId, groupId: groupId || null, producerCodeId: null })
+        }}
         disabled={isLoading}
-        className="w-56"
+        className="w-64"
       />
       {showProducer && (
         <Combobox
           label="Productor"
           placeholder="Todos"
           value={value.producerCodeId === null ? ALL : String(value.producerCodeId)}
-          options={producerOptions(principal, showHidden, value.producerCodeId)}
+          options={producerOptions(principal, showHidden, value.producerCodeId, value.groupId ?? null)}
           onChange={raw => onChange({ ...value, producerCodeId: parseId(raw) })}
           disabled={!principal}
           className="w-52"

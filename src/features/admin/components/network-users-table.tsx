@@ -1,5 +1,7 @@
 'use client'
 
+import { Fragment } from 'react'
+
 import { Ellipsis, Lock, Send, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -105,7 +107,7 @@ function UserCell({ user, isSelf = false }: { user: NetworkUser | ReadOnlyNetwor
  * A row nobody may edit: the API's `label` as its role ("Lumarsoft · Developer", "Owner · <shared zones>"), "—" where a
  * managed account has a principal, a zone or codes, and no menu.
  */
-function ReadOnlyRow({ user, showPrincipal }: { user: ReadOnlyNetworkUser; showPrincipal: boolean }) {
+function ReadOnlyRow({ user }: { user: ReadOnlyNetworkUser }) {
   const none = <span className="text-[13px] text-muted-foreground">—</span>
   return (
     <TableRow className="bg-secondary/25 hover:bg-secondary/25">
@@ -120,8 +122,6 @@ function ReadOnlyRow({ user, showPrincipal }: { user: ReadOnlyNetworkUser; showP
           {user.label || roleLabel(user.role)}
         </Badge>
       </TableCell>
-      {showPrincipal && <TableCell>{none}</TableCell>}
-      {showPrincipal && <TableCell className="hidden lg:table-cell">{none}</TableCell>}
       <TableCell className="hidden md:table-cell">{none}</TableCell>
       <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
         {user.createdAt ? formatJoinDate(user.createdAt) : '—'}
@@ -171,7 +171,9 @@ export function NetworkUsersTable({
   onResetTwoFactor,
   onDelete,
 }: NetworkUsersTableProps) {
-  const columns = showPrincipal ? 7 : 5
+  // Across principals the rows come grouped by principal (users-view sorts them): a heading per principal instead of
+  // a Principal and a Zona column on every row.
+  const columns = 5
 
   return (
     <Card className="overflow-hidden border-line-2 py-0 shadow-sm">
@@ -181,8 +183,6 @@ export function NetworkUsersTable({
             <TableRow className="hover:bg-transparent">
               <TableHead className={`h-11 pl-5 ${HEAD}`}>Usuario</TableHead>
               <TableHead className={HEAD}>Rol</TableHead>
-              {showPrincipal && <TableHead className={HEAD}>Principal</TableHead>}
-              {showPrincipal && <TableHead className={`hidden lg:table-cell ${HEAD}`}>Zona</TableHead>}
               <TableHead className={`hidden md:table-cell ${HEAD}`}>Códigos</TableHead>
               <TableHead className={`hidden sm:table-cell ${HEAD}`}>Alta</TableHead>
               <TableHead className="w-12 pr-5" />
@@ -212,64 +212,73 @@ export function NetworkUsersTable({
               </TableRow>
             )}
 
-            {users?.map(user => {
+            {users?.map((user, index) => {
               const isSelf = user.id === selfId
+              const firstOfPrincipal = showPrincipal && users[index - 1]?.principal.id !== user.principal.id
+              const ofPrincipal = firstOfPrincipal ? users.filter(u => u.principal.id === user.principal.id).length : 0
               return (
-                <TableRow key={user.id}>
-                  <TableCell className="py-3 pl-5">
-                    <UserCell user={user} isSelf={isSelf} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="font-normal text-ink-3">
-                      {roleLabel(user.role)}
-                    </Badge>
-                  </TableCell>
-                  {showPrincipal && <TableCell className="text-[13px] text-ink">{user.principal.name}</TableCell>}
-                  {showPrincipal && (
-                    <TableCell className="hidden text-[13px] text-muted-foreground lg:table-cell">
-                      {user.zone?.name ?? 'Sin zona'}
-                    </TableCell>
+                <Fragment key={user.id}>
+                  {firstOfPrincipal && (
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableCell colSpan={columns} className="py-2 pl-5">
+                        <span className="text-[13px] font-semibold text-ink">{user.principal.name}</span>
+                        <span className="ml-2 text-[12px] text-muted-foreground">
+                          {user.zone?.name ?? 'Sin zona'} ·{' '}
+                          {ofPrincipal === 1 ? '1 usuario' : `${ofPrincipal} usuarios`}
+                        </span>
+                      </TableCell>
+                    </TableRow>
                   )}
-                  <TableCell className="hidden md:table-cell">
-                    <CodesCell user={user} />
-                  </TableCell>
-                  <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
-                    {formatJoinDate(user.createdAt)}
-                  </TableCell>
-                  <TableCell className="pr-5">
-                    <div className="flex justify-end">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
-                            <Ellipsis className="size-4" />
-                            <span className="sr-only">Acciones</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-72">
-                          <DropdownMenuItem onClick={() => onEdit(user)}>
-                            <SquarePen />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onSendPasswordLink(user)}>
-                            <Send />
-                            Mandar enlace para elegir contraseña
-                          </DropdownMenuItem>
-                          {user.twoFactorEnabled && !isSelf && (
-                            <DropdownMenuItem onClick={() => onResetTwoFactor(user)}>
-                              <ShieldOff />
-                              Reiniciar verificación en dos pasos
+                  <TableRow>
+                    <TableCell className="py-3 pl-5">
+                      <UserCell user={user} isSelf={isSelf} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="font-normal text-ink-3">
+                        {roleLabel(user.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <CodesCell user={user} />
+                    </TableCell>
+                    <TableCell className="hidden text-[13px] text-muted-foreground sm:table-cell">
+                      {formatJoinDate(user.createdAt)}
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
+                              <Ellipsis className="size-4" />
+                              <span className="sr-only">Acciones</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-72">
+                            <DropdownMenuItem onClick={() => onEdit(user)}>
+                              <SquarePen />
+                              Editar
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem variant="destructive" disabled={isSelf} onClick={() => onDelete(user)}>
-                            <Trash2 />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                            <DropdownMenuItem onClick={() => onSendPasswordLink(user)}>
+                              <Send />
+                              Mandar enlace para elegir contraseña
+                            </DropdownMenuItem>
+                            {user.twoFactorEnabled && !isSelf && (
+                              <DropdownMenuItem onClick={() => onResetTwoFactor(user)}>
+                                <ShieldOff />
+                                Reiniciar verificación en dos pasos
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive" disabled={isSelf} onClick={() => onDelete(user)}>
+                              <Trash2 />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
               )
             })}
 
@@ -281,7 +290,7 @@ export function NetworkUsersTable({
                   </TableCell>
                 </TableRow>
                 {readOnlyUsers.map(user => (
-                  <ReadOnlyRow key={`read-only-${user.id}`} user={user} showPrincipal={showPrincipal} />
+                  <ReadOnlyRow key={`read-only-${user.id}`} user={user} />
                 ))}
               </>
             )}

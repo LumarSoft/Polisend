@@ -155,6 +155,18 @@ export function usePrincipalCodeActions() {
         hierarchyService.renameGroup(token as string, principalId, groupId, { name }),
       onSuccess: refreshNetwork,
     }),
+    mergeGroup: useMutation({
+      mutationFn: ({
+        principalId,
+        groupId,
+        intoGroupId,
+      }: {
+        principalId: number
+        groupId: number
+        intoGroupId: number
+      }) => hierarchyService.mergeGroup(token as string, principalId, groupId, intoGroupId),
+      onSuccess: refreshNetwork,
+    }),
     removeGroup: useMutation({
       mutationFn: ({ principalId, groupId }: { principalId: number; groupId: number }) =>
         hierarchyService.removeGroup(token as string, principalId, groupId),

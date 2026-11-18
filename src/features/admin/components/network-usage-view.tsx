@@ -1,10 +1,12 @@
 'use client'
 
 import { Fragment, useState } from 'react'
-import { Loader2, Lock, Pencil } from 'lucide-react'
+import { Loader2, Lock, Pencil, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Combobox } from '@/components/ui/combobox'
+import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -57,6 +59,78 @@ function onlyCode(principal: NetworkUsagePrincipal, code: string): NetworkUsageP
     ZERO,
   )
   return { ...principal, numbers, totals }
+}
+
+/** What a number is doing this month, to narrow a network of many numbers. */
+type UsageState = 'todos' | 'con-consumo' | 'cerca' | 'limite' | 'pausado' | 'sin-consumo'
+
+const STATE_OPTIONS: Array<{ value: UsageState; label: string }> = [
+  { value: 'todos', label: 'Todos los números' },
+  { value: 'con-consumo', label: 'Con consumo' },
+  { value: 'cerca', label: 'Cerca del límite (80% o más)' },
+  { value: 'limite', label: 'Llegaron al límite' },
+  { value: 'pausado', label: 'Asistente pausado' },
+  { value: 'sin-consumo', label: 'Sin consumo' },
+]
+
+function matchesState(row: NetworkUsageNumber, state: UsageState): boolean {
+  if (state === 'con-consumo') return row.consumedMessages > 0
+  if (state === 'cerca') return row.percentUsed >= 80 && !row.limitReached
+  if (state === 'limite') return row.limitReached
+  if (state === 'pausado') return row.paused
+  if (state === 'sin-consumo') return row.consumedMessages === 0
+  return true
+}
+
+/** Lower case without accents, to search names as people type them. */
+const plain = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+/**
+ * The numbers that match the search (number, branch, principal or productor) and the state, with their principal's
+ * totals recounted; a principal with none of them goes, and so does one without numbers unless `showEmpty`.
+ */
+function narrowNumbers(groups: UsageGroup[], search: string, state: UsageState, showEmpty: boolean): UsageGroup[] {
+  const term = plain(search.trim())
+  const narrowing = term !== '' || state !== 'todos'
+  return groups
+    .map(group => ({
+      ...group,
+      principals: group.principals.flatMap(principal => {
+        if (!narrowing) return principal.numbers.length > 0 || showEmpty ? [principal] : []
+        const principalMatches = term !== '' && plain(principal.name).includes(term)
+        const numbers = principal.numbers.filter(
+          row =>
+            matchesState(row, state) &&
+            (term === '' ||
+              principalMatches ||
+              plain(
+                [
+                  numberLabel(row),
+                  row.branchName ?? '',
+                  row.responsibleCode?.code ?? '',
+                  row.responsibleCode?.holderName ?? '',
+                ].join(' '),
+              ).includes(term)),
+        )
+        if (numbers.length === 0) return []
+        const totals = numbers.reduce(
+          (sum, row) =>
+            addTotals(sum, {
+              numbers: 1,
+              consumedMessages: row.consumedMessages,
+              sentMessages: row.sentMessages,
+              campaignMessages: row.campaignMessages,
+            }),
+          ZERO,
+        )
+        return [{ ...principal, numbers, totals }]
+      }),
+    }))
+    .filter(group => group.principals.length > 0)
 }
 
 /** `code`: the chosen productor's code (only with a principal chosen), or null for every one. */
@@ -270,6 +344,10 @@ export function NetworkUsageView({ variant = 'usage' }: { variant?: 'usage' | 'b
   const { isOwner, isDeveloper, isLoading: roleLoading } = useRole()
   const [period, setPeriod] = useState(thisMonth)
   const [filter, setFilter] = useState<NetworkListFilterValue>(EMPTY_NETWORK_FILTER)
+  const [search, setSearch] = useState('')
+  const [state, setState] = useState<UsageState>('todos')
+  // The principals without a number (a zone's productores, offices without a line yet) only on request.
+  const [showEmpty, setShowEmpty] = useState(false)
   const { data, isLoading, isError } = useNetworkUsage(period, isOwner)
   // The Productor level: a number belongs to the productor it is billed to (its responsible code).
   const { data: principals = [] } = useHierarchyPrincipals(isOwner)
@@ -284,14 +362,16 @@ export function NetworkUsageView({ variant = 'usage' }: { variant?: 'usage' | 'b
     )
   }
 
-  const groups = data ? filterGroups(groupsOf(data, isDeveloper), filter, code) : []
+  const groups = data
+    ? narrowNumbers(filterGroups(groupsOf(data, isDeveloper), filter, code), search, state, showEmpty)
+    : []
   // A closed month keeps the plans it had; only the running month's can change (on the API too). The month is the
   // API's: the answer on screen is for the chosen month (not the previous one kept while loading), the API has not
   // closed it, and it is Argentina's running month (`thisMonth`, the API's `currentPeriod`), never the browser's
   // local one. The popover checks it again against `/admin/billing`, which answers the API's running month.
   const runningPeriod =
     data && data.period === period && !data.closed && data.period === thisMonth() ? data.period : null
-  const filtered = filter.zoneKey !== null || filter.principalId !== null
+  const filtered = filter.zoneKey !== null || filter.principalId !== null || search.trim() !== '' || state !== 'todos'
   const totals = !data
     ? null
     : filtered
@@ -314,9 +394,38 @@ export function NetworkUsageView({ variant = 'usage' }: { variant?: 'usage' | 'b
         </p>
       </div>
 
-      <div className="mb-5 flex flex-wrap items-end gap-4">
+      <div className="mb-3 flex flex-wrap items-end gap-4">
         <MonthPicker value={period} onChange={setPeriod} id="network-usage-period" />
         <NetworkFilter mode="network" value={filter} onChange={setFilter} />
+      </div>
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-56 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Buscar número, principal o productor"
+            placeholder="Buscar número, sucursal, principal o productor…"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            className="h-10 border-line-2 pl-9 text-[13px]"
+          />
+        </div>
+        <Combobox
+          label="Estado"
+          placeholder="Todos los números"
+          value={state}
+          options={STATE_OPTIONS}
+          onChange={raw => setState(raw as UsageState)}
+          className="w-64"
+        />
+        <label className="flex items-center gap-2 text-[13px] text-ink-3">
+          <input
+            type="checkbox"
+            checked={showEmpty}
+            onChange={event => setShowEmpty(event.target.checked)}
+            className="size-4 accent-ember"
+          />
+          Mostrar principales sin números
+        </label>
       </div>
       <TokensHint className="-mt-2 mb-5" />
 
@@ -372,7 +481,11 @@ export function NetworkUsageView({ variant = 'usage' }: { variant?: 'usage' | 'b
               {data && groups.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-12 text-center text-[14px] text-muted-foreground">
-                    {filtered ? 'Nada coincide con el filtro.' : 'Tu red todavía no tiene principales.'}
+                    {filtered
+                      ? 'Nada coincide con el filtro.'
+                      : !showEmpty && data.zones.some(zone => zone.principals.length > 0)
+                        ? 'Ningún principal tiene números en este mes. Marcá «Mostrar principales sin números» para verlos.'
+                        : 'Tu red todavía no tiene principales.'}
                   </TableCell>
                 </TableRow>
               )}

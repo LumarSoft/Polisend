@@ -39,6 +39,29 @@ const ROLE_OPTIONS: ComboboxOption[] = [
   { value: ROLES.admin, label: roleLabel(ROLES.admin) },
 ]
 
+/** The second step of the accounts: all, the ones with it on, the ones without it. */
+type TwoFactorFilter = typeof ALL | 'con' | 'sin'
+
+const TWO_FACTOR_OPTIONS: Array<{ value: TwoFactorFilter; label: string }> = [
+  { value: ALL, label: 'Todos' },
+  { value: 'con', label: 'Con dos pasos' },
+  { value: 'sin', label: 'Sin dos pasos' },
+]
+
+/** By zone, principal, role (SuperAdmin first) and name: the table groups each principal's accounts together. */
+function sortByPrincipal(users: NetworkUser[] | undefined): NetworkUser[] | undefined {
+  const order = (user: NetworkUser) => (user.role === ROLES.superAdmin ? 0 : 1)
+  return users
+    ?.slice()
+    .sort(
+      (a, b) =>
+        (a.zone?.name ?? '\uffff').localeCompare(b.zone?.name ?? '\uffff', 'es') ||
+        a.principal.name.localeCompare(b.principal.name, 'es') ||
+        order(a) - order(b) ||
+        (a.name ?? a.email).localeCompare(b.name ?? b.email, 'es'),
+    )
+}
+
 /** An Admin manages nobody: the API refuses /hierarchy/users to it. */
 function Restricted() {
   return (
@@ -136,6 +159,9 @@ function UsersScreen() {
 
   const [filter, setFilter] = useState<NetworkListFilterValue>(EMPTY_NETWORK_FILTER)
   const [role, setRole] = useState<NetworkUserRole | null>(null)
+  const [twoFactor, setTwoFactor] = useState<TwoFactorFilter>(ALL)
+  // The Owner's read-only rows (Lumarsoft, the other Owners of its zones) only on request: they are not its network.
+  const [showReadOnly, setShowReadOnly] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput.trim(), 300)
   const [formOpen, setFormOpen] = useState(false)
@@ -161,7 +187,7 @@ function UsersScreen() {
   const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
   // An Owner's read-only rows (Lumarsoft, the other Owners of its zones) have no principal, zone, codes or managed
   // role: they show only with no filter but the search, and only then does the panel ask the API for them.
-  const withReadOnly = isOwner && !filtered && !role
+  const withReadOnly = isOwner && showReadOnly && !filtered && !role
 
   const { data: principals = [] } = useHierarchyPrincipals()
   const query: NetworkUsersQuery = {
@@ -172,7 +198,11 @@ function UsersScreen() {
     ...(withReadOnly ? { includeReadOnly: true } : {}),
   }
   const usersQuery = useNetworkUsers(query)
-  const users = narrowUsers(usersQuery.data?.filter(isManagedUser), filter, principals)
+  const users = sortByPrincipal(
+    narrowUsers(usersQuery.data?.filter(isManagedUser), filter, principals)?.filter(
+      user => twoFactor === ALL || user.twoFactorEnabled === (twoFactor === 'con'),
+    ),
+  )
   // The SuperAdmin's own principal: its name, its codes (filter and "Productores").
   const tree = useNetworkTree(isSuperAdmin)
   const ownPrincipal = isSuperAdmin ? (principals.find(p => p.isHome) ?? principals[0] ?? null) : null
@@ -181,7 +211,10 @@ function UsersScreen() {
   const [access, setAccess] = useState<{ action: AccountAccessAction; user: NetworkUser } | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const emptyText = filtered || role || search ? 'Ningún usuario coincide con los filtros.' : 'Todavía no hay usuarios.'
+  const emptyText =
+    filtered || role || search || twoFactor !== ALL
+      ? 'Ningún usuario coincide con los filtros.'
+      : 'Todavía no hay usuarios.'
   const readOnlyUsers = withReadOnly
     ? (usersQuery.data ?? []).filter(isReadOnlyUser).filter(user => matchesSearch(user, search))
     : []
@@ -213,7 +246,7 @@ function UsersScreen() {
   const subtitle = isDeveloper
     ? 'Los SuperAdmin y Admin de todos los principales. Polisend los invita por correo y nunca elige ni ve sus contraseñas; cada cambio le llega como aviso a su principal.'
     : isOwner
-      ? 'Los SuperAdmin y Admin de los principales de tu red. Al final, de solo lectura, las cuentas de Lumarsoft y de los otros Owner de tus zonas.'
+      ? 'Los SuperAdmin y Admin de los principales de tu red, agrupados por principal. Las cuentas de Lumarsoft y de los otros Owner de tus zonas se ven con la casilla de abajo, de solo lectura.'
       : `Los SuperAdmin y Admin de ${ownPrincipal?.name ?? 'tu principal'}.`
 
   return (
@@ -305,6 +338,14 @@ function UsersScreen() {
               onChange={raw => setRole(raw === ALL ? null : (raw as NetworkUserRole))}
               className="w-44"
             />
+            <Combobox
+              label="Dos pasos"
+              placeholder="Todos"
+              value={twoFactor}
+              options={TWO_FACTOR_OPTIONS}
+              onChange={raw => setTwoFactor(raw as TwoFactorFilter)}
+              className="w-44"
+            />
             <div className="relative min-w-48 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -315,6 +356,18 @@ function UsersScreen() {
               />
             </div>
           </div>
+
+          {isOwner && (
+            <label className="mb-3 flex w-fit items-center gap-2 text-[13px] text-ink-3">
+              <input
+                type="checkbox"
+                checked={showReadOnly}
+                onChange={event => setShowReadOnly(event.target.checked)}
+                className="size-4 accent-ember"
+              />
+              Mostrar también las cuentas de Lumarsoft y de los otros Owner de tus zonas
+            </label>
+          )}
 
           <NetworkUsersTable
             users={users}

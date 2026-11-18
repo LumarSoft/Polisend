@@ -10,6 +10,8 @@ import {
   FolderOpen,
   FolderPlus,
   GripVertical,
+  LogIn,
+  Merge,
   Loader2,
   Pencil,
   Plus,
@@ -20,6 +22,7 @@ import {
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { CodeGroup, NetworkTreeCode } from '@/types/api/hierarchy'
@@ -41,6 +44,15 @@ export interface PrincipalCodesBlockProps {
   onlyCodeId?: number | null
   /** The Developer moves the master mark; nobody else may. */
   canSetMaster?: boolean
+  /**
+   * Mi red, for a principal that holds a zone's productores: each group is one of the zone's principals (or an
+   * independent productor), with «Entrar»; the codes still without one are «Sin clasificar».
+   */
+  asPrincipals?: boolean
+  /** Works on that group as the acting principal (asPrincipals). */
+  onEnterGroup?: (groupId: number) => void
+  /** Only this group (the Principal filter chose it), opened. */
+  onlyGroupId?: number | null
 }
 
 /**
@@ -59,6 +71,9 @@ export function PrincipalCodesBlock({
   groups = [],
   onlyCodeId = null,
   canSetMaster = false,
+  asPrincipals = false,
+  onEnterGroup,
+  onlyGroupId = null,
 }: PrincipalCodesBlockProps) {
   const [showHidden] = useShowHiddenCodes()
   const [search, setSearch] = useState('')
@@ -71,7 +86,8 @@ export function PrincipalCodesBlock({
         code => code.code.toLowerCase().includes(term) || (code.holderName ?? '').toLowerCase().includes(term),
       )
     : shown
-  const grouped = onlyCodeId === null && (groups.length > 0 || codes.length > 20)
+  const grouped = onlyCodeId === null && (asPrincipals || groups.length > 0 || codes.length > 20)
+  const shownGroups = onlyGroupId === null ? groups : groups.filter(group => group.id === onlyGroupId)
 
   return (
     <div className="flex flex-col gap-3">
@@ -92,7 +108,7 @@ export function PrincipalCodesBlock({
       )}
       {grouped ? (
         <div className="flex flex-col gap-2">
-          {groups.map(group => (
+          {shownGroups.map(group => (
             <GroupSection
               key={group.id}
               principalId={principalId}
@@ -101,17 +117,23 @@ export function PrincipalCodesBlock({
               codes={visible.filter(code => code.groupId === group.id)}
               searching={term.length > 0}
               canSetMaster={canSetMaster}
+              asPrincipal={asPrincipals}
+              onEnter={onEnterGroup ? () => onEnterGroup(group.id) : undefined}
+              startOpen={onlyGroupId !== null}
             />
           ))}
-          <GroupSection
-            principalId={principalId}
-            group={null}
-            groups={groups}
-            codes={visible.filter(code => !groups.some(group => group.id === code.groupId))}
-            searching={term.length > 0}
-            canSetMaster={canSetMaster}
-            startOpen={groups.length === 0}
-          />
+          {onlyGroupId === null && (
+            <GroupSection
+              principalId={principalId}
+              group={null}
+              groups={groups}
+              codes={visible.filter(code => !groups.some(group => group.id === code.groupId))}
+              searching={term.length > 0}
+              canSetMaster={canSetMaster}
+              asPrincipal={asPrincipals}
+              startOpen={groups.length === 0}
+            />
+          )}
         </div>
       ) : (
         <CodesTable
@@ -165,6 +187,8 @@ function GroupSection({
   searching,
   canSetMaster,
   startOpen = false,
+  asPrincipal = false,
+  onEnter,
 }: {
   principalId: number
   group: CodeGroup | null
@@ -173,8 +197,12 @@ function GroupSection({
   searching: boolean
   canSetMaster: boolean
   startOpen?: boolean
+  /** One of a zone's principals (or an independent productor), not a folder of a principal. */
+  asPrincipal?: boolean
+  onEnter?: () => void
 }) {
-  const { renameGroup, removeGroup } = usePrincipalCodeActions()
+  const { renameGroup, removeGroup, mergeGroup } = usePrincipalCodeActions()
+  const [merging, setMerging] = useState(false)
   const move = useMoveCode(principalId)
   const [open, setOpen] = useState(startOpen)
   const [over, setOver] = useState(false)
@@ -196,6 +224,29 @@ function GroupSection({
           setRenaming(false)
         },
         onError: error => toast.error(apiErrorMessage(error, 'No se pudo renombrar el grupo.')),
+      },
+    )
+  }
+
+  const merge = (intoGroupId: number) => {
+    const into = groups.find(other => other.id === intoGroupId)
+    if (!group || !into) return
+    const what = asPrincipal ? 'principal' : 'grupo'
+    if (
+      !window.confirm(
+        `¿Fusionar «${group.name}» en «${into.name}»? Sus ${codes.length} códigos pasan a «${into.name}».`,
+      )
+    ) {
+      return
+    }
+    mergeGroup.mutate(
+      { principalId, groupId: group.id, intoGroupId },
+      {
+        onSuccess: () => {
+          toast.success(`«${group.name}» quedó dentro de «${into.name}»`)
+          setMerging(false)
+        },
+        onError: error => toast.error(apiErrorMessage(error, `No se pudo fusionar el ${what}.`)),
       },
     )
   }
@@ -244,11 +295,19 @@ function GroupSection({
             <Folder className="size-4 shrink-0 text-muted-foreground" />
           )}
           {renaming ? null : (
-            <span className="truncate text-[13.5px] font-medium text-ink">{group ? group.name : 'Sin grupo'}</span>
+            <span className="truncate text-[13.5px] font-medium text-ink">
+              {group ? group.name : asPrincipal ? 'Sin clasificar' : 'Sin grupo'}
+            </span>
           )}
           {!renaming && (
             <span className="shrink-0 text-[12px] text-muted-foreground">
-              {codes.length === 1 ? '1 código' : `${codes.length} códigos`}
+              {asPrincipal && group
+                ? codes.length === 1
+                  ? 'Productor independiente'
+                  : `${codes.length} productores`
+                : codes.length === 1
+                  ? '1 código'
+                  : `${codes.length} códigos`}
               {group?.organizerCode ? ` · organizador ${group.organizerCode}` : ''}
             </span>
           )}
@@ -273,8 +332,32 @@ function GroupSection({
             </Button>
           </form>
         )}
-        {group && !renaming && (
+        {group && merging && (
+          <div className="flex items-center gap-1">
+            <Combobox
+              label="Fusionar en"
+              placeholder={asPrincipal ? 'Elegí el principal' : 'Elegí el grupo'}
+              value={null}
+              options={groups
+                .filter(other => other.id !== group.id)
+                .map(other => ({ value: String(other.id), label: other.name }))}
+              onChange={raw => merge(Number(raw))}
+              disabled={mergeGroup.isPending}
+              className="w-64"
+            />
+            <Button type="button" size="icon" variant="ghost" className="size-8" onClick={() => setMerging(false)}>
+              <X className="size-4" />
+              <span className="sr-only">Cancelar</span>
+            </Button>
+          </div>
+        )}
+        {group && !renaming && !merging && (
           <div className="flex shrink-0 gap-1">
+            {onEnter && (
+              <Button type="button" size="sm" className="h-8" onClick={onEnter}>
+                <LogIn className="size-3.5" /> Entrar
+              </Button>
+            )}
             <Button
               type="button"
               size="icon"
@@ -288,6 +371,21 @@ function GroupSection({
               <Pencil className="size-3.5" />
               <span className="sr-only">Renombrar grupo</span>
             </Button>
+            {groups.length > 1 && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                onClick={() => setMerging(true)}
+                title={asPrincipal ? 'Fusionar con otro principal' : 'Fusionar con otro grupo'}
+              >
+                <Merge className="size-3.5" />
+                <span className="sr-only">
+                  {asPrincipal ? 'Fusionar con otro principal' : 'Fusionar con otro grupo'}
+                </span>
+              </Button>
+            )}
             <Button
               type="button"
               size="icon"
