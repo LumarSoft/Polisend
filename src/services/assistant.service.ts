@@ -1,6 +1,7 @@
 import { apiRequest, apiStream } from '@/lib/api-client'
 import type {
   AssistantAction,
+  AssistantAttachment,
   AssistantConversation,
   AssistantConversationSummary,
   AssistantStreamEvent,
@@ -30,6 +31,13 @@ export const assistantService = {
     signal?: AbortSignal,
   ): Promise<void> {
     return apiStream<AssistantStreamEvent>('/admin/assistant/messages', { token, body, signal }, onEvent)
+  },
+
+  /** A photo or PDF for the next question: the API shrinks it, reads it and keeps it for the conversation. */
+  upload(token: string, file: File): Promise<AssistantAttachment> {
+    const body = new FormData()
+    body.append('file', file)
+    return apiRequest<AssistantAttachment>('/admin/assistant/attachments', { method: 'POST', token, body })
   },
 
   /** The panel opened: the API gets the model ready so the first question answers sooner. */

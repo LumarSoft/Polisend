@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Check, CornerDownRight, Loader2, Pointer } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { AssistantAction, AssistantStep } from '@/types/api/assistant'
+import type { AssistantAction, AssistantAttachment, AssistantStep } from '@/types/api/assistant'
 import { clientHref, isSuggestionLine, parseReply, replyScreenHref, type ReplyInline } from '../lib/assistant-format'
 import { tourStore } from '../lib/tour-store'
 import { AssistantActionCard } from './assistant-action-card'
 import { AssistantLogo } from './assistant-logo'
+import { MessageAttachments } from './assistant-attachments'
 
 const PILL =
   'my-0.5 inline-flex items-center gap-1.5 rounded-full border border-ember-ring bg-ember-soft px-3 py-1 align-middle text-[12.5px] font-medium text-ember-2 transition-colors hover:bg-ember hover:text-on-ember'
@@ -135,17 +136,28 @@ function Appear({ children, className }: { children: ReactNode; className?: stri
   )
 }
 
-export function UserBubble({ content, faded = false }: { content: string; faded?: boolean }) {
+export function UserBubble({
+  content,
+  faded = false,
+  attachments = [],
+}: {
+  content: string
+  faded?: boolean
+  attachments?: AssistantAttachment[]
+}) {
   return (
-    <Appear className="flex justify-end">
-      <div
-        className={cn(
-          'max-w-[85%] rounded-2xl rounded-br-md bg-ember px-3.5 py-2 text-[13.5px] leading-relaxed whitespace-pre-wrap break-words text-on-ember shadow-sm',
-          faded && 'opacity-70',
-        )}
-      >
-        {content}
-      </div>
+    <Appear className="flex flex-col items-end gap-1.5">
+      <MessageAttachments files={attachments} />
+      {content && (
+        <div
+          className={cn(
+            'max-w-[85%] rounded-2xl rounded-br-md bg-ember px-3.5 py-2 text-[13.5px] leading-relaxed whitespace-pre-wrap break-words text-on-ember shadow-sm',
+            faded && 'opacity-70',
+          )}
+        >
+          {content}
+        </div>
+      )}
     </Appear>
   )
 }

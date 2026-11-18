@@ -52,7 +52,20 @@ export interface AssistantMessage {
   /** The steps it took to answer ("Revisando los datos de pago"). */
   steps: string[]
   actions: AssistantAction[]
+  /** A question's photos and PDFs. */
+  attachments?: AssistantAttachment[]
   createdAt: string
+}
+
+/** A photo or PDF attached to a question, as the API keeps it. */
+export interface AssistantAttachment {
+  id: number
+  kind: 'image' | 'pdf'
+  name: string
+  size: number
+  pages: number | null
+  /** A signed link to the file (valid for some hours), API-relative. */
+  url: string
 }
 
 export interface AssistantConversationSummary {
@@ -79,6 +92,8 @@ export interface SendAssistantMessageRequest {
   content: string
   /** The screen the person is on and the sheet open on it, so "esto" and "este cliente" mean something. */
   page?: { route?: string; screen?: string; record?: AssistantOpenRecord }
+  /** Files uploaded with `assistantService.upload`, at most 4; with them, `content` may be empty. */
+  attachments?: number[]
 }
 
 /** A step the assistant is taking right now. */
