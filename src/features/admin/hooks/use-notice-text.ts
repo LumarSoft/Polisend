@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { noticeTextsService } from '@/services/notice-texts.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
@@ -7,11 +8,19 @@ import { useAuth } from '../context/auth-context'
 /** While Meta reviews the text, the editor asks again every minute. */
 const PENDING_REFRESH_MS = 60_000
 
-/** The organization's text of a notice and Meta's review of it; loads only while the editor is open. */
+/** The list that shows the notice as the client reads it. */
+const listOf = (kind: NoticeTextKind) =>
+  kind === 'payment_rejection' ? QUERY_KEYS.admin.rejectionsAll : QUERY_KEYS.admin.expiredPoliciesAll
+
+/**
+ * The organization's text of a notice and Meta's review of it; loads only while the editor is open. When a refresh
+ * finds that a number sends another text now (Meta approved or rejected it), the list's preview refreshes too.
+ */
 export function useNoticeText(kind: NoticeTextKind, enabled: boolean) {
   const { token } = useAuth()
+  const queryClient = useQueryClient()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: QUERY_KEYS.admin.noticeText(kind),
     queryFn: () => noticeTextsService.get(token as string, kind),
     enabled: !!token && enabled,
@@ -20,6 +29,18 @@ export function useNoticeText(kind: NoticeTextKind, enabled: boolean) {
         ? PENDING_REFRESH_MS
         : false,
   })
+
+  const sending = query.data?.accounts.map(a => `${a.id}:${a.sending}`).join(',')
+  const lastSending = useRef(sending)
+  useEffect(() => {
+    if (sending === undefined) return
+    if (lastSending.current !== undefined && lastSending.current !== sending) {
+      void queryClient.invalidateQueries({ queryKey: listOf(kind) })
+    }
+    lastSending.current = sending
+  }, [sending, kind, queryClient])
+
+  return query
 }
 
 /**
@@ -31,9 +52,7 @@ export function useNoticeTextActions(kind: NoticeTextKind) {
   const queryClient = useQueryClient()
   const settle = (view: NoticeText) => {
     queryClient.setQueryData(QUERY_KEYS.admin.noticeText(kind), view)
-    void queryClient.invalidateQueries({
-      queryKey: kind === 'payment_rejection' ? QUERY_KEYS.admin.rejectionsAll : QUERY_KEYS.admin.expiredPoliciesAll,
-    })
+    void queryClient.invalidateQueries({ queryKey: listOf(kind) })
   }
 
   const save = useMutation({
