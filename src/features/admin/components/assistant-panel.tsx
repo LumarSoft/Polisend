@@ -1,8 +1,19 @@
 'use client'
 
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { AlertCircle, ArrowRight, ArrowUp, ChevronLeft, History, Loader2, Lock, Square, SquarePen } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowRight,
+  ArrowUp,
+  ChevronLeft,
+  History,
+  Loader2,
+  Lock,
+  Paperclip,
+  Square,
+  SquarePen,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -14,6 +25,8 @@ import { suggestionsFor, type AssistantSuggestion } from '../lib/assistant-sugge
 import { AssistantHistory } from './assistant-history'
 import { AssistantLogo } from './assistant-logo'
 import { AssistantTurn, UserBubble } from './assistant-message'
+import { PendingAttachments } from './assistant-attachments'
+import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, useAssistantAttachments } from '../hooks/use-assistant-attachments'
 
 interface AssistantPanelProps {
   open: boolean
@@ -32,7 +45,10 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
   const [view, setView] = useState<'chat' | 'history'>('chat')
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const files = useAssistantAttachments()
+  const [dragging, setDragging] = useState(false)
   const { messages, live, streaming } = assistant
   const empty = messages.length === 0 && !live && !assistant.loading
 
@@ -69,10 +85,33 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
 
   const close = () => onOpenChange(false)
 
+  // A question with files may go without words; never while a file is still being read.
+  const canSend = (!!draft.trim() || files.ready.length > 0) && !files.uploading
   const submit = () => {
-    if (!draft.trim() || streaming) return
-    void assistant.send(draft)
+    if (!canSend || streaming) return
+    void assistant.send(draft, files.ready)
     setDraft('')
+    files.clear()
+  }
+
+  // A photo copied to the clipboard (a screenshot, an image from WhatsApp Web) goes in with ⌘V.
+  const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasted = Array.from(event.clipboardData.files)
+    if (!pasted.length) return
+    event.preventDefault()
+    files.add(pasted)
+  }
+
+  const onDrop = (event: DragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.types.includes('Files')) return
+    event.preventDefault()
+    setDragging(false)
+    if (plan.included && view === 'chat') files.add(Array.from(event.dataTransfer.files))
+  }
+  const onDragOver = (event: DragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.types.includes('Files') || !plan.included || view !== 'chat') return
+    event.preventDefault()
+    if (!dragging) setDragging(true)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -117,7 +156,21 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
         side="right"
         className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-[460px]"
         onOpenAutoFocus={event => event.preventDefault()}
+        onDragOver={onDragOver}
+        onDragLeave={event => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+        }}
+        onDrop={onDrop}
       >
+        {dragging && (
+          <div className="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-2xl border-2 border-dashed border-ember bg-ember-soft/80 text-center">
+            <div className="flex flex-col items-center gap-2 px-6">
+              <Paperclip className="size-6 text-ember-2" />
+              <p className="text-[14px] font-medium text-ink">Soltá acá las fotos o PDF</p>
+              <p className="text-[12px] text-ink-3">Hasta {MAX_ATTACHMENTS} por pregunta, de 10 MB cada uno.</p>
+            </div>
+          </div>
+        )}
         <SheetHeader className="flex-row items-center gap-2.5 space-y-0 border-b border-line px-4 py-3 pr-12">
           {view === 'history' ? (
             <Button
@@ -209,7 +262,7 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
                 <div className="flex flex-col gap-5 px-4 py-5">
                   {messages.map(message =>
                     message.role === 'user' ? (
-                      <UserBubble key={message.id} content={message.content} />
+                      <UserBubble key={message.id} content={message.content} attachments={message.attachments} />
                     ) : (
                       <AssistantTurn
                         key={message.id}
@@ -222,7 +275,7 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
                   )}
                   {live && (
                     <>
-                      <UserBubble content={live.question} />
+                      <UserBubble content={live.question} attachments={live.attachments} />
                       <AssistantTurn
                         content={live.text}
                         steps={live.steps}
@@ -267,12 +320,37 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
                 submit()
               }}
             >
+              <PendingAttachments files={files.pending} onRemove={files.remove} />
               <div className="flex items-end gap-2 rounded-2xl border border-line-2 bg-background px-3 py-2 transition-colors focus-within:border-ember focus-within:ring-3 focus-within:ring-ember-ring/40">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept={ATTACHMENT_ACCEPT}
+                  multiple
+                  hidden
+                  onChange={event => {
+                    files.add(Array.from(event.target.files ?? []))
+                    event.target.value = ''
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={files.pending.length >= MAX_ATTACHMENTS}
+                  className="-ml-1.5 size-8 shrink-0 rounded-full text-muted-foreground"
+                  title="Adjuntar fotos o PDF"
+                >
+                  <Paperclip className="size-4" />
+                  <span className="sr-only">Adjuntar fotos o PDF</span>
+                </Button>
                 <textarea
                   ref={inputRef}
                   value={draft}
                   onChange={event => setDraft(event.target.value.slice(0, MAX_QUESTION))}
                   onKeyDown={onKeyDown}
+                  onPaste={onPaste}
                   rows={1}
                   maxLength={MAX_QUESTION}
                   placeholder="Preguntá o pedí un cambio…"
@@ -291,14 +369,15 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
                     <span className="sr-only">Detener la respuesta</span>
                   </Button>
                 ) : (
-                  <Button type="submit" size="icon" disabled={!draft.trim()} className="size-8 shrink-0 rounded-full">
+                  <Button type="submit" size="icon" disabled={!canSend} className="size-8 shrink-0 rounded-full">
                     <ArrowUp className="size-4" />
                     <span className="sr-only">Enviar</span>
                   </Button>
                 )}
               </div>
               <p className="mt-1.5 px-1 text-[11px] text-faint">
-                Antes de cambiar algo te muestra una tarjeta para confirmar. Puede equivocarse: revisá los datos.
+                Podés adjuntar fotos o PDF. Antes de cambiar algo te muestra una tarjeta para confirmar. Puede
+                equivocarse: revisá los datos.
               </p>
             </form>
           </>

@@ -6,6 +6,7 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import { assistantService } from '@/services/assistant.service'
 import type {
   AssistantAction,
+  AssistantAttachment,
   AssistantConversation,
   AssistantMessage,
   AssistantStep,
@@ -18,6 +19,8 @@ import { useProfile } from './use-profile'
 /** The answer being written, shown until it is saved and read back. */
 export interface LiveTurn {
   question: string
+  /** The photos and PDFs that went with it. */
+  attachments: AssistantAttachment[]
   text: string
   steps: AssistantStep[]
   actions: AssistantAction[]
@@ -124,12 +127,12 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
 
   const streaming = live?.streaming ?? false
 
-  const send = async (text: string) => {
+  const send = async (text: string, attachments: AssistantAttachment[] = []) => {
     const question = text.trim()
-    if (!question || streaming || !token) return
+    if ((!question && !attachments.length) || streaming || !token) return
     const controller = new AbortController()
     abortRef.current = controller
-    setLive({ question, text: '', steps: [], actions: [], streaming: true, error: null, stopped: false })
+    setLive({ question, attachments, text: '', steps: [], actions: [], streaming: true, error: null, stopped: false })
 
     let id = conversationId
     let answer: AssistantMessage | null = null
@@ -137,7 +140,12 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
     try {
       await assistantService.send(
         token,
-        { ...(id ? { conversationId: id } : {}), content: question, page },
+        {
+          ...(id ? { conversationId: id } : {}),
+          content: question,
+          page,
+          ...(attachments.length ? { attachments: attachments.map(file => file.id) } : {}),
+        },
         event => {
           switch (event.event) {
             case 'conversation':
@@ -194,9 +202,14 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
         content: question,
         steps: [],
         actions: [],
+        attachments,
         createdAt: new Date().toISOString(),
       }
-      return { id: id as number, title: old?.title ?? question, messages: [...base, asked, saved] }
+      return {
+        id: id as number,
+        title: old?.title ?? (question || 'Archivo adjunto'),
+        messages: [...base, asked, saved],
+      }
     })
     setLive(null)
     void queryClient.invalidateQueries({ queryKey: key })
@@ -208,7 +221,7 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
 
   /** Asks the last question again, after an error. */
   const retry = () => {
-    if (live && !live.streaming) void send(live.question)
+    if (live && !live.streaming) void send(live.question, live.attachments)
   }
 
   const updateAction = (action: AssistantAction) => {
