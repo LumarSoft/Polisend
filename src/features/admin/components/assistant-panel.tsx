@@ -375,7 +375,7 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route }: A
                   </Button>
                 )}
               </div>
-              <p className="mt-1.5 px-1 text-[11px] text-faint">
+              <p className="mt-1.5 px-1 text-[12px] leading-snug text-faint">
                 Podés adjuntar fotos o PDF. Antes de cambiar algo te muestra una tarjeta para confirmar. Puede
                 equivocarse: revisá los datos.
               </p>

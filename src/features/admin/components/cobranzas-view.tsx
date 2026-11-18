@@ -60,7 +60,7 @@ function DebtPills({ client }: { client: CobranzaCliente }) {
 
   if (pills.length === 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-[12px] text-emerald-600 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1 text-[12px] text-emerald-700 dark:text-emerald-400">
         <CheckCircle2 className="size-3.5" />
         Al día
       </span>
@@ -261,7 +261,7 @@ interface Kpi {
 const KPI_TONES: Record<Kpi['tone'], string> = {
   destructive: 'bg-destructive/10 text-destructive',
   amber: 'bg-amber/15 text-amber-700 dark:text-amber',
-  emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+  emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
   neutral: 'bg-ember-soft text-ember-2',
 }
 
@@ -525,7 +525,7 @@ export function CobranzasView() {
                       {option.label}
                       <span
                         className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
-                          active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-muted-foreground'
+                          active ? 'bg-ember-soft text-ember-2' : 'bg-line-2 text-ink-3'
                         }`}
                       >
                         {filterCount(stats, option.value)}
@@ -600,7 +600,7 @@ export function CobranzasView() {
                     <TableRow>
                       <TableCell colSpan={5} className="py-16 text-center">
                         <div className="flex flex-col items-center gap-3">
-                          <div className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                          <div className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                             <CheckCircle2 className="size-5" />
                           </div>
                           <p className="text-[14px] text-muted-foreground">

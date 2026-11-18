@@ -328,7 +328,7 @@ export function ConectarWhatsapp({
       {onboard.isSuccess && !error && (
         <p
           className={`text-sm max-w-prose ${
-            onboardingNeedsAttention ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+            onboardingNeedsAttention ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'
           }`}
         >
           {onboard.data.reconnected

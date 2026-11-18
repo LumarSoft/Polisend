@@ -93,7 +93,7 @@ function NumberBotSwitch({ assistant, canEdit }: { assistant: NumberAssistant; c
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
             {on ? (
-              <Power className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <Power className="size-4 text-emerald-700 dark:text-emerald-400" />
             ) : (
               <PowerOff className="size-4 text-destructive" />
             )}

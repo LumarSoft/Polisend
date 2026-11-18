@@ -535,7 +535,7 @@ const marginTone = (n: number | null | undefined) =>
     ? 'text-muted-foreground'
     : n < 0
       ? 'text-destructive'
-      : 'text-emerald-600 dark:text-emerald-400'
+      : 'text-emerald-700 dark:text-emerald-400'
 
 /** The Tablero's six columns, the same for an Owner, a zone, an organization and a number. */
 function MoneyCells({ totals }: { totals: PlatformBillingTotals }) {

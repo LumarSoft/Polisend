@@ -67,7 +67,7 @@ export function Kpi({
   tone?: 'good' | 'bad'
 }) {
   const color =
-    tone === 'good' ? 'text-emerald-600 dark:text-emerald-400' : tone === 'bad' ? 'text-destructive' : 'text-ink'
+    tone === 'good' ? 'text-emerald-700 dark:text-emerald-400' : tone === 'bad' ? 'text-destructive' : 'text-ink'
   return (
     <Card className="flex flex-col gap-1 border-line-2 p-4 shadow-sm">
       <span className="text-[11px] uppercase tracking-[0.12em] text-faint">{label}</span>

@@ -33,7 +33,7 @@ interface Kpi {
 
 const TONES: Record<KpiTone, string> = {
   ember: 'border-ember-ring bg-ember-soft text-ember-2',
-  emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+  emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
   red: 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400',
   amber: 'bg-amber/15 text-amber-700 dark:text-amber',
 }

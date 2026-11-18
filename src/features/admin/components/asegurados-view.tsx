@@ -62,7 +62,7 @@ function PoliciesCell({ polizas }: { polizas: AdminClientSummary['policies'] }) 
       <div className="text-[11.5px] text-muted-foreground">
         {polizas.length} {polizas.length === 1 ? 'póliza' : 'pólizas'} ·{' '}
         {vigentes > 0 ? (
-          <span className="text-emerald-600 dark:text-emerald-400">
+          <span className="text-emerald-700 dark:text-emerald-400">
             {vigentes} {vigentes === 1 ? 'vigente' : 'vigentes'}
           </span>
         ) : (

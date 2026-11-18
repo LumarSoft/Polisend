@@ -2,7 +2,7 @@ import { BadgeCheck, Briefcase, ExternalLink } from 'lucide-react'
 import type { MetaPortfolio } from '@/types/api/phone-numbers'
 
 const VERIFICATION: Record<string, { label: string; tone: string }> = {
-  verified: { label: 'verificado', tone: 'text-emerald-600 dark:text-emerald-400' },
+  verified: { label: 'verificado', tone: 'text-emerald-700 dark:text-emerald-400' },
   not_verified: { label: 'sin verificar', tone: 'text-amber-700 dark:text-amber' },
 }
 

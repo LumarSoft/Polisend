@@ -109,7 +109,7 @@ function NoticeCell({ policy }: { policy: ExpiredPolicy }) {
         <div
           className={cn(
             'text-[12px]',
-            delivered ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-300',
+            delivered ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-300',
           )}
         >
           <span className="inline-flex items-center gap-1">
@@ -122,7 +122,7 @@ function NoticeCell({ policy }: { policy: ExpiredPolicy }) {
     }
     case 'MARKED':
       return (
-        <div className="text-[12px] text-emerald-600 dark:text-emerald-400">
+        <div className="text-[12px] text-emerald-700 dark:text-emerald-400">
           <span className="inline-flex items-center gap-1">
             <CheckCheck className="size-3.5" />
             Avisado a mano

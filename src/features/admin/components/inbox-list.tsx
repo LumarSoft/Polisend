@@ -90,7 +90,7 @@ export function InboxList({ conversations, selectedId, onSelect, onDelete }: Pro
                       </Headset>
                     ) : (
                       conv.status === 'pending' && (
-                        <Clock className="size-3.5 text-amber-600 dark:text-amber-400" aria-label="Pendiente">
+                        <Clock className="size-3.5 text-amber-700 dark:text-amber-400" aria-label="Pendiente">
                           <title>Pendiente</title>
                         </Clock>
                       )

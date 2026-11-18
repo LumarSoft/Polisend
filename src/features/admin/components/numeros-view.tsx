@@ -651,7 +651,8 @@ export function NumerosView() {
                 })
               }}
               disabled={remove.isPending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              // A solid red with white text: --destructive is a text red (light in dark mode), too pale under white.
+              className="bg-red-700 text-white hover:bg-red-800"
             >
               {remove.isPending ? 'Procesando…' : 'Dar de baja'}
             </AlertDialogAction>

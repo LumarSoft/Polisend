@@ -132,8 +132,8 @@ interface Kpi {
 
 const KPI_TONES: Record<Kpi['tone'], string> = {
   amber: 'bg-amber/15 text-amber-700 dark:text-amber',
-  sky: 'bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-300',
-  emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+  sky: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
+  emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
   destructive: 'bg-destructive/10 text-destructive',
 }
 

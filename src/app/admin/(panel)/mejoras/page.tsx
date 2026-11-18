@@ -48,7 +48,7 @@ export default function MejorasPage() {
             >
               <Lightbulb className="size-4" /> Propuestas
               {isDeveloper && !!newProposals?.count && (
-                <span className="rounded-full bg-ember-2 px-1.5 text-[10.5px] font-semibold text-on-ember">
+                <span className="rounded-full bg-ember px-1.5 text-[10.5px] font-semibold text-on-ember">
                   {newProposals.count}
                 </span>
               )}

@@ -262,7 +262,7 @@ function Notice({ icon, title, tone = 'neutral', children }: NoticeProps) {
         <div
           className={
             tone === 'success'
-              ? 'mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'
+              ? 'mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
               : 'mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground'
           }
         >

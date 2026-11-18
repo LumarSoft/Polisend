@@ -64,7 +64,7 @@ export function TriunfoCredentialStatusView({
     <>
       <p className={`flex items-start gap-2 text-[13px] ${line.ok ? 'text-muted-foreground' : 'text-destructive'}`}>
         {healthy ? (
-          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
         ) : line.ok ? null : (
           <TriangleAlert className="mt-0.5 size-4 shrink-0" />
         )}

@@ -19,7 +19,7 @@ interface StatDef {
 const TONE_STYLES: Record<StatDef['tone'], { icon: string; ring: string }> = {
   neutral: { icon: 'bg-ember-soft text-ember-2', ring: 'hover:border-ember-2/40' },
   emerald: {
-    icon: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+    icon: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
     ring: 'hover:border-emerald-500/40',
   },
   amber: { icon: 'bg-amber/15 text-amber-700 dark:text-amber', ring: 'hover:border-amber/50' },
