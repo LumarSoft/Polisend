@@ -8,6 +8,7 @@ function buildQuery(params: CobranzasQuery): string {
   if (params.sort) search.set('sort', params.sort)
   if (params.producerCodeId) search.set('producerCodeId', String(params.producerCodeId))
   if (params.phoneNumberId) search.set('phoneNumberId', String(params.phoneNumberId))
+  if (params.codeGroupId) search.set('codeGroupId', String(params.codeGroupId))
   if (params.paymentMethod) search.set('paymentMethod', params.paymentMethod)
   if (params.page) search.set('page', String(params.page))
   if (params.pageSize) search.set('pageSize', String(params.pageSize))

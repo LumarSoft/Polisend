@@ -126,6 +126,8 @@ export interface AdminClientsQuery {
   // SuperAdmin section filter: by producer code OR by phone number/sucursal.
   producerCodeId?: number
   phoneNumberId?: number
+  /** A code group of the principal (a zone's organizer or independent productor shown as a principal). */
+  codeGroupId?: number
   page?: number
   pageSize?: number
 }

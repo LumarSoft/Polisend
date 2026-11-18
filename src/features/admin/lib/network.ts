@@ -20,11 +20,21 @@ export interface NetworkZone {
 export interface NetworkSelection {
   zoneKey: ZoneKey | null
   principalId: number | null
+  /**
+   * A group of a principal shown as its groups (`groupsAsPrincipals`): the zone's organizer or independent productor
+   * chosen at the level of a principal. Null = the principal itself. Absent in selections stored before 18/11/2026.
+   */
+  groupId?: number | null
   /** The productor (producer code) filter; null = "Todos". */
   producerCodeId: number | null
 }
 
-export const EMPTY_SELECTION: NetworkSelection = { zoneKey: null, principalId: null, producerCodeId: null }
+export const EMPTY_SELECTION: NetworkSelection = {
+  zoneKey: null,
+  principalId: null,
+  groupId: null,
+  producerCodeId: null,
+}
 
 export function zoneKeyOf(principal: HierarchyPrincipal): ZoneKey {
   return principal.zoneId ?? NO_ZONE
@@ -56,8 +66,14 @@ export function zonesOf(principals: HierarchyPrincipal[], noZoneName: string): N
 }
 
 /** The selection of one principal: its zone, itself, every productor. */
-export function selectionOf(principal: HierarchyPrincipal): NetworkSelection {
-  return { zoneKey: zoneKeyOf(principal), principalId: principal.id, producerCodeId: null }
+export function selectionOf(principal: HierarchyPrincipal, groupId: number | null = null): NetworkSelection {
+  return { zoneKey: zoneKeyOf(principal), principalId: principal.id, groupId, producerCodeId: null }
+}
+
+/** The codes the productor level offers: a chosen group's, or the whole principal's. */
+export function codesInScope(principal: HierarchyPrincipal | null, groupId: number | null | undefined) {
+  const codes = principal?.codes ?? []
+  return groupId ? codes.filter(code => code.groupId === groupId) : codes
 }
 
 /**
@@ -76,14 +92,21 @@ export function resolveSelection(
   if (wanted.principalId !== null) {
     const principal = principals.find(p => p.id === wanted.principalId)
     if (!principal) return fallback
-    const keepsCode = principal.codes.some(code => code.id === wanted.producerCodeId)
-    return { ...selectionOf(principal), producerCodeId: keepsCode ? wanted.producerCodeId : null }
+    const groupId =
+      wanted.groupId && principal.groups?.some(group => group.id === wanted.groupId) ? wanted.groupId : null
+    const keepsCode = codesInScope(principal, groupId).some(code => code.id === wanted.producerCodeId)
+    return { ...selectionOf(principal, groupId), producerCodeId: keepsCode ? wanted.producerCodeId : null }
   }
 
   const zoneExists = principals.some(p => zoneKeyOf(p) === wanted.zoneKey)
-  return zoneExists ? { zoneKey: wanted.zoneKey, principalId: null, producerCodeId: null } : fallback
+  return zoneExists ? { zoneKey: wanted.zoneKey, principalId: null, groupId: null, producerCodeId: null } : fallback
 }
 
 export function sameSelection(a: NetworkSelection, b: NetworkSelection): boolean {
-  return a.zoneKey === b.zoneKey && a.principalId === b.principalId && a.producerCodeId === b.producerCodeId
+  return (
+    a.zoneKey === b.zoneKey &&
+    a.principalId === b.principalId &&
+    (a.groupId ?? null) === (b.groupId ?? null) &&
+    a.producerCodeId === b.producerCodeId
+  )
 }

@@ -484,7 +484,7 @@ function NavSectionBlock({
 /** The menu of the role: the Developer's platform, the Owner's network plus its principal, or the office's. */
 function useNavSections(): NavSection[] {
   const { isDeveloper, isOwner, canManageOrg } = useRole()
-  const { hasPrincipal } = useActingPrincipal()
+  const { hasPrincipal, group } = useActingPrincipal()
   const brand = usePanelBrand()
   if (isDeveloper) return [{ key: 'platform', label: 'Plataforma', entries: DEVELOPER_NAV }]
   const office = filterNav(PRINCIPAL_NAV, item => !item.manageOnly || canManageOrg)
@@ -493,7 +493,8 @@ function useNavSections(): NavSection[] {
     { key: 'network', label: 'Mi red', entries: OWNER_NETWORK_NAV },
     {
       key: 'principal',
-      label: hasPrincipal ? brand.name : 'Sin principal elegido',
+      // A zone's group chosen as a principal is named after itself, not after the zone's holding principal.
+      label: hasPrincipal ? (group?.name ?? brand.name) : 'Sin principal elegido',
       // Usuarios, Facturación and Configuración are the network's, above; the office's day is not the Owner's.
       entries: filterNav(
         office,

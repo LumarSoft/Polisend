@@ -2,10 +2,11 @@ import { apiRequest } from '@/lib/api-client'
 import type { DashboardData } from '@/types/api/dashboard'
 
 export const dashboardService = {
-  get: (token: string, scope?: { producerCodeId?: number; phoneNumberId?: number }) => {
+  get: (token: string, scope?: { producerCodeId?: number; phoneNumberId?: number; codeGroupId?: number }) => {
     const params = new URLSearchParams()
     if (scope?.producerCodeId) params.set('producerCodeId', String(scope.producerCodeId))
     if (scope?.phoneNumberId) params.set('phoneNumberId', String(scope.phoneNumberId))
+    if (scope?.codeGroupId) params.set('codeGroupId', String(scope.codeGroupId))
     const qs = params.toString()
     return apiRequest<DashboardData>(`/admin/dashboard${qs ? `?${qs}` : ''}`, { token })
   },

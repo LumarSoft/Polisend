@@ -225,7 +225,7 @@ export function AseguradosView() {
       </div>
 
       <RequirePrincipal showFilter={false}>
-        <AseguradosStats activeEstado={estado} onSelectEstado={handleEstado} />
+        <AseguradosStats activeEstado={estado} onSelectEstado={handleEstado} scope={scope} />
 
         <AseguradosFilters
           riskType={riskType}

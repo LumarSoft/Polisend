@@ -7,7 +7,7 @@ import { useActingPrincipal } from '../context/acting-principal-context'
 import { useHierarchyPrincipals } from '../hooks/use-hierarchy'
 import { useRole } from '../hooks/use-role'
 import { useShowHiddenCodes, visibleCodes } from '../hooks/use-hidden-codes'
-import { NO_ZONE, noZoneLabel, zoneKeyOf, zonesOf, type NetworkZone, type ZoneKey } from '../lib/network'
+import { NO_ZONE, codesInScope, noZoneLabel, zoneKeyOf, zonesOf, type NetworkZone, type ZoneKey } from '../lib/network'
 
 const ALL = 'all'
 
@@ -62,6 +62,50 @@ function zoneOptions(zones: NetworkZone[]): ComboboxOption[] {
   }))
 }
 
+/** `principalId` or `principalId:groupId`: the value of a principal-level option of the work filter. */
+const principalValue = (principalId: number, groupId: number | null = null) =>
+  groupId ? `${principalId}:${groupId}` : String(principalId)
+
+/**
+ * The principal level of the Owner's work filter: every principal, and, instead of a principal that holds a zone's
+ * productores (`groupsAsPrincipals`), each of its groups (an organizer's principal or an independent productor) at
+ * the same level, plus the codes still without a group. By name.
+ */
+function workPrincipalOptions(principals: HierarchyPrincipal[]): ComboboxOption[] {
+  const options = principals.flatMap<ComboboxOption & { sort: string }>(principal => {
+    if (!principal.groupsAsPrincipals) {
+      return [{ ...principalOptions([principal])[0], sort: principal.name }]
+    }
+    const groups = (principal.groups ?? []).map(group => {
+      const count = principal.codes.filter(code => code.groupId === group.id).length
+      return {
+        value: principalValue(principal.id, group.id),
+        label: group.name,
+        hint: count === 1 ? 'Productor independiente' : `${count} productores`,
+        sort: group.name,
+      }
+    })
+    const loose = principal.codes.filter(code => !code.groupId).length
+    const rest =
+      loose > 0 || groups.length === 0
+        ? [
+            {
+              value: principalValue(principal.id),
+              label: groups.length ? 'Sin clasificar' : principal.name,
+              hint: groups.length
+                ? `${loose} productores sin grupo · toda la zona`
+                : `${principal.codes.length} productores`,
+              sort: '\uffff',
+            },
+          ]
+        : []
+    return [...groups, ...rest]
+  })
+  return options
+    .sort((a, b) => a.sort.localeCompare(b.sort, 'es'))
+    .map(option => ({ value: option.value, label: option.label, hint: option.hint }))
+}
+
 function principalOptions(principals: HierarchyPrincipal[]): ComboboxOption[] {
   return principals.map(principal => ({
     value: String(principal.id),
@@ -72,15 +116,16 @@ function principalOptions(principals: HierarchyPrincipal[]): ComboboxOption[] {
   }))
 }
 
-/** The principal's codes; blocked ones only with the preference on (or when already chosen). */
+/** The principal's codes (a chosen group's only); blocked ones only with the preference on (or when already chosen). */
 function producerOptions(
   principal: HierarchyPrincipal | null,
   showHidden: boolean,
   chosen: number | null,
+  groupId: number | null = null,
 ): ComboboxOption[] {
   return [
     { value: ALL, label: 'Todos' },
-    ...visibleCodes(principal?.codes ?? [], showHidden, chosen).map(code => ({
+    ...visibleCodes(codesInScope(principal, groupId), showHidden, chosen).map(code => ({
       value: String(code.id),
       label: code.code,
       hint:
@@ -128,18 +173,25 @@ function WorkNetworkFilter({
       <Combobox
         label="Principal"
         placeholder="Elegí un principal"
-        value={acting.selection.principalId === null ? null : String(acting.selection.principalId)}
-        options={principalOptions(acting.zone?.principals ?? [])}
-        onChange={raw => acting.selectPrincipal(Number(raw))}
+        value={
+          acting.selection.principalId === null
+            ? null
+            : principalValue(acting.selection.principalId, acting.selection.groupId ?? null)
+        }
+        options={workPrincipalOptions(acting.zone?.principals ?? [])}
+        onChange={raw => {
+          const [principalId, groupId] = raw.split(':').map(Number)
+          acting.selectGroup(principalId, groupId || null)
+        }}
         disabled={acting.isLoading || !acting.zone}
-        className="w-56"
+        className="w-64"
       />
       {showProducer && (
         <Combobox
           label="Productor"
           placeholder="Todos"
           value={producer === null ? ALL : String(producer)}
-          options={producerOptions(acting.principal, showHidden, producer)}
+          options={producerOptions(acting.principal, showHidden, producer, acting.selection.groupId ?? null)}
           onChange={raw => setProducer(parseId(raw))}
           disabled={!acting.principal}
           className="w-52"

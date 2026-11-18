@@ -11,6 +11,8 @@ export interface HierarchyPrincipalCode {
   holderName: string | null
   /** Triunfo blocks new policies, renewals and endorsements for it. Absent on older APIs. */
   triunfoBlocked?: boolean
+  /** Its code group, or null. Absent on older APIs. */
+  groupId?: number | null
 }
 
 /** `GET /hierarchy/principals` (Developer, Owner, SuperAdmin): the cascading filter's data, ordered by name. */
@@ -27,6 +29,12 @@ export interface HierarchyPrincipal {
   /** The caller's own principal (never true for the Developer). */
   isHome: boolean
   codes: HierarchyPrincipalCode[]
+  /**
+   * It holds a zone's productores: the filter lists each of its `groups` at the level of a principal (an organizer's
+   * principal or an independent productor) instead of it. Absent on older APIs.
+   */
+  groupsAsPrincipals?: boolean
+  groups?: Array<{ id: number; name: string }>
 }
 
 // ─── Mi red (GET /hierarchy/tree) ──────────────────────────────────────────────

@@ -10,6 +10,8 @@ import { numberLabel } from '../lib/number-label'
 export interface ScopeFilterValue {
   producerCodeId?: number
   phoneNumberId?: number
+  /** An Owner's group of a principal shown as its groups (a zone's organizer or independent productor). */
+  codeGroupId?: number
 }
 
 interface ScopeFilterProps {
