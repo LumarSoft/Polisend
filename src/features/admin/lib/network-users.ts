@@ -1,4 +1,5 @@
 import type {
+  CodeGroup,
   NetworkTree,
   NetworkTreeCode,
   NetworkTreePrincipal,
@@ -8,6 +9,7 @@ import type {
   ReadOnlyNetworkUser,
   Zone,
 } from '@/types/api/hierarchy'
+import { NO_ZONE, type ZoneKey } from './network'
 import { ROLES, roleLabel } from './roles'
 
 /**
@@ -27,6 +29,13 @@ export interface FormPrincipal {
   accounts: number
   /** Every live code, active or not. */
   codes: NetworkTreeCode[]
+  /**
+   * It holds a zone's productores (`groupsAsPrincipals`): the form offers each of its groups as a principal, worked
+   * through an Admin with the codes chosen; nobody is made SuperAdmin of the whole zone.
+   */
+  groupsAsPrincipals: boolean
+  /** The groups its codes are ordered in, by name. */
+  groups: CodeGroup[]
 }
 
 function toFormPrincipal(principal: NetworkTreePrincipal, zone: { id: number; name: string } | null): FormPrincipal {
@@ -39,7 +48,85 @@ function toFormPrincipal(principal: NetworkTreePrincipal, zone: { id: number; na
     isHome: principal.isHome,
     accounts: principal.users.superAdmins + principal.users.admins,
     codes: principal.codes,
+    groupsAsPrincipals: principal.groupsAsPrincipals === true,
+    groups: principal.groups ?? [],
   }
+}
+
+export function formZoneKey(principal: FormPrincipal): ZoneKey {
+  return principal.zoneId ?? NO_ZONE
+}
+
+/** A zone of the user form's "Zona" select: the principals the caller reaches in it. */
+export interface FormZone {
+  key: ZoneKey
+  name: string
+  /** Principals at the level the form offers them: a zone's productores count one per group. */
+  principals: number
+}
+
+/** The zones of the caller's principals, by name, with the principals in no zone last (`noZoneName`). */
+export function formZonesOf(principals: FormPrincipal[], noZoneName: string): FormZone[] {
+  const byKey = new Map<ZoneKey, FormZone>()
+  for (const principal of principals) {
+    const key = formZoneKey(principal)
+    const zone = byKey.get(key) ?? {
+      key,
+      name: key === NO_ZONE ? noZoneName : (principal.zoneName ?? ''),
+      principals: 0,
+    }
+    zone.principals += principal.groupsAsPrincipals ? Math.max(1, groupChoices(principal).length) : 1
+    byKey.set(key, zone)
+  }
+  return [...byKey.values()].sort((a, b) =>
+    a.key === NO_ZONE ? 1 : b.key === NO_ZONE ? -1 : a.name.localeCompare(b.name, 'es'),
+  )
+}
+
+/** `principalId` or `principalId:groupId`: a principal-level choice of the user form. */
+export function choiceValue(principalId: number, groupId: number | null = null): string {
+  return groupId === null ? String(principalId) : `${principalId}:${groupId}`
+}
+
+export function parseChoice(value: string): { principalId: number; groupId: number | null } {
+  const [principalId, groupId] = value.split(':').map(Number)
+  return { principalId, groupId: Number.isFinite(groupId) ? groupId : null }
+}
+
+export const UNGROUPED_LABEL = 'Sin clasificar'
+
+/** A group of a zone's productores as a principal of the form; `groupId` null = the codes still without a group. */
+export interface GroupChoice {
+  groupId: number | null
+  name: string
+  /** Its live codes. */
+  codes: number
+}
+
+/** The groups of a principal that holds a zone's productores, by name, and its codes without a group last. */
+export function groupChoices(principal: FormPrincipal): GroupChoice[] {
+  const groups = principal.groups
+    .map(group => ({
+      groupId: group.id,
+      name: group.name,
+      codes: principal.codes.filter(code => code.groupId === group.id).length,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+  const loose = principal.codes.filter(code => !code.groupId).length
+  if (loose === 0 && groups.length > 0) return groups
+  return [...groups, { groupId: null, name: groups.length ? UNGROUPED_LABEL : principal.name, codes: loose }]
+}
+
+/** The name of a code's group in a principal that holds a zone's productores. */
+export function groupNameOf(principal: FormPrincipal, groupId: number | null | undefined): string {
+  return principal.groups.find(group => group.id === groupId)?.name ?? UNGROUPED_LABEL
+}
+
+/** "FERLINI", "FERLINI y SOSA", "FERLINI, SOSA y 2 más". */
+export function nameList(names: string[], shown = 2): string {
+  if (names.length <= 1) return names.join('')
+  if (names.length <= shown + 1) return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`
+  return `${names.slice(0, shown).join(', ')} y ${names.length - shown} más`
 }
 
 /** Every principal of the tree once (zones, the Developer's unzoned ones, the caller's own), by name. */
