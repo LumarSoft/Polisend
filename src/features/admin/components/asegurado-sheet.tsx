@@ -43,6 +43,7 @@ import {
 } from '../lib/asegurados-ui'
 import { AseguradoDocumentosTab } from './asegurado-documentos'
 import { PolizaStatusBadge } from './poliza-status-badge'
+import { useAssistantRecord } from '../context/assistant-context'
 
 type SheetTab = 'polizas' | 'pagos' | 'documentos'
 
@@ -471,6 +472,7 @@ function InfoCell({ icon: Icon, label, value, className }: InfoCellProps) {
 
 export function AseguradoSheet({ clientId, onClose, defaultTab = 'polizas' }: AseguradoSheetProps) {
   const { data: client, isLoading } = useAdminClient(clientId)
+  useAssistantRecord(clientId !== null ? { kind: 'asegurado', id: clientId } : null)
   const { signature } = usePanelBrand()
   const [tab, setTab] = useState<SheetTab>(defaultTab)
   const vigentesCount = client?.policies.filter(p => p.validTo && new Date(p.validTo) >= new Date()).length

@@ -35,6 +35,7 @@ import { useActingPrincipal } from '../context/acting-principal-context'
 import type { InboxConversation } from '@/types/api/inbox'
 import { contactDisplayName } from '../lib/inbox-contact'
 import { AssistantLauncher } from './assistant-launcher'
+import { useAssistantRecord } from '../context/assistant-context'
 
 type InboxFilter = 'all' | 'unread' | 'pending' | 'taken'
 
@@ -82,6 +83,7 @@ export function InboxView() {
   const linkedId = Number(searchParams.get('conversation')) || null
   const [pickedId, setPickedId] = useState<number | null | undefined>(undefined)
   const selectedId = pickedId === undefined ? linkedId : pickedId
+  useAssistantRecord(selectedId !== null ? { kind: 'chat', id: selectedId } : null)
   // Switching chats is local state, so it is instant and never depends on a
   // Next navigation round-trip. The URL only mirrors it (replaceState, no
   // navigation) so a reload or a shared link reopens the same chat.
