@@ -85,7 +85,7 @@ function CodeStatus({ code }: { code: CodeTriunfoCredentialStatus }) {
   const when = code.verifiedAt ? new Date(code.verifiedAt).toLocaleDateString('es-AR') : null
   return (
     <span className="flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
-      <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+      <CheckCircle2 className="size-3.5 text-emerald-700 dark:text-emerald-400" />
       Usuario {code.username}
       {when ? ` · validado el ${when}` : ''}
     </span>

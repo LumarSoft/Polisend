@@ -260,7 +260,7 @@ function AssistantStep({ numberId, onNext }: { numberId: number; onNext: () => v
           {configured ? 'Volver a editar' : 'Configurar el asistente'}
         </Button>
         {configured && (
-          <span className="inline-flex items-center gap-1 text-[12.5px] text-emerald-600 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1 text-[12.5px] text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="size-4" /> Asistente configurado
           </span>
         )}
@@ -462,19 +462,19 @@ export function BranchOnboardingDialog({
           <div className="flex flex-col gap-4">
             <ul className="flex flex-col gap-2 text-[13px]">
               <li className="flex items-center gap-2 text-ink">
-                <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                <CheckCircle2 className="size-4 text-emerald-700 dark:text-emerald-400" />
                 Productor <span className="font-medium">
                   {summary.code?.holderName ?? summary.code?.code}
                 </span> (código {summary.code?.code}) en {principal?.name}
               </li>
               <li className="flex items-center gap-2 text-ink">
-                <UserPlus className="size-4 text-emerald-600 dark:text-emerald-400" />
+                <UserPlus className="size-4 text-emerald-700 dark:text-emerald-400" />
                 Admin <span className="font-medium">{summary.user?.email}</span>
                 {summary.user?.invited && <span className="text-muted-foreground">(le llegó el enlace)</span>}
               </li>
               <li className="flex items-center gap-2 text-ink">
                 <MessageSquare
-                  className={`size-4 ${summary.number ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
+                  className={`size-4 ${summary.number ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}
                 />
                 {summary.number ? 'Número de WhatsApp conectado' : 'Número de WhatsApp: pendiente (Números → Conectar)'}
               </li>

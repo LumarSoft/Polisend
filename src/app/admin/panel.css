@@ -367,7 +367,8 @@
   --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent-foreground: var(--color-ink);
   --sidebar-ring: var(--color-ember);
-  --destructive: #dc2626;
+  /* Red-700: still red, and readable as text on its own tint (red-600 was 4.1:1 there). */
+  --destructive: #b91c1c;
 }
 
 /* ── Neutrals, light ─────────────────────────────────────────────── */
@@ -407,7 +408,7 @@
   --color-ink: #0f172a;
   --color-ink-2: #1e293b;
   --color-ink-3: #334155;
-  --color-faint: #64748b;
+  --color-faint: #56657a;
   --color-faint-2: #94a3b8;
   --color-paper: #ffffff;
   --color-paper-2: #f8fafc;
@@ -434,7 +435,7 @@
   --color-ink: #09090b;
   --color-ink-2: #18181b;
   --color-ink-3: #3f3f46;
-  --color-faint: #71717a;
+  --color-faint: #63636b;
   --color-faint-2: #a1a1aa;
   --color-paper: #ffffff;
   --color-paper-2: #fafafa;
@@ -457,7 +458,8 @@
 /* The sidebar frame is the darkest layer, then the page, then cards. */
 
 :is(.dark, .dark *)[data-palette] {
-  --destructive: #ef4444;
+  /* Red as text on a dark page and on its own tint (badges, tinted buttons). */
+  --destructive: #f87171;
 }
 
 :is(.dark, .dark *)[data-palette='dorado'] {
@@ -527,12 +529,13 @@
 
 /* Gold. */
 [data-palette='dorado'] {
+  /* Gold is a light fill: dark text on it, and a deep gold for text on light surfaces. */
   --color-ember: #e8a820;
-  --color-ember-2: #c48a0a;
+  --color-ember-2: #875c05;
   --color-ember-soft: rgba(232, 168, 32, 0.1);
   --color-ember-ring: rgba(232, 168, 32, 0.24);
-  --color-on-ember: #fafaf6;
-  --primary-foreground: #ffffff;
+  --color-on-ember: #1a1206;
+  --primary-foreground: #1a1206;
   --accent: #f6f1e4;
   --chart-3: #93b0f5;
 }
@@ -543,6 +546,7 @@
   --color-ember-soft: rgba(232, 168, 32, 0.14);
   --color-ember-ring: rgba(232, 168, 32, 0.32);
   --color-on-ember: #1a1206;
+  --primary-foreground: #1a1206;
   --accent: #262017;
 }
 
@@ -559,19 +563,20 @@
 }
 
 :is(.dark, .dark *)[data-palette='azul'] {
-  --color-ember: #4d76ee;
-  --color-ember-2: #7d9bf3;
-  --color-ember-soft: rgba(77, 118, 238, 0.16);
-  --color-ember-ring: rgba(77, 118, 238, 0.36);
-  --color-on-ember: #0b1120;
+  --color-ember: #3f6bed;
+  --color-ember-2: #8ea8f6;
+  --color-ember-soft: rgba(63, 107, 237, 0.16);
+  --color-ember-ring: rgba(63, 107, 237, 0.36);
+  --color-on-ember: #ffffff;
   --accent: #18243a;
 }
 
 [data-palette='turquesa'] {
-  --color-ember: #0d9488;
-  --color-ember-2: #0f766e;
-  --color-ember-soft: rgba(13, 148, 136, 0.09);
-  --color-ember-ring: rgba(13, 148, 136, 0.24);
+  /* Teal-700 so white text on it reads (teal-600 was 3.7:1); teal-800 for text on its tint. */
+  --color-ember: #0f766e;
+  --color-ember-2: #115e59;
+  --color-ember-soft: rgba(15, 118, 110, 0.09);
+  --color-ember-ring: rgba(15, 118, 110, 0.24);
   --color-on-ember: #ffffff;
   --primary-foreground: #ffffff;
   --accent: #ecf6f5;
@@ -601,11 +606,11 @@
 }
 
 :is(.dark, .dark *)[data-palette='violeta'] {
-  --color-ember: #8b5cf6;
-  --color-ember-2: #a78bfa;
-  --color-ember-soft: rgba(139, 92, 246, 0.17);
-  --color-ember-ring: rgba(139, 92, 246, 0.38);
-  --color-on-ember: #1e1038;
+  --color-ember: #8452f5;
+  --color-ember-2: #b49cfb;
+  --color-ember-soft: rgba(132, 82, 245, 0.17);
+  --color-ember-ring: rgba(132, 82, 245, 0.38);
+  --color-on-ember: #ffffff;
   --accent: #211c38;
 }
 
@@ -621,11 +626,11 @@
 }
 
 :is(.dark, .dark *)[data-palette='rosa'] {
-  --color-ember: #ec4899;
+  --color-ember: #dd1779;
   --color-ember-2: #f472b6;
-  --color-ember-soft: rgba(236, 72, 153, 0.15);
-  --color-ember-ring: rgba(236, 72, 153, 0.36);
-  --color-on-ember: #3b0a20;
+  --color-ember-soft: rgba(221, 23, 121, 0.15);
+  --color-ember-ring: rgba(221, 23, 121, 0.36);
+  --color-on-ember: #ffffff;
   --accent: #2a1a22;
 }
 

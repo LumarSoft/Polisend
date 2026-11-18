@@ -45,7 +45,7 @@ export function PasswordResetView() {
           <div className="text-center">
             <BrandMark size={48} className="mx-auto mb-5 rounded-2xl shadow-md" />
             <div className="rounded-3xl border border-line-2 bg-paper p-7 shadow-[0_30px_70px_-30px_rgba(15,13,10,0.25)]">
-              <div className="mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <div className="mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
                 <CheckCircle2 className="size-5" />
               </div>
               <h1 className="font-display text-[22px] leading-tight text-ink">Listo, ya podés iniciar sesión</h1>

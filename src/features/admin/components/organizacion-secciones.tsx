@@ -179,7 +179,7 @@ export function CodesTable({
                 {c.lastCarteraSyncAt ? (
                   fecha(c.lastCarteraSyncAt)
                 ) : (
-                  <span className="text-amber-600 dark:text-amber-400">nunca</span>
+                  <span className="text-amber-700 dark:text-amber-400">nunca</span>
                 )}
               </TableCell>
               <TableCell className="text-right">

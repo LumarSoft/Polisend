@@ -42,7 +42,7 @@ export function MessageAttachments({ files }: { files: AssistantAttachment[] }) 
             <FileText className="size-5 shrink-0 text-ember-2" />
             <span className="min-w-0">
               <span className="block truncate text-[12.5px] font-medium text-ink">{file.name}</span>
-              <span className="block text-[11px] text-faint">{fileDetail(file)}</span>
+              <span className="block text-[12px] text-faint">{fileDetail(file)}</span>
             </span>
           </a>
         ),
@@ -84,7 +84,7 @@ export function PendingAttachments({
             <span className="truncate font-medium text-ink">{file.name}</span>
             <span
               className={cn(
-                'truncate text-[11px]',
+                'truncate text-[12px]',
                 file.status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-faint',
               )}
             >

@@ -322,7 +322,7 @@ function CountBadge({ count, small = false }: { count: number; small?: boolean }
     <span className="relative ml-auto flex items-center justify-center group-data-[collapsible=icon]:hidden">
       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ember-2 opacity-60" />
       <span
-        className={`relative flex items-center justify-center rounded-full bg-ember-2 font-semibold text-on-ember ${
+        className={`relative flex items-center justify-center rounded-full bg-ember font-semibold text-on-ember ${
           small ? 'h-4 min-w-4 px-1 text-[9.5px]' : 'h-5 min-w-5 px-1.5 text-[10.5px]'
         }`}
       >

@@ -214,7 +214,7 @@ function PolizaCard({ poliza, showProducer }: { poliza: AdminPolizaDetail; showP
                 key={c.id}
                 className="flex items-center gap-1 rounded-md border border-line-2 bg-background px-2 py-1"
               >
-                {c.status === 'paid' && <CheckCircle2 className="size-3.5 text-emerald-500" />}
+                {c.status === 'paid' && <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />}
                 {c.status === 'overdue' && <XCircle className="size-3.5 text-destructive" />}
                 {c.status === 'rejected' && <Ban className="size-3.5 text-destructive" />}
                 {c.status === 'pending' && <Calendar className="size-3.5 text-muted-foreground" />}
@@ -234,7 +234,7 @@ function PolizaCard({ poliza, showProducer }: { poliza: AdminPolizaDetail; showP
               {nextCuota.dueDate ? ` — ${formatDate(nextCuota.dueDate)}` : ''}
             </div>
           ) : (
-            <div className="mt-2 flex items-center gap-1 text-[11.5px] text-emerald-600 dark:text-emerald-400">
+            <div className="mt-2 flex items-center gap-1 text-[11.5px] text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="size-3.5" />
               Todas las cuotas pagadas
             </div>
@@ -246,7 +246,7 @@ function PolizaCard({ poliza, showProducer }: { poliza: AdminPolizaDetail; showP
 }
 
 function cuotaStatusIcon(status: AdminCuota['status']) {
-  if (status === 'paid') return <CheckCircle2 className="size-4 text-emerald-500" />
+  if (status === 'paid') return <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
   if (status === 'overdue') return <XCircle className="size-4 text-destructive" />
   if (status === 'rejected') return <Ban className="size-4 text-destructive" />
   return <Calendar className="size-4 text-muted-foreground" />
@@ -424,7 +424,7 @@ function PagosTab({ client }: { client: AdminClientDetail }) {
         </div>
       ) : allCuotas.length > 0 ? (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-          <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <CheckCircle2 className="size-5 shrink-0 text-emerald-700 dark:text-emerald-400" />
           <div className="text-[13px] font-medium text-emerald-700 dark:text-emerald-400">Todas las cuotas al día</div>
         </div>
       ) : null}

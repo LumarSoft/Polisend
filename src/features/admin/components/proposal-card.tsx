@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { PROPOSAL_STATUS_LABEL, type Proposal, type ProposalStatus } from '@/types/api/improvements'
 
 const STATUS_CLASS: Record<ProposalStatus, string> = {
-  NEW: 'bg-ember-2 text-on-ember',
+  NEW: 'bg-ember text-on-ember',
   REVIEWING: 'bg-ember-soft text-ember-2',
   PLANNED: 'bg-ember-soft text-ember-2',
   DONE: 'bg-ink text-paper',
