@@ -264,7 +264,11 @@ function UsersScreen() {
             los que le marques en Usuarios.
           </p>
           {tree.data?.home ? (
-            <PrincipalCodesBlock principalId={tree.data.home.id} codes={tree.data.home.codes} />
+            <PrincipalCodesBlock
+              principalId={tree.data.home.id}
+              codes={tree.data.home.codes}
+              groups={tree.data.home.groups}
+            />
           ) : tree.isLoading ? (
             <Skeleton className="h-40 w-full rounded-lg" />
           ) : (
