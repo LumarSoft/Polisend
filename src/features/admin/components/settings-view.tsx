@@ -26,6 +26,8 @@ import { SuperAdminOnlyNote } from './super-admin-only-note'
 import { MyAccountSection } from './my-account-section'
 import { OwnNumberSettings } from './own-number-settings'
 import { TriunfoSettingsSection } from './triunfo-settings-section'
+import { TriunfoWsSection } from './triunfo-ws-section'
+import { TriunfoCodeCredentialsSection } from './triunfo-code-credentials-section'
 import { splitNames } from '../lib/number-assistant-form'
 import { useUrlTab } from '../hooks/use-panel-link'
 import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
@@ -239,7 +241,7 @@ export function SettingsView() {
   // Nothing loads while an Owner's zone change left it without a principal (RequirePrincipal shows why).
   const tenantEnabled = useTenantQueriesEnabled()
   const { data: config } = useProducerConfig(tenantEnabled)
-  const { canManageOrg, isAdmin } = useRole()
+  const { canManageOrg, isAdmin, isOwner } = useRole()
   // Only the SuperAdmin changes what applies to every number; a branch's admin changes their own number's
   // (from 28/10 to 10/11 any admin could, and branches saved their own data as the whole organization's).
   const canEditOrg = canManageOrg
@@ -323,8 +325,11 @@ export function SettingsView() {
             <PricingPlansSection canEdit={canEditOrg} />
           </TabsContent>
 
-          <TabsContent value="triunfo" className="mt-6">
+          <TabsContent value="triunfo" className="mt-6 space-y-5">
             <TriunfoSettingsSection canEdit={canEditOrg} />
+            {/* The Owner's web-service user is the whole network's, not the principal's: below the principal's access. */}
+            {isOwner && <TriunfoWsSection />}
+            <TriunfoCodeCredentialsSection manager={canManageOrg} />
           </TabsContent>
         </Tabs>
       </RequirePrincipal>

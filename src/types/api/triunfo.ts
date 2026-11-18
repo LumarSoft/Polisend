@@ -51,3 +51,37 @@ export interface SaveTriunfoCredentialRequest {
   /** MD5 of the Triunfo password, in hex: hashed in the browser, the password itself is never sent. */
   password: string
 }
+
+/** The Owner's Triunfo web-service user ("WS…"): reads the novedades of its zones. Never the password. */
+export interface TriunfoWsCredentialStatus {
+  configured: boolean
+  username: string | null
+  /** The productor code Triunfo answered for when it was saved. */
+  verifiedCode: string | null
+  verifiedAt: string | null
+}
+
+export interface SaveTriunfoWsCredentialRequest {
+  username: string
+  /** MD5 of the password, in hex: hashed in the browser, the password itself is never sent. */
+  password: string
+  /** A productor code of the Owner's zones, to prove the user with one day of its novedades. */
+  productor: string
+}
+
+/** One productor code the user reaches and its own TriunfoNet user (never the password). */
+export interface CodeTriunfoCredentialStatus {
+  producerCodeId: number
+  code: string
+  holderName: string | null
+  isActive: boolean
+  configured: boolean
+  username: string | null
+  verifiedAt: string | null
+}
+
+export interface SaveCodeTriunfoCredentialRequest {
+  username: string
+  /** MD5 of the TriunfoNet password, in hex: hashed in the browser, the password itself is never sent. */
+  password: string
+}
