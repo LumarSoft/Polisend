@@ -14,7 +14,7 @@ import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { DEVELOPER_PATHS, OWNER_NETWORK_PATHS, SCREENS_WITH_NETWORK_FILTER, matchesPath } from '../lib/panel-areas'
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
 import { AppSidebar } from './app-sidebar'
-import { AssistantLauncher } from './assistant-launcher'
+import { AssistantFab, AssistantLauncher } from './assistant-launcher'
 import { TourOverlay } from './tour-overlay'
 import { RequirePrincipal } from './require-principal'
 import { TriunfoStatusBanner } from './triunfo-status-banner'
@@ -108,6 +108,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </SidebarInset>
           {/* Outside the top bar: the guide carries on in Whatsapp, which has none. */}
           <TourOverlay />
+          {/* Whatsapp has its own button and its box to write in sits there. */}
+          <AssistantFab hidden={fullScreen} />
           {/* ?seccion= of a link: the exact section lights up once it shows. */}
           <Suspense fallback={null}>
             <SectionFocus />
