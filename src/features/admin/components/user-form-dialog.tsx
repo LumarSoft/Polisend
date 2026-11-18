@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { NetworkUser, NetworkUserRole } from '@/types/api/hierarchy'
+import type { ZoneKey } from '../lib/network'
 import { useNetworkUserForm, type NetworkUserFormState, type SavedResult } from '../hooks/use-network-user-form'
 import { ROLES, roleLabel } from '../lib/roles'
 import {
@@ -26,6 +27,7 @@ import {
   PrincipalModeSwitch,
   PrincipalPicker,
   RoleCards,
+  ZonePicker,
 } from './user-access-fields'
 import type { AccountAccessAction } from '../hooks/use-account-access'
 import { AccountAccessDialog } from './account-access-dialog'
@@ -38,6 +40,8 @@ interface UserFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** The principal a new user starts in: the list's filter or `?principal=`. */
   defaultPrincipalId: number | null
+  /** The zone a new user starts in: the list's filter. */
+  defaultZoneKey?: ZoneKey | null
   /** The role a new user starts with (Mi red's «Sin SuperAdmin · crear uno» asks for SuperAdmin); Admin by default. */
   defaultRole?: NetworkUserRole
   /** The SuperAdmin edits its principal's codes in the "Productores" tab of the same screen. */
@@ -71,10 +75,12 @@ function PrincipalSection({ form }: { form: NetworkUserFormState }) {
     return (
       <FixedPrincipal
         principal={principal}
+        name={form.principalLabel}
         note={form.isEdit ? 'Solo el equipo de Polisend pasa un usuario a otro principal' : 'Tu principal'}
       />
     )
   }
+  const noZone = form.zoneKey === null
 
   return (
     <div className="flex flex-col gap-3">
@@ -90,12 +96,29 @@ function PrincipalSection({ form }: { form: NetworkUserFormState }) {
           zoneRequired={form.isOwner}
         />
       ) : (
-        <PrincipalPicker
-          principals={form.selectablePrincipals}
-          value={principal?.id ?? null}
-          onChange={form.setPrincipalId}
-          label={isAdminRole ? 'Depende de' : 'Principal'}
-        />
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ZonePicker zones={form.formZones} value={form.zoneKey} onChange={form.setZone} />
+            <PrincipalPicker
+              principals={form.selectablePrincipals}
+              value={form.principalChoice}
+              onChange={form.choosePrincipal}
+              label={isAdminRole ? 'Depende de' : 'Principal'}
+              disabled={noZone}
+              emptyText={
+                !isAdminRole && form.zoneHasGroups
+                  ? 'En esta zona solo hay principales para Admin'
+                  : 'No hay principales en esta zona'
+              }
+            />
+          </div>
+          {!isAdminRole && form.zoneHasGroups && (
+            <Note>
+              Los principales que salen de la zona de Triunfo no tienen SuperAdmin: para darle sus productores, elegí
+              Admin.
+            </Note>
+          )}
+        </>
       )}
     </div>
   )
@@ -121,15 +144,32 @@ function CodesSection({ form, onEditCodes }: { form: NetworkUserFormState; onEdi
 
   if (!principal) return null
   return (
-    <Section title="Códigos que ve">
+    <Section title={form.zoneGroups ? 'Productores que ve' : 'Códigos que ve'}>
       <CodesPicker
         options={form.codeOptions}
         selected={form.codeIds}
         onToggle={form.toggleCode}
         onCreate={form.createCode}
         creating={form.creatingCode}
-        canCreate
+        canCreate={!form.zoneGroups}
+        showGroups={form.zoneGroups && form.otherGroups}
       />
+      {form.zoneGroups && (
+        <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-ink-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 accent-ember-2"
+            checked={form.otherGroups}
+            onChange={e => form.setOtherGroups(e.target.checked)}
+          />
+          <span>
+            Sumar productores de otros principales de la zona
+            <span className="block text-[12px] text-muted-foreground">
+              Ve solo los que marques; podés destildar los que no le correspondan.
+            </span>
+          </span>
+        </label>
+      )}
     </Section>
   )
 }
@@ -184,12 +224,14 @@ function RestoreDialog({ form }: { form: NetworkUserFormState }) {
 function UserForm({
   user,
   defaultPrincipalId,
+  defaultZoneKey,
   defaultRole,
   onEditCodes,
   onDone,
 }: {
   user: NetworkUser | null
   defaultPrincipalId: number | null
+  defaultZoneKey?: ZoneKey | null
   defaultRole?: NetworkUserRole
   onEditCodes?: () => void
   onDone: () => void
@@ -198,7 +240,7 @@ function UserForm({
     toast.success(title, description ? { description } : undefined)
     onDone()
   }
-  const form = useNetworkUserForm({ user, defaultPrincipalId, defaultRole, onSaved: saved })
+  const form = useNetworkUserForm({ user, defaultPrincipalId, defaultZoneKey, defaultRole, onSaved: saved })
   const [accessAction, setAccessAction] = useState<AccountAccessAction | null>(null)
   const { fields } = form
 
@@ -267,6 +309,7 @@ function UserForm({
             value={fields.role}
             onChange={form.setRole}
             disabledNote={form.isSelf ? 'No podés cambiar tu propio rol.' : undefined}
+            blocked={form.blockedRole}
           />
         </Section>
 
@@ -331,6 +374,7 @@ export function UserFormDialog({
   open,
   onOpenChange,
   defaultPrincipalId,
+  defaultZoneKey,
   defaultRole,
   onEditCodes,
 }: UserFormDialogProps) {
@@ -351,6 +395,7 @@ export function UserFormDialog({
             key={user?.id ?? 'new'}
             user={user}
             defaultPrincipalId={defaultPrincipalId}
+            defaultZoneKey={defaultZoneKey}
             defaultRole={defaultRole}
             onEditCodes={
               onEditCodes &&

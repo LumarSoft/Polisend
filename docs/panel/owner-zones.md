@@ -240,3 +240,16 @@ Inicio. Reclassifying is moving codes between groups in Mi red: no data moves.
   principal level; choosing it clears the principal (`clearPrincipal`) and Inicio shows `GET /hierarchy/dashboard
   ?zoneId=` (every principal of the zone added up, counts only). The shell does not ask for a principal on Inicio with
   a zone chosen; the other work screens still do.
+
+## User form: zone first, a zone's productores through an Admin (18/11/2026, night)
+
+- «Zona» comes first (`ZonePicker`, from the list's zone filter, the principal's zone or the only one); «Principal» /
+  «Depende de» lists only that zone's principals and stays disabled until a zone is chosen.
+- A principal with `groupsAsPrincipals` is offered as its groups (`principalId:groupId`) plus «Sin clasificar», never
+  as itself. Choosing a group makes the account an Admin with the group's active codes checked; any can be unchecked,
+  and «Sumar productores de otros principales de la zona» lists every code of the zone with its group, so one Admin
+  can work productores of several of the zone's principals (they are all codes of the same holding principal, so the
+  API needs nothing new). The summary and the fixed principal of an edit name the groups of the checked codes.
+- Nobody is SuperAdmin of a zone's productores: the SuperAdmin role does not list them (a note says to choose Admin),
+  switching to SuperAdmin clears such a choice, and editing one of their Admins disables the SuperAdmin card.
+- Codes of different real principals still cannot share one account (a user belongs to one principal).

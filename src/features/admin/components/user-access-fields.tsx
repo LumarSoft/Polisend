@@ -11,7 +11,8 @@ import { cn } from '@/lib/utils'
 import type { NetworkUserRole, Zone } from '@/types/api/hierarchy'
 import type { CodeOption, NewPrincipalDraft } from '../hooks/use-network-user-form'
 import { newCodeRow } from '../hooks/use-network-user-form'
-import type { FormPrincipal } from '../lib/network-users'
+import { NO_ZONE, type ZoneKey } from '../lib/network'
+import { choiceValue, groupChoices, type FormPrincipal, type FormZone } from '../lib/network-users'
 import { CODE_HINT, isValidCode } from '../lib/producer-code'
 import { ROLES } from '../lib/roles'
 
@@ -36,11 +37,14 @@ export function RoleCards({
   value,
   onChange,
   disabledNote,
+  blocked,
 }: {
   value: NetworkUserRole
   onChange: (role: NetworkUserRole) => void
   /** Set when the role cannot change (one's own): the reason, shown under the cards. */
   disabledNote?: string
+  /** A role the account cannot take where it is, and why (an Admin of a zone's productores is never SuperAdmin). */
+  blocked?: { role: NetworkUserRole; note: string }
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -54,7 +58,7 @@ export function RoleCards({
               type="button"
               role="radio"
               aria-checked={selected}
-              disabled={!!disabledNote}
+              disabled={!!disabledNote || blocked?.role === card.role}
               onClick={() => onChange(card.role)}
               className={cn(
                 'flex items-start gap-3 rounded-lg border p-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
@@ -70,21 +74,75 @@ export function RoleCards({
           )
         })}
       </div>
-      {disabledNote && <p className="text-[12px] text-muted-foreground">{disabledNote}</p>}
+      {(disabledNote ?? blocked?.note) && (
+        <p className="text-[12px] text-muted-foreground">{disabledNote ?? blocked?.note}</p>
+      )}
     </div>
   )
 }
 
-function principalOption(principal: FormPrincipal): ComboboxOption {
-  const hint = [
-    principal.zoneName,
-    principal.isHome ? 'Tu principal' : null,
-    principal.accounts === 0 ? 'Sin usuarios' : null,
-    principal.isActive ? null : 'Inactivo',
-  ]
-    .filter(Boolean)
-    .join(' · ')
-  return { value: String(principal.id), label: principal.name, hint: hint || undefined }
+const plural = (n: number, one: string, many: string) => `${n.toLocaleString('es-AR')} ${n === 1 ? one : many}`
+
+/**
+ * The principals of a zone at the level of a principal: each one, and, instead of one that holds the zone's productores,
+ * each of its groups (an organizer's principal or an independent productor) and its codes without a group. By name.
+ */
+function principalOptions(principals: FormPrincipal[]): ComboboxOption[] {
+  const options = principals.flatMap<ComboboxOption & { sort: string }>(principal => {
+    if (!principal.groupsAsPrincipals) {
+      const hint = [
+        principal.isHome ? 'Tu principal' : null,
+        principal.accounts === 0 ? 'Sin usuarios' : null,
+        principal.isActive ? null : 'Inactivo',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      return [{ value: String(principal.id), label: principal.name, hint: hint || undefined, sort: principal.name }]
+    }
+    return groupChoices(principal).map(group => ({
+      value: choiceValue(principal.id, group.groupId),
+      label: group.name,
+      hint:
+        group.groupId === null && principal.groups.length > 0
+          ? `${plural(group.codes, 'productor', 'productores')} sin grupo`
+          : group.codes === 1
+            ? 'Productor independiente'
+            : plural(group.codes, 'productor', 'productores'),
+      // The codes without a group go last.
+      sort: group.groupId === null && principal.groups.length > 0 ? '\uffff' : group.name,
+    }))
+  })
+  return options
+    .sort((a, b) => a.sort.localeCompare(b.sort, 'es'))
+    .map(({ value, label, hint }) => ({ value, label, hint }))
+}
+
+/** "Zona": the first choice of the user form; the principals list only those of the zone. */
+export function ZonePicker({
+  zones,
+  value,
+  onChange,
+}: {
+  zones: FormZone[]
+  value: ZoneKey | null
+  onChange: (key: ZoneKey) => void
+}) {
+  return (
+    <Combobox
+      label="Zona"
+      placeholder="Elegí una zona"
+      searchPlaceholder="Buscar zona…"
+      emptyText="No hay zonas"
+      value={value === null ? null : String(value)}
+      options={zones.map(zone => ({
+        value: String(zone.key),
+        label: zone.name,
+        hint: plural(zone.principals, 'principal', 'principales'),
+      }))}
+      onChange={raw => onChange(raw === NO_ZONE ? NO_ZONE : Number(raw))}
+      className="w-full"
+    />
+  )
 }
 
 export function PrincipalPicker({
@@ -92,33 +150,50 @@ export function PrincipalPicker({
   value,
   onChange,
   label = 'Principal',
+  disabled = false,
+  emptyText = 'No hay principales en esta zona',
 }: {
+  /** The zone's principals; one that holds the zone's productores is offered as its groups. */
   principals: FormPrincipal[]
-  value: number | null
-  onChange: (id: number) => void
+  /** `principalId` or `principalId:groupId`. */
+  value: string | null
+  onChange: (value: string) => void
   label?: string
+  /** No zone chosen yet. */
+  disabled?: boolean
+  emptyText?: string
 }) {
   return (
     <Combobox
       label={label}
-      placeholder="Elegí un principal"
+      placeholder={disabled ? 'Elegí primero la zona' : 'Elegí un principal'}
       searchPlaceholder="Buscar principal…"
-      emptyText="No hay principales"
-      value={value === null ? null : String(value)}
-      options={principals.map(principalOption)}
-      onChange={raw => onChange(Number(raw))}
+      emptyText={emptyText}
+      value={value}
+      options={principalOptions(principals)}
+      onChange={onChange}
+      disabled={disabled}
       className="w-full"
     />
   )
 }
 
 /** A principal that cannot change (a SuperAdmin's own, or an existing user's). */
-export function FixedPrincipal({ principal, note }: { principal: FormPrincipal | null; note?: string }) {
+export function FixedPrincipal({
+  principal,
+  name,
+  note,
+}: {
+  principal: FormPrincipal | null
+  /** What to call it, when not its own name (a zone's productores go by their groups). */
+  name?: string
+  note?: string
+}) {
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-line-2 bg-secondary/40 px-3 py-2.5">
       <Building2 className="size-4 text-muted-foreground" />
       <div className="min-w-0">
-        <div className="truncate text-[13.5px] font-medium text-ink">{principal?.name ?? '…'}</div>
+        <div className="truncate text-[13.5px] font-medium text-ink">{name || principal?.name || '…'}</div>
         {(principal?.zoneName || note) && (
           <div className="text-[11.5px] text-muted-foreground">
             {[principal?.zoneName, note].filter(Boolean).join(' · ')}
@@ -340,6 +415,7 @@ export function CodesPicker({
   onCreate,
   creating,
   canCreate,
+  showGroups = false,
 }: {
   options: CodeOption[]
   selected: number[]
@@ -348,6 +424,8 @@ export function CodesPicker({
   onCreate: (code: string, holderName: string) => Promise<string | null>
   creating: boolean
   canCreate: boolean
+  /** Say each code's group (a zone's productores, several of its principals listed). */
+  showGroups?: boolean
 }) {
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
@@ -357,7 +435,9 @@ export function CodesPicker({
 
   const needle = query.trim().toLowerCase()
   const visible = needle
-    ? options.filter(option => `${option.code} ${option.holderName ?? ''}`.toLowerCase().includes(needle))
+    ? options.filter(option =>
+        `${option.code} ${option.holderName ?? ''} ${option.groupName ?? ''}`.toLowerCase().includes(needle),
+      )
     : options
 
   const create = async () => {
@@ -380,7 +460,7 @@ export function CodesPicker({
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar código o titular…"
+            placeholder={showGroups ? 'Buscar código, titular o principal…' : 'Buscar código o titular…'}
             className="h-9 pl-9 text-[13px]"
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -409,6 +489,7 @@ export function CodesPicker({
               <span className="font-medium">{option.code}</span>
               {option.holderName && <span className="text-muted-foreground"> · {option.holderName}</span>}
               {option.isMaster && <span className="text-muted-foreground"> · master</span>}
+              {showGroups && option.groupName && <span className="text-ember-2"> · {option.groupName}</span>}
               {!option.isActive && <span className="text-amber-700 dark:text-amber"> · inactivo</span>}
             </span>
           </label>

@@ -393,6 +393,7 @@ function UsersScreen() {
         open={formOpen}
         onOpenChange={changeFormOpen}
         defaultPrincipalId={filter.principalId}
+        defaultZoneKey={filter.zoneKey}
         defaultRole={linkedRole}
         onEditCodes={isSuperAdmin ? () => setTab('productores') : undefined}
       />
