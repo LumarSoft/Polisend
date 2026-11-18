@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import { CornerDownRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ASSISTANT_LAUNCHER_ATTRIBUTE } from '@/lib/assistant-launcher'
 import { useAssistantPanel } from '../context/assistant-context'
 import { AssistantLogo } from './assistant-logo'
 
@@ -85,17 +86,26 @@ function markHintSeen() {
  * misses the one in the top bar. It moves while an answer is being written and
  * shows a dot when one finished with the panel closed. The first time, a note
  * says what it is for. Not in Whatsapp, where it would cover the box to write
- * in (that screen has its own button), nor while the panel is open.
+ * in (that screen has its own button), nor while the panel is open. Over an
+ * open sheet (a client's file, a claim…) it rises above the sheet and stays
+ * usable, since that record is what the assistant would be asked about; the
+ * sheet stays open when it is touched (ASSISTANT_LAUNCHER_ATTRIBUTE).
  */
 export function AssistantFab({ hidden = false }: { hidden?: boolean }) {
-  const { available, open, setOpen, busy, unread } = useAssistantPanel()
+  const { available, open, setOpen, busy, unread, overSheet } = useAssistantPanel()
   const seenBefore = useSyncExternalStore(subscribeHint, hintSeen, () => true)
   const hint = !seenBefore
   const seen = markHintSeen
-  if (!available || hidden || open) return null
+  if (!available || (hidden && !overSheet) || open) return null
 
   return (
-    <div className="pointer-events-none fixed right-5 bottom-[max(20px,env(safe-area-inset-bottom))] z-40 flex items-end gap-2.5">
+    <div
+      {...{ [ASSISTANT_LAUNCHER_ATTRIBUTE]: '' }}
+      className={cn(
+        'pointer-events-none fixed right-5 bottom-[max(20px,env(safe-area-inset-bottom))] flex items-end gap-2.5',
+        overSheet ? 'z-[60]' : 'z-40',
+      )}
+    >
       {hint && (
         <div className="pointer-events-auto max-w-[250px] rounded-2xl rounded-br-md border border-line bg-card px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-2 shadow-lg">
           Preguntame por tu cartera, tus campañas o cómo hacer algo en el panel.{' '}
