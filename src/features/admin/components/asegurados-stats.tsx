@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { AdminClientsStats, ClientEstadoFilter } from '@/types/api/clients'
 import { useAdminClientsStats } from '../hooks/use-admin-clients-stats'
+import type { ScopeFilterValue } from './scope-filter'
 
 interface StatDef {
   key: string
@@ -60,10 +61,12 @@ function buildStats(data: AdminClientsStats): StatDef[] {
 interface AseguradosStatsProps {
   activeEstado?: ClientEstadoFilter
   onSelectEstado: (estado?: ClientEstadoFilter) => void
+  /** The list's section filter: the KPIs follow it. */
+  scope?: ScopeFilterValue
 }
 
-export function AseguradosStats({ activeEstado, onSelectEstado }: AseguradosStatsProps) {
-  const { data, isLoading } = useAdminClientsStats()
+export function AseguradosStats({ activeEstado, onSelectEstado, scope }: AseguradosStatsProps) {
+  const { data, isLoading } = useAdminClientsStats(scope)
 
   if (isLoading || !data) {
     return (

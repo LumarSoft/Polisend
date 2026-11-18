@@ -7,6 +7,7 @@ export const balanceService = {
     if (query.months) params.set('months', String(query.months))
     if (query.producerCodeId) params.set('producerCodeId', String(query.producerCodeId))
     if (query.phoneNumberId) params.set('phoneNumberId', String(query.phoneNumberId))
+    if (query.codeGroupId) params.set('codeGroupId', String(query.codeGroupId))
     const qs = params.toString()
     return apiRequest<BalanceResponse>(`/admin/balance${qs ? `?${qs}` : ''}`, { token })
   },

@@ -26,7 +26,10 @@ export function useScopeFilterState(): [ScopeFilterValue, (value: ScopeFilterVal
   if (!isOwner) return [local, setChosen]
 
   const producerCodeId = acting.selection.producerCodeId
-  const scope: ScopeFilterValue = producerCodeId !== null ? { producerCodeId } : local
+  // A group chosen at the level of a principal narrows every screen to its codes (with one of them, to that one).
+  const group = acting.selection.groupId ? { codeGroupId: acting.selection.groupId } : {}
+  const scope: ScopeFilterValue =
+    producerCodeId !== null ? { producerCodeId, ...group } : acting.selection.groupId ? group : local
   const choose = (value: ScopeFilterValue) => {
     acting.selectProducerCode(value.producerCodeId ?? null)
     setChosen(value.phoneNumberId != null ? { phoneNumberId: value.phoneNumberId } : {})

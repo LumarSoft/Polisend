@@ -15,6 +15,7 @@ function buildListQuery(params: AdminClientsQuery): string {
   if (params.sort) search.set('sort', params.sort)
   if (params.producerCodeId) search.set('producerCodeId', String(params.producerCodeId))
   if (params.phoneNumberId) search.set('phoneNumberId', String(params.phoneNumberId))
+  if (params.codeGroupId) search.set('codeGroupId', String(params.codeGroupId))
   if (params.page) search.set('page', String(params.page))
   if (params.pageSize) search.set('pageSize', String(params.pageSize))
   const qs = search.toString()
@@ -24,7 +25,9 @@ function buildListQuery(params: AdminClientsQuery): string {
 export const adminClientsService = {
   list: (params: AdminClientsQuery, token: string) =>
     apiRequest<AdminClientsPage>(`/admin/clients${buildListQuery(params)}`, { token }),
-  stats: (token: string) => apiRequest<AdminClientsStats>('/admin/clients/stats', { token }),
+  /** The KPIs follow the list's section filter. */
+  stats: (token: string, scope: { producerCodeId?: number; phoneNumberId?: number; codeGroupId?: number } = {}) =>
+    apiRequest<AdminClientsStats>(`/admin/clients/stats${buildListQuery(scope)}`, { token }),
   get: (id: number, token: string) => apiRequest<AdminClientDetail>(`/admin/clients/${id}`, { token }),
   // Documents Triunfo has for one policy, fetched live by the API.
   documentos: (clientId: number, polizaId: number, token: string) =>

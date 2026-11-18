@@ -24,6 +24,7 @@ function parseSelection(raw: string | null): NetworkSelection | null {
     return {
       zoneKey: parseZone(record.zoneKey),
       principalId: parseId(record.principalId),
+      groupId: parseId(record.groupId),
       producerCodeId: parseId(record.producerCodeId),
     }
   } catch {

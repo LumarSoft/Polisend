@@ -210,3 +210,13 @@ codes «Sin grupo») and «Sin grupo». A code moves by dragging its row onto a 
 (`PATCH /hierarchy/principals/:id/codes/:codeId` with `groupId`). The grouped layout shows when the principal has
 groups or more than 20 codes; the first groups come from an operations script, one per Triunfo organizer with two or
 more productores.
+
+## A zone's groups as principals (18/11/2026)
+
+A principal can hold a zone's productores and be shown as its code groups (`groupsAsPrincipals` from
+`/hierarchy/principals`): the Owner's work filter lists each group (an organizer's principal or an independent
+productor) at the level of a principal, plus «Sin clasificar» while some codes have no group, and never the holding
+principal itself. Choosing a group sets `selection.groupId` (kept in the stored selection): the content remounts only
+when the principal changes, the productor level offers the group's codes, the sidebar section and the brand take the
+group's name, and `useScopeFilterState` sends `codeGroupId` to Asegurados (list and KPIs), Cobranzas, Balance and
+Inicio. Reclassifying is moving codes between groups in Mi red: no data moves.

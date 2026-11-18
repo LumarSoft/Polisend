@@ -55,4 +55,6 @@ export interface BalanceQuery {
   months?: number
   producerCodeId?: number
   phoneNumberId?: number
+  /** A code group of the principal (a zone's organizer or independent productor shown as a principal). */
+  codeGroupId?: number
 }

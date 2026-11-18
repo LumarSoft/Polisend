@@ -42,6 +42,8 @@ export interface ActingPrincipalContextValue {
   principal: HierarchyPrincipal | null
   /** The productor filter of the active principal; null = "Todos". */
   producerCode: HierarchyPrincipalCode | null
+  /** The group chosen at the level of a principal (a zone's organizer or independent productor), or null. */
+  group: { id: number; name: string } | null
   /** The principal requests act on: the active one, else the Owner's own. Null outside an Owner's session. */
   actingPrincipalId: number | null
   homePrincipalId: number | null
@@ -49,6 +51,11 @@ export interface ActingPrincipalContextValue {
   selectZone: (key: ZoneKey) => void
   /** Makes it the active principal: the panel content remounts on the same tab, without URL params. */
   selectPrincipal: (id: number) => void
+  /**
+   * A group of a principal shown as its groups, chosen at the level of a principal (null = the principal itself). The
+   * content remounts only when the principal changes.
+   */
+  selectGroup: (principalId: number, groupId: number | null) => void
   /** A filter of the active principal: nothing remounts. */
   selectProducerCode: (id: number | null) => void
   /** After creating, renaming or moving a principal or a code: the filter's list lives outside each principal's cache. */
@@ -179,6 +186,7 @@ export function ActingPrincipalProvider({ children }: { children: ReactNode }) {
   const zone = zones.find(z => z.key === selection.zoneKey) ?? null
   const principal = principals.find(p => p.id === selection.principalId) ?? null
   const producerCode = principal?.codes.find(c => c.id === selection.producerCodeId) ?? null
+  const group = principal?.groups?.find(g => g.id === selection.groupId) ?? null
 
   const value: ActingPrincipalContextValue = {
     isOwnerSession,
@@ -190,18 +198,29 @@ export function ActingPrincipalProvider({ children }: { children: ReactNode }) {
     hasPrincipal: ownerReady && selection.principalId !== null,
     principal,
     producerCode,
+    group,
     actingPrincipalId,
     homePrincipalId: isOwnerSession ? homePrincipalId : null,
     selectZone: ownerReady
       ? key => {
           const keeps = principal !== null && zones.find(z => z.key === key)?.principals.includes(principal)
-          change(keeps ? { ...selection, zoneKey: key } : { zoneKey: key, principalId: null, producerCodeId: null })
+          change(
+            keeps
+              ? { ...selection, zoneKey: key }
+              : { zoneKey: key, principalId: null, groupId: null, producerCodeId: null },
+          )
         }
       : noop,
     selectPrincipal: ownerReady
       ? id => {
           const next = principals.find(p => p.id === id)
           if (next) change(selectionOf(next))
+        }
+      : noop,
+    selectGroup: ownerReady
+      ? (principalId, groupId) => {
+          const next = principals.find(p => p.id === principalId)
+          if (next) change(selectionOf(next, groupId))
         }
       : noop,
     selectProducerCode: ownerReady ? id => change({ ...selection, producerCodeId: id }) : noop,
