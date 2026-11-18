@@ -10,7 +10,6 @@ import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { formatMoment } from '../lib/rejections-format'
 import { RejectionImportDetail } from './rejection-import-detail'
 import { NetworkFilter } from './network-filter'
-import { NoticeTextButton } from './notice-text-dialog'
 import { RequirePrincipal } from './require-principal'
 
 export function RejectionsView() {
@@ -53,13 +52,10 @@ export function RejectionsView() {
           {/* An Owner's Zona › Principal: an Excel is the whole principal's, not a productor's. */}
           <NetworkFilter showProducer={false} />
           {tenantEnabled && (
-            <>
-              <NoticeTextButton kind="payment_rejection" />
-              <Button data-help="rechazos-cargar" onClick={() => fileInput.current?.click()} disabled={busy}>
-                {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                Cargar Excel
-              </Button>
-            </>
+            <Button data-help="rechazos-cargar" onClick={() => fileInput.current?.click()} disabled={busy}>
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              Cargar Excel
+            </Button>
           )}
         </div>
       </header>

@@ -33,7 +33,6 @@ import {
   summarize,
 } from '../lib/rejections-format'
 import { personName } from '../lib/tasks-format'
-import { InboxMessageText } from './inbox-message-text'
 
 type Confirm = 'send' | 'mark' | 'delete' | null
 
@@ -332,7 +331,7 @@ function MessageBubble({ text }: { text: string }) {
   return (
     <div className="rounded-lg bg-secondary/60 p-3">
       <p className="max-w-[420px] rounded-lg rounded-tl-none bg-card p-3 text-[13.5px] leading-relaxed text-ink shadow-sm">
-        <InboxMessageText text={text} />
+        {text}
       </p>
     </div>
   )
