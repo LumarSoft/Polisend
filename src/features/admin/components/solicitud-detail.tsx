@@ -21,6 +21,7 @@ import { usePanelBrand } from '../hooks/use-panel-brand'
 import { buildSolicitudWhatsappUrl, productLabel, STATUS_LABELS, STATUS_ORDER, timeAgo } from '../lib/solicitudes-ui'
 import { StatusPill } from './solicitud-status-pill'
 import { SolicitudChat } from './solicitud-chat'
+import { useAssistantRecord } from '../context/assistant-context'
 
 interface SolicitudDetailViewProps {
   target: { kind: SolicitudKind; id: number } | null
@@ -41,6 +42,7 @@ const TABS: { value: DetailTab; label: string; icon: typeof ClipboardList }[] = 
  */
 export function SolicitudDetailView({ target, onClose }: Readonly<SolicitudDetailViewProps>) {
   const { data, isLoading } = useSolicitud(target?.kind ?? null, target?.id ?? null)
+  useAssistantRecord(target)
   const [tab, setTab] = useState<DetailTab>('datos')
 
   return (

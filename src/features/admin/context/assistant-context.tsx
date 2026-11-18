@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { assistantService } from '@/services/assistant.service'
+import type { AssistantOpenRecord } from '@/types/api/assistant'
 import { useAuth } from './auth-context'
 import { useAssistant } from '../hooks/use-assistant'
 import { usePlanFeature } from '../hooks/use-billing'
@@ -30,6 +31,27 @@ const Context = createContext<AssistantPanelContext>({
   ask: () => undefined,
 })
 
+/** A sheet tells the assistant it is open; the returned function takes it back. */
+type OpenRecordRegistry = (record: AssistantOpenRecord) => () => void
+
+const RecordRegistry = createContext<OpenRecordRegistry>(() => () => undefined)
+
+/**
+ * The record a sheet shows (a client's file, a claim, a request, a number, a
+ * chat), for the assistant to know what "este cliente" or "esto" is. Called
+ * inside the sheet, so every screen that opens it tells it; the last one opened
+ * counts, and closing it gives the place back to the one under it.
+ */
+export function useAssistantRecord(record: AssistantOpenRecord | null): void {
+  const register = useContext(RecordRegistry)
+  const kind = record?.kind
+  const id = record?.id
+  useEffect(() => {
+    if (!kind || !id) return
+    return register({ kind, id })
+  }, [register, kind, id])
+}
+
 /** The API keeps the model ready for 5 minutes: opening again sooner asks for nothing. */
 const WARM_EVERY_MS = 4 * 60_000
 
@@ -51,7 +73,15 @@ export function AssistantProvider({ enabled, route, screen, children }: Assistan
   const [open, setOpen] = useState(false)
   const plan = usePlanFeature('ai_assistant', enabled)
   const available = enabled && !plan.nowhere
-  const page = useMemo(() => ({ route, screen }), [route, screen])
+  // Sheets open one over another: the top one is what the person is looking at.
+  const [records, setRecords] = useState<Array<{ key: symbol; record: AssistantOpenRecord }>>([])
+  const register = useCallback<OpenRecordRegistry>(record => {
+    const key = Symbol(record.kind)
+    setRecords(current => [...current, { key, record }])
+    return () => setRecords(current => current.filter(entry => entry.key !== key))
+  }, [])
+  const record = records.at(-1)?.record
+  const page = useMemo(() => ({ route, screen, ...(record ? { record } : {}) }), [route, screen, record])
   const assistant = useAssistant(page, available)
 
   useEffect(() => {
@@ -109,7 +139,7 @@ export function AssistantProvider({ enabled, route, screen, children }: Assistan
 
   return (
     <Context.Provider value={value}>
-      {children}
+      <RecordRegistry.Provider value={register}>{children}</RecordRegistry.Provider>
       {available && (
         <AssistantPanel open={open} onOpenChange={setOpen} assistant={assistant} plan={plan} route={route} />
       )}

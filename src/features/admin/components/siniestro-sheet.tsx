@@ -26,6 +26,7 @@ import {
 } from '../lib/siniestros-ui'
 import { useAdminSiniestro, useUpdateAdminSiniestro } from '../hooks/use-admin-siniestro'
 import { ClaimCoverageBanner } from './claim-coverage-banner'
+import { useAssistantRecord } from '../context/assistant-context'
 
 interface SiniestroSheetProps {
   siniestroId: number | null
@@ -245,6 +246,7 @@ export function SiniestroSheet({ siniestroId, onClose }: SiniestroSheetProps) {
   const { data: siniestro, isLoading, isFetching, isError, error, refetch } = useAdminSiniestro(siniestroId)
   const invalidReference = siniestroId !== null && (!Number.isInteger(siniestroId) || siniestroId <= 0)
   const notFound = invalidReference || (error instanceof ApiError && error.status === 404)
+  useAssistantRecord(siniestroId !== null && !invalidReference ? { kind: 'siniestro', id: siniestroId } : null)
 
   return (
     <Dialog open={siniestroId !== null} onOpenChange={open => !open && onClose()}>

@@ -6,6 +6,7 @@ import { useNumberAssistant } from '../hooks/use-number-assistant'
 import { numberAssistantFormKey } from '../lib/number-assistant-form'
 import { numberLabel } from '../lib/number-label'
 import { NumberAssistantEditor } from './number-assistant-editor'
+import { useAssistantRecord } from '../context/assistant-context'
 
 /** Números → Asistente: a number's own name, office people, hours and data, over the organization's. */
 export function NumberAssistantSheet({
@@ -18,6 +19,7 @@ export function NumberAssistantSheet({
   onOpenChange: (open: boolean) => void
 }) {
   const { data, isError } = useNumberAssistant(numberId)
+  useAssistantRecord(open && numberId !== null ? { kind: 'numero', id: numberId } : null)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

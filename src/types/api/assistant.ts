@@ -67,12 +67,18 @@ export interface AssistantConversation {
   messages: AssistantMessage[]
 }
 
+/** A sheet open on screen: the assistant reads it with its own tools, so only its kind and id travel. */
+export interface AssistantOpenRecord {
+  kind: 'asegurado' | 'numero' | 'siniestro' | 'lead' | 'cotizacion' | 'chat'
+  id: number
+}
+
 export interface SendAssistantMessageRequest {
   /** Without it, a new conversation starts. */
   conversationId?: number
   content: string
-  /** The screen the person is on, so "esto" and "acá" mean something. */
-  page?: { route?: string; screen?: string }
+  /** The screen the person is on and the sheet open on it, so "esto" and "este cliente" mean something. */
+  page?: { route?: string; screen?: string; record?: AssistantOpenRecord }
 }
 
 /** A step the assistant is taking right now. */
