@@ -6,7 +6,6 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Activity,
   BanknoteX,
-  BarChart3,
   Bell,
   ListTodo,
   Building2,
@@ -78,6 +77,7 @@ import { useActingPrincipal } from '../context/acting-principal-context'
 import { useRole } from '../hooks/use-role'
 import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { AppearanceDialog } from './appearance-dialog'
+import { OWNER_HIDDEN_PATHS, OWNER_NETWORK_PATHS, matchesPath } from '../lib/panel-areas'
 import { SidebarUsage } from './sidebar-usage'
 
 interface NavItem {
@@ -195,11 +195,22 @@ const DEVELOPER_NAV: NavEntry[] = [
   { label: 'Mi cuenta', href: '/admin/cuenta', icon: UserRound },
 ]
 
-/** The Owner's network: the whole of it, whatever principal is active. */
+/**
+ * The Owner's network: the whole of it, whatever principal is active. Its Facturación is the network's tokens with
+ * every zone, principal and productor (what "Consumo de la red" showed), and its Configuración is global.
+ */
 const OWNER_NETWORK_NAV: NavEntry[] = [
   { label: 'Mi red', href: '/admin/red', icon: Network },
   { label: 'Usuarios', href: USERS_HREF, icon: Users },
-  { label: 'Consumo de la red', href: '/admin/red/consumo', icon: BarChart3 },
+  {
+    key: 'administracion-red',
+    label: 'Administración',
+    icon: Settings,
+    items: [
+      { label: 'Facturación', href: '/admin/facturacion', icon: CreditCard },
+      { label: 'Configuración', href: '/admin/configuracion', icon: UserCog },
+    ],
+  },
 ]
 
 /** Keeps the entries `keep` allows; a group left empty goes too. */
@@ -483,8 +494,11 @@ function useNavSections(): NavSection[] {
     {
       key: 'principal',
       label: hasPrincipal ? brand.name : 'Sin principal elegido',
-      // "Usuarios" is the network's, above.
-      entries: filterNav(office, item => item.href !== USERS_HREF),
+      // Usuarios, Facturación and Configuración are the network's, above; the office's day is not the Owner's.
+      entries: filterNav(
+        office,
+        item => !matchesPath(pathOf(item.href), [...OWNER_NETWORK_PATHS, ...OWNER_HIDDEN_PATHS]),
+      ),
     },
   ]
 }
@@ -493,13 +507,15 @@ function useNavSections(): NavSection[] {
 function useAlertCounts(): (href: string) => number {
   const { isDeveloper, isOwner } = useRole()
   const tenant = useTenantQueriesEnabled()
-  const { data: novedadesStats } = useNovedadesStats({}, tenant)
+  // An Owner has no Asuntos pendientes, Whatsapp or Solicitudes in its menu: their counts are not loaded.
+  const office = tenant && !isOwner
+  const { data: novedadesStats } = useNovedadesStats({}, office)
   const { data: taskStats } = useTaskStats(tenant)
   // "Pending" conversations = a client asked for a human agent → needs attention.
-  const { data: inboxConversations } = useInboxConversations(undefined, undefined, undefined, tenant)
+  const { data: inboxConversations } = useInboxConversations(undefined, undefined, undefined, office)
   useInboxMessageSound(inboxConversations)
   const inboxPending = inboxConversations?.filter(c => c.status === 'pending').length ?? 0
-  const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount(tenant)
+  const { data: solicitudesNuevas = 0 } = useNewSolicitudesCount(office)
   // "Mejoras" badge: unseen improvements for the office, new proposals for the Developer.
   // Not for an Owner: the "new" marks are per user and would mix its principals.
   const { data: improvementsUnseen } = useImprovementsUnseenCount(tenant && !isOwner)

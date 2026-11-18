@@ -265,7 +265,8 @@ const PAGE = 'mx-auto w-full max-w-6xl px-5 py-8 md:px-8 md:py-10'
  * at all: `GET /hierarchy/usage` has no field for one. In the running month the Owner changes a number's plan here,
  * on the number's own principal.
  */
-export function NetworkUsageView() {
+/** `billing`: the Owner's Administración › Facturación, the same tokens under its own title. */
+export function NetworkUsageView({ variant = 'usage' }: { variant?: 'usage' | 'billing' }) {
   const { isOwner, isDeveloper, isLoading: roleLoading } = useRole()
   const [period, setPeriod] = useState(thisMonth)
   const [filter, setFilter] = useState<NetworkListFilterValue>(EMPTY_NETWORK_FILTER)
@@ -300,9 +301,11 @@ export function NetworkUsageView() {
   return (
     <div className={PAGE}>
       <div className="mb-6">
-        <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">Mi red</div>
+        <div className="text-[10.5px] font-medium uppercase tracking-[0.3em] text-ember-2">
+          {variant === 'billing' ? 'Administración' : 'Mi red'}
+        </div>
         <h1 className="mt-2 font-display text-[clamp(26px,3.5vw,36px)] tracking-[-0.035em] text-ink">
-          Consumo de la red
+          {variant === 'billing' ? 'Facturación' : 'Consumo de la red'}
         </h1>
         <p className="mt-1.5 max-w-2xl text-[14px] text-muted-foreground">
           Los tokens de cada número de tu red, por zona y principal. Cada número tiene un plan de tokens por mes: la

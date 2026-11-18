@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import type { NetworkTreePrincipal } from '@/types/api/hierarchy'
 import { networkUsersHref } from '../lib/network-links'
 import { PrincipalCodesBlock } from './principal-codes-block'
+import { useShowHiddenCodes, visibleCodes } from '../hooks/use-hidden-codes'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 const day = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' })
@@ -55,6 +56,8 @@ export function NetworkPrincipalCard({
   onEnter,
 }: NetworkPrincipalCardProps) {
   const [codesOpen, setCodesOpen] = useState(false)
+  const [showHidden] = useShowHiddenCodes()
+  const visibleCount = visibleCodes(principal.codes, showHidden).length
   const showCodes = codesOpen || onlyCodeId !== null
   const Chevron = showCodes ? ChevronDown : ChevronRight
   const { users, numbers, triunfo } = principal
@@ -147,7 +150,7 @@ export function NetworkPrincipalCard({
           className="flex items-center gap-1.5 text-[13px] font-medium text-ink-3 hover:text-ink disabled:cursor-default"
         >
           <Chevron className="size-4 text-muted-foreground" />
-          Productores ({principal.codes.length})
+          Productores ({visibleCount})
         </button>
         {showCodes && (
           <div className="mt-3">

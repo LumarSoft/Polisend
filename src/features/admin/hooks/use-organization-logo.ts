@@ -4,18 +4,22 @@ import { organizationsService } from '@/services/organizations.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
 import { useAuth } from '../context/auth-context'
 
-/** The SuperAdmin's own organization logo; the profile (sidebar, credential) refreshes after it. */
-export function useOwnLogo() {
+/**
+ * The SuperAdmin's own organization logo; the profile (sidebar, credential) refreshes after it. `forPrincipal`: an
+ * Owner's own principal, whatever principal it has chosen (its global Configuración).
+ */
+export function useOwnLogo(forPrincipal?: number) {
   const { token } = useAuth()
   const queryClient = useQueryClient()
+  // The profile key prefixes the home one: both refresh.
   const refresh = () => void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.profile })
 
   const upload = useMutation({
-    mutationFn: (file: File) => adminConfigService.uploadLogo(token as string, file),
+    mutationFn: (file: File) => adminConfigService.uploadLogo(token as string, file, forPrincipal),
     onSuccess: refresh,
   })
   const remove = useMutation({
-    mutationFn: () => adminConfigService.removeLogo(token as string),
+    mutationFn: () => adminConfigService.removeLogo(token as string, forPrincipal),
     onSuccess: refresh,
   })
   return { upload, remove }

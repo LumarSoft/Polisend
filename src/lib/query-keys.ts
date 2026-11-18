@@ -25,6 +25,8 @@ export const QUERY_KEYS = {
     dashboard: ['admin', 'dashboard'] as const,
     balance: (params: BalanceQuery) => ['admin', 'balance', params] as const,
     profile: ['admin', 'profile'] as const,
+    /** An Owner's own principal as /users/me describes it, whatever principal it has chosen. */
+    homeProfile: ['admin', 'profile', 'home'] as const,
     config: ['admin', 'config'] as const,
     botProfile: ['admin', 'config', 'profile'] as const,
     users: ['admin', 'users'] as const,

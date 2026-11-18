@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 
 import { useState, type FormEvent } from 'react'
 import { Check, Loader2, Pencil, Plus, X } from 'lucide-react'
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { NetworkTreeCode } from '@/types/api/hierarchy'
 import { usePrincipalCodeActions } from '../hooks/use-hierarchy'
+import { isHiddenCode, useShowHiddenCodes, visibleCodes } from '../hooks/use-hidden-codes'
 import { apiErrorMessage } from '../lib/api-error-message'
 import { CODE_HINT, isValidCode } from '../lib/producer-code'
 
@@ -37,7 +39,10 @@ export function PrincipalCodesBlock({
   onlyCodeId = null,
   canSetMaster = false,
 }: PrincipalCodesBlockProps) {
-  const visible = onlyCodeId === null ? codes : codes.filter(code => code.id === onlyCodeId)
+  const [showHidden] = useShowHiddenCodes()
+  // Inactive and Triunfo-blocked codes only with the preference on (Configuración › Cuenta), or when filtered to one.
+  const visible = onlyCodeId === null ? visibleCodes(codes, showHidden) : codes.filter(code => code.id === onlyCodeId)
+  const hidden = onlyCodeId === null && !showHidden ? codes.filter(isHiddenCode).length : 0
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-lg border border-line-2">
@@ -57,13 +62,25 @@ export function PrincipalCodesBlock({
             {visible.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="py-5 text-center text-[13px] text-muted-foreground">
-                  Este principal todavía no tiene códigos.
+                  {hidden > 0
+                    ? 'Todos sus códigos están inactivos o bloqueados.'
+                    : 'Este principal todavía no tiene códigos.'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+      {hidden > 0 && (
+        <p className="text-[12.5px] text-muted-foreground">
+          {hidden === 1 ? 'Hay 1 código inactivo o bloqueado' : `Hay ${hidden} códigos inactivos o bloqueados`} que no
+          se muestran. Para verlos, activá «Mostrar códigos inactivos y bloqueados» en{' '}
+          <Link href="/admin/configuracion" className="font-medium text-ember-2 underline-offset-2 hover:underline">
+            Configuración › Cuenta
+          </Link>
+          .
+        </p>
+      )}
       {onlyCodeId === null && <NewCodeForm principalId={principalId} />}
     </div>
   )
@@ -112,6 +129,11 @@ function CodeRow({
           {!code.isActive && (
             <Badge variant="outline" className="border-line-2 text-[10px] text-muted-foreground">
               inactivo
+            </Badge>
+          )}
+          {code.triunfoBlocked && (
+            <Badge variant="outline" className="border-line-2 text-[10px] text-muted-foreground">
+              bloqueado en Triunfo
             </Badge>
           )}
         </div>
