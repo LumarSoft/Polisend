@@ -20,6 +20,8 @@ interface AssistantPanelContext {
   unread: boolean
   /** Opens the panel and asks this question (a section's "ask the assistant" button). */
   ask: (question: string) => void
+  /** A sheet with a record is open over the screen: the round button goes above it, the record is its subject. */
+  overSheet: boolean
 }
 
 const Context = createContext<AssistantPanelContext>({
@@ -29,10 +31,11 @@ const Context = createContext<AssistantPanelContext>({
   busy: false,
   unread: false,
   ask: () => undefined,
+  overSheet: false,
 })
 
 /** A sheet tells the assistant it is open; the returned function takes it back. */
-type OpenRecordRegistry = (record: AssistantOpenRecord) => () => void
+type OpenRecordRegistry = (record: AssistantOpenRecord, overlay: boolean) => () => void
 
 const RecordRegistry = createContext<OpenRecordRegistry>(() => () => undefined)
 
@@ -40,16 +43,18 @@ const RecordRegistry = createContext<OpenRecordRegistry>(() => () => undefined)
  * The record a sheet shows (a client's file, a claim, a request, a number, a
  * chat), for the assistant to know what "este cliente" or "esto" is. Called
  * inside the sheet, so every screen that opens it tells it; the last one opened
- * counts, and closing it gives the place back to the one under it.
+ * counts, and closing it gives the place back to the one under it. `overlay`
+ * says it covers the screen (a sheet or a dialog), so the round button rises
+ * above it; the chat picked in Whatsapp is a record but no overlay.
  */
-export function useAssistantRecord(record: AssistantOpenRecord | null): void {
+export function useAssistantRecord(record: AssistantOpenRecord | null, { overlay = true } = {}): void {
   const register = useContext(RecordRegistry)
   const kind = record?.kind
   const id = record?.id
   useEffect(() => {
     if (!kind || !id) return
-    return register({ kind, id })
-  }, [register, kind, id])
+    return register({ kind, id }, overlay)
+  }, [register, kind, id, overlay])
 }
 
 /** The API keeps the model ready for 5 minutes: opening again sooner asks for nothing. */
@@ -74,13 +79,14 @@ export function AssistantProvider({ enabled, route, screen, children }: Assistan
   const plan = usePlanFeature('ai_assistant', enabled)
   const available = enabled && !plan.nowhere
   // Sheets open one over another: the top one is what the person is looking at.
-  const [records, setRecords] = useState<Array<{ key: symbol; record: AssistantOpenRecord }>>([])
-  const register = useCallback<OpenRecordRegistry>(record => {
+  const [records, setRecords] = useState<Array<{ key: symbol; record: AssistantOpenRecord; overlay: boolean }>>([])
+  const register = useCallback<OpenRecordRegistry>((record, overlay) => {
     const key = Symbol(record.kind)
-    setRecords(current => [...current, { key, record }])
+    setRecords(current => [...current, { key, record, overlay }])
     return () => setRecords(current => current.filter(entry => entry.key !== key))
   }, [])
   const record = records.at(-1)?.record
+  const overSheet = records.some(entry => entry.overlay)
   const page = useMemo(() => ({ route, screen, ...(record ? { record } : {}) }), [route, screen, record])
   const assistant = useAssistant(page, available)
 
@@ -133,8 +139,8 @@ export function AssistantProvider({ enabled, route, screen, children }: Assistan
   )
 
   const value = useMemo(
-    () => ({ open, setOpen, available, busy: streaming, unread, ask }),
-    [open, available, streaming, unread, ask],
+    () => ({ open, setOpen, available, busy: streaming, unread, ask, overSheet }),
+    [open, available, streaming, unread, ask, overSheet],
   )
 
   return (

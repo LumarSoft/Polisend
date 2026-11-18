@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Dialog as SheetPrimitive } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
+import { fromAssistantLauncher } from '@/lib/assistant-launcher'
 import { Button } from '@/components/ui/button'
 import { XIcon } from 'lucide-react'
 
@@ -57,6 +58,15 @@ function SheetContent({
           className,
         )}
         {...props}
+        // The assistant's button can sit above this: touching it is not a click outside.
+        onPointerDownOutside={event => {
+          if (fromAssistantLauncher(event)) event.preventDefault()
+          else props.onPointerDownOutside?.(event)
+        }}
+        onInteractOutside={event => {
+          if (fromAssistantLauncher(event)) event.preventDefault()
+          else props.onInteractOutside?.(event)
+        }}
       >
         {children}
         {showCloseButton && (
