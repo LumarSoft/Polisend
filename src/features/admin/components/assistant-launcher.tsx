@@ -1,19 +1,32 @@
 'use client'
 
 import { useState, useSyncExternalStore } from 'react'
-import { CornerDownRight } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ASSISTANT_LAUNCHER_ATTRIBUTE } from '@/lib/assistant-launcher'
 import { useAssistantPanel } from '../context/assistant-context'
-import { AssistantLogo } from './assistant-logo'
+import { AssistantMark, type AssistantMood } from './assistant-mark'
+
+/** The face the buttons show: thinking while it works, happy with an answer waiting. */
+function useLauncherMood(): AssistantMood {
+  const { busy, unread } = useAssistantPanel()
+  return busy ? 'thinking' : unread ? 'happy' : 'idle'
+}
+
+function useMac() {
+  const [mac] = useState(() => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform))
+  return mac
+}
 
 /**
- * Opens the AI assistant. The pill in the panel's top bar, or a round icon
+ * Opens the AI assistant. The pill in the panel's top bar, or the mark alone
  * (`compact`) where a section has its own header, like Whatsapp.
  */
 export function AssistantLauncher({ compact = false, className }: { compact?: boolean; className?: string }) {
-  const { available, setOpen, busy } = useAssistantPanel()
-  const [mac] = useState(() => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform))
+  const { available, setOpen, busy, unread } = useAssistantPanel()
+  const mood = useLauncherMood()
+  const mac = useMac()
   if (!available) return null
 
   if (compact) {
@@ -23,11 +36,12 @@ export function AssistantLauncher({ compact = false, className }: { compact?: bo
         onClick={() => setOpen(true)}
         title={`Asistente (${mac ? '⌘' : 'Ctrl+'}K)`}
         className={cn(
-          'grid size-9 shrink-0 place-items-center rounded-full transition-transform hover:scale-105',
+          'relative grid size-9 shrink-0 place-items-center rounded-full transition-transform hover:scale-105',
           className,
         )}
       >
-        <AssistantLogo size={26} thinking={busy} />
+        <AssistantMark size={28} mood={mood} />
+        {unread && <span className="absolute top-0.5 right-0.5 size-2.5 rounded-full bg-iris ring-2 ring-background" />}
         <span className="sr-only">Abrir el asistente</span>
       </button>
     )
@@ -38,16 +52,19 @@ export function AssistantLauncher({ compact = false, className }: { compact?: bo
       type="button"
       onClick={() => setOpen(true)}
       className={cn(
-        'group ml-auto flex h-8 items-center gap-2 rounded-full border border-line-2 bg-background py-1 pr-1.5 pl-1 text-[12.5px] text-ink-3 shadow-xs transition-colors',
-        'hover:border-ember-ring hover:bg-ember-soft hover:text-ember-2',
+        'group relative ml-auto flex h-9 items-center gap-2 rounded-full border border-line-2 bg-background py-1 pr-2 pl-1 text-[12.5px] text-ink-3 shadow-xs transition-all',
+        'hover:border-iris-ring hover:bg-iris-soft hover:text-iris-ink hover:shadow-[0_6px_18px_-10px_var(--color-iris-glow)]',
         className,
       )}
     >
-      <AssistantLogo size={22} thinking={busy} />
-      <span className="hidden font-medium sm:inline">Asistente</span>
-      <kbd className="hidden rounded-md border border-line-2 bg-secondary px-1.5 py-px font-sans text-[10.5px] text-faint group-hover:border-ember-ring md:inline">
+      <AssistantMark size={26} mood={mood} />
+      <span className="hidden font-medium sm:inline">
+        {busy ? 'Pensando…' : unread ? 'Tu respuesta está lista' : 'Preguntale al asistente'}
+      </span>
+      <kbd className="hidden rounded-md border border-line-2 bg-secondary px-1.5 py-px font-sans text-[10.5px] text-faint group-hover:border-iris-ring md:inline">
         {mac ? '⌘K' : 'Ctrl K'}
       </kbd>
+      {unread && <span className="absolute top-1 left-7 size-2 rounded-full bg-iris ring-2 ring-background" />}
       <span className="sr-only sm:hidden">Abrir el asistente</span>
     </button>
   )
@@ -82,17 +99,19 @@ function markHintSeen() {
 }
 
 /**
- * The assistant's round button at the bottom right of every screen, for whoever
- * misses the one in the top bar. It moves while an answer is being written and
- * shows a dot when one finished with the panel closed. The first time, a note
- * says what it is for. Not in Whatsapp, where it would cover the box to write
- * in (that screen has its own button), nor while the panel is open. Over an
- * open sheet (a client's file, a claim…) it rises above the sheet and stays
- * usable, since that record is what the assistant would be asked about; the
- * sheet stays open when it is touched (ASSISTANT_LAUNCHER_ATTRIBUTE).
+ * The assistant at the bottom right of every screen, for whoever misses the
+ * one in the top bar: its face thinks while an answer is written and smiles
+ * when one is waiting. The first time, a note says what it is for. Not in
+ * Whatsapp, where it would cover the box to write in (that screen has its own
+ * button), nor while the panel is open. Over an open sheet (a client's file, a
+ * claim…) it rises above the sheet and stays usable, since that record is what
+ * the assistant would be asked about; the sheet stays open when it is touched
+ * (ASSISTANT_LAUNCHER_ATTRIBUTE).
  */
 export function AssistantFab({ hidden = false }: { hidden?: boolean }) {
-  const { available, open, setOpen, busy, unread, overSheet } = useAssistantPanel()
+  const { available, open, setOpen, unread, overSheet } = useAssistantPanel()
+  const mood = useLauncherMood()
+  const reduced = useReducedMotion()
   const seenBefore = useSyncExternalStore(subscribeHint, hintSeen, () => true)
   const hint = !seenBefore
   const seen = markHintSeen
@@ -106,53 +125,129 @@ export function AssistantFab({ hidden = false }: { hidden?: boolean }) {
         overSheet ? 'z-[60]' : 'z-40',
       )}
     >
-      {hint && (
-        <div className="pointer-events-auto max-w-[250px] rounded-2xl rounded-br-md border border-line bg-card px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-2 shadow-lg">
-          Preguntame por tu cartera, tus campañas o cómo hacer algo en el panel.{' '}
-          <button type="button" onClick={seen} className="font-medium text-ember-2 hover:underline">
-            Entendido
-          </button>
-        </div>
-      )}
-      <button
+      <AnimatePresence>
+        {(hint || unread) && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="pointer-events-auto relative max-w-[250px] rounded-2xl rounded-br-md border border-line-2 bg-card px-3.5 py-2.5 pr-8 text-[12.5px] leading-snug text-ink-2 shadow-lg"
+          >
+            {unread ? (
+              <button type="button" onClick={() => setOpen(true)} className="text-left">
+                <span className="font-medium text-iris-ink">Tu respuesta está lista.</span> Tocá para verla.
+              </button>
+            ) : (
+              <>
+                Preguntame por tu cartera, tus números o cómo hacer algo en el panel.{' '}
+                <button type="button" onClick={seen} className="font-medium text-iris-ink hover:underline">
+                  Entendido
+                </button>
+              </>
+            )}
+            {hint && !unread && (
+              <button
+                type="button"
+                onClick={seen}
+                className="absolute top-2 right-2 grid size-5 place-items-center rounded-full text-faint hover:bg-secondary"
+              >
+                <X className="size-3" />
+                <span className="sr-only">Cerrar</span>
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.button
         type="button"
         onClick={() => {
           seen()
           setOpen(true)
         }}
+        whileHover={reduced ? undefined : { scale: 1.06, y: -1 }}
+        whileTap={reduced ? undefined : { scale: 0.94 }}
         title={unread ? 'Tu respuesta está lista' : 'Asistente'}
-        className="pointer-events-auto relative grid size-12 shrink-0 place-items-center rounded-full border border-line-2 bg-background shadow-lg transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ember-ring focus-visible:outline-none"
+        className="pointer-events-auto relative grid size-14 shrink-0 place-items-center rounded-full border border-iris-ring bg-card shadow-[0_10px_30px_-10px_var(--color-iris-glow),0_2px_8px_-2px_rgb(0_0_0/0.12)] focus-visible:ring-2 focus-visible:ring-iris-ring focus-visible:outline-none"
       >
-        <AssistantLogo size={30} thinking={busy} />
-        {unread && <span className="absolute top-0.5 right-0.5 size-3 rounded-full bg-ember ring-2 ring-background" />}
+        <AssistantMark size={38} mood={mood} />
+        {unread && (
+          <span className="absolute top-0.5 right-0.5 size-3.5 rounded-full bg-iris ring-2 ring-background">
+            {!reduced && <span className="absolute inset-0 animate-ping rounded-full bg-iris opacity-60" />}
+          </span>
+        )}
         <span className="sr-only">{unread ? 'Abrir el asistente: tu respuesta está lista' : 'Abrir el asistente'}</span>
-      </button>
+      </motion.button>
     </div>
   )
 }
 
-/** A section's own way into the assistant: asks it a question about that screen. */
+/**
+ * A screen's own way into the assistant: asks it a question about what is on
+ * screen. `chip` (the default) for a header or a card's corner, `icon` for a
+ * tight spot (the mark alone, the question as its title), `link` inside text.
+ */
 export function AskAssistantButton({
   question,
   label,
+  variant = 'chip',
   className,
 }: {
   question: string
   label: string
+  variant?: 'chip' | 'icon' | 'link'
   className?: string
 }) {
-  const { available, ask } = useAssistantPanel()
+  const { available, ask, busy } = useAssistantPanel()
   if (!available) return null
+  const onClick = () => ask(question)
+
+  if (variant === 'icon') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={busy}
+        title={label}
+        className={cn(
+          'grid size-7 shrink-0 place-items-center rounded-full transition-transform hover:scale-110 disabled:opacity-60',
+          className,
+        )}
+      >
+        <AssistantMark size={22} still />
+        <span className="sr-only">{label}</span>
+      </button>
+    )
+  }
+
+  if (variant === 'link') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={busy}
+        className={cn(
+          'inline-flex items-center gap-1 text-[12.5px] font-medium text-iris-ink underline decoration-iris-ring underline-offset-2 hover:decoration-iris disabled:opacity-60',
+          className,
+        )}
+      >
+        <AssistantMark size={16} still />
+        {label}
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"
-      onClick={() => ask(question)}
+      onClick={onClick}
+      disabled={busy}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border border-ember-ring bg-ember-soft px-3 py-1 text-[12.5px] font-medium text-ember-2 transition-colors hover:bg-ember hover:text-on-ember',
+        'inline-flex h-8 items-center gap-1.5 rounded-full border border-iris-ring bg-iris-soft py-1 pr-3 pl-1 text-[12.5px] font-medium text-iris-ink transition-all',
+        'hover:-translate-y-px hover:bg-iris hover:text-on-iris hover:shadow-[0_6px_16px_-8px_var(--color-iris-glow)] disabled:pointer-events-none disabled:opacity-60',
         className,
       )}
     >
-      <CornerDownRight className="size-3.5" />
+      <AssistantMark size={22} still />
       {label}
     </button>
   )

@@ -1,5 +1,11 @@
 import {
+  BarChart3,
   CalendarClock,
+  MessageCircle,
+  RefreshCw,
+  Smartphone,
+  TrendingUp,
+  UserRound,
   CalendarOff,
   Clock,
   FileText,
@@ -12,6 +18,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
+import type { AssistantOpenRecord } from '@/types/api/assistant'
 
 /** A question the empty conversation offers. `fill` puts the text in the box to finish it instead of sending it. */
 export interface AssistantSuggestion {
@@ -28,6 +35,9 @@ const BANK: AssistantSuggestion = {
 const EXPIRING: AssistantSuggestion = { label: '¿Qué pólizas vencen esta semana?', icon: CalendarClock }
 const TASK: AssistantSuggestion = { label: 'Creá una tarea para…', icon: ListTodo, fill: 'Creá una tarea para ' }
 const CLIENT: AssistantSuggestion = { label: 'Buscá a un asegurado…', icon: Search, fill: 'Mostrame la ficha de ' }
+const RANKING: AssistantSuggestion = { label: '¿Qué productor tiene más deuda vencida?', icon: BarChart3 }
+const RENEWALS: AssistantSuggestion = { label: '¿Cómo viene la renovación este mes?', icon: RefreshCw }
+const TREND: AssistantSuggestion = { label: '¿Cómo vienen las cotizaciones mes a mes?', icon: TrendingUp }
 const IDEA: AssistantSuggestion = {
   label: 'Quiero proponer una mejora',
   icon: Lightbulb,
@@ -57,9 +67,9 @@ const BY_SCREEN: Array<[string, AssistantSuggestion[]]> = [
   [
     '/admin/cobranzas',
     [
-      { label: '¿Quiénes tienen cuotas rechazadas?', icon: Wallet },
       { label: '¿Cuánta deuda vencida hay y de quiénes?', icon: Wallet },
-      BANK,
+      { label: '¿Cómo se reparte la deuda vencida por antigüedad?', icon: BarChart3 },
+      { label: '¿Quiénes tienen cuotas rechazadas?', icon: Wallet },
       CLIENT,
     ],
   ],
@@ -84,10 +94,35 @@ const BY_SCREEN: Array<[string, AssistantSuggestion[]]> = [
   ['/admin/tareas', [{ label: '¿Qué tareas tengo para hoy?', icon: ListTodo }, TASK, PENDING, IDEA]],
   ['/admin/novedades', [{ label: 'Resumime los asuntos por atender', icon: Inbox }, TASK, PENDING, CLIENT]],
   ['/admin/asegurados', [CLIENT, EXPIRING, { label: '¿Quiénes tienen cuotas vencidas?', icon: Wallet }, TASK]],
+  [
+    '/admin/balance',
+    [RENEWALS, TREND, { label: '¿Cuántas pólizas nuevas entraron el mes pasado?', icon: BarChart3 }, RANKING],
+  ],
 ]
 
-const DEFAULT: AssistantSuggestion[] = [PENDING, BANK, EXPIRING, TASK]
+const DEFAULT: AssistantSuggestion[] = [PENDING, RANKING, EXPIRING, RENEWALS]
 
-export function suggestionsFor(route: string | undefined): AssistantSuggestion[] {
-  return BY_SCREEN.find(([prefix]) => route?.startsWith(prefix))?.[1] ?? DEFAULT
+/** The first suggestion when a sheet is open: a question about that record. */
+const FOR_RECORD: Record<AssistantOpenRecord['kind'], AssistantSuggestion> = {
+  asegurado: { label: 'Resumime este asegurado', icon: UserRound },
+  siniestro: { label: '¿Qué falta para avanzar con este siniestro?', icon: ShieldAlert },
+  lead: { label: '¿Cómo sigo con esta solicitud?', icon: FileText },
+  cotizacion: { label: '¿Cómo sigo con esta solicitud?', icon: FileText },
+  chat: { label: '¿Qué pidió este cliente en el chat?', icon: MessageCircle },
+  numero: { label: '¿Cómo está configurado este número?', icon: Smartphone },
+}
+
+/** How the panel names what is open, for the chip that says what the assistant sees. */
+export const RECORD_LABELS: Record<AssistantOpenRecord['kind'], string> = {
+  asegurado: 'la ficha del asegurado',
+  siniestro: 'el siniestro',
+  lead: 'la solicitud',
+  cotizacion: 'la solicitud',
+  chat: 'el chat',
+  numero: 'el número',
+}
+
+export function suggestionsFor(route: string | undefined, record?: AssistantOpenRecord): AssistantSuggestion[] {
+  const forScreen = BY_SCREEN.find(([prefix]) => route?.startsWith(prefix))?.[1] ?? DEFAULT
+  return record ? [FOR_RECORD[record.kind], ...forScreen.slice(0, 3)] : forScreen
 }

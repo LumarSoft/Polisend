@@ -147,7 +147,15 @@ export function AssistantProvider({ enabled, route, screen, children }: Assistan
     <Context.Provider value={value}>
       <RecordRegistry.Provider value={register}>{children}</RecordRegistry.Provider>
       {available && (
-        <AssistantPanel open={open} onOpenChange={setOpen} assistant={assistant} plan={plan} route={route} />
+        <AssistantPanel
+          open={open}
+          onOpenChange={setOpen}
+          assistant={assistant}
+          plan={plan}
+          route={route}
+          screen={screen}
+          record={record}
+        />
       )}
     </Context.Provider>
   )

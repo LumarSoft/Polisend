@@ -54,7 +54,46 @@ export interface AssistantMessage {
   actions: AssistantAction[]
   /** A question's photos and PDFs. */
   attachments?: AssistantAttachment[]
+  /** An answer's charts and tables, drawn from what its tools returned. */
+  visuals?: AssistantVisual[]
+  /** The person's rating of an answer. */
+  feedback?: AssistantFeedback | null
   createdAt: string
+}
+
+export type AssistantFeedback = 'up' | 'down'
+
+/** A column of a visual: the first ones name each row (a producer, a month); the rest are values. */
+export interface AssistantVisualColumn {
+  key: string
+  label: string
+  format: 'text' | 'count' | 'money' | 'percent'
+}
+
+export type AssistantVisualRow = Record<string, string | number | null>
+
+/**
+ * Data the panel draws under an answer: a ranking as bars, a series as a line,
+ * a breakdown as a table, totals as figures. Built by the API from what a tool
+ * returned, never from the model's text, so the numbers are the tool's.
+ */
+export interface AssistantVisual {
+  id: string
+  kind: 'bars' | 'line' | 'table' | 'kpis'
+  title: string
+  subtitle?: string
+  columns: AssistantVisualColumn[]
+  rows: AssistantVisualRow[]
+  /** The columns drawn as bars or lines. */
+  series: string[]
+  totals?: AssistantVisualRow
+  comparison?: {
+    label: string
+    values: AssistantVisualRow
+    change: Record<string, { absolute: number; percent: number | null }>
+  }
+  /** Data freshness, days without data, what was cut. */
+  notes: string[]
 }
 
 /** A photo or PDF attached to a question, as the API keeps it. */
@@ -103,12 +142,13 @@ export interface AssistantStep {
   state: 'running' | 'done'
 }
 
-/** What the answer stream sends, in this order: conversation?, then step/delta/action, then done or error. */
+/** What the answer stream sends, in this order: conversation?, then step/delta/action/visual, then done or error. */
 export type AssistantStreamEvent =
   | { event: 'conversation'; data: AssistantConversationSummary }
   | { event: 'step'; data: AssistantStep }
   | { event: 'delta'; data: { text: string } }
   | { event: 'action'; data: AssistantAction }
+  | { event: 'visual'; data: AssistantVisual }
   | { event: 'done'; data: { conversationId: number; message: AssistantMessage } }
   | { event: 'error'; data: { message: string } }
 

@@ -4,6 +4,7 @@ import type {
   AssistantAttachment,
   AssistantConversation,
   AssistantConversationSummary,
+  AssistantFeedback,
   AssistantStreamEvent,
   ConfirmAssistantActionResponse,
   SendAssistantMessageRequest,
@@ -50,6 +51,19 @@ export const assistantService = {
     return apiRequest<ConfirmAssistantActionResponse>(`/admin/assistant/actions/${actionId}/confirm`, {
       method: 'POST',
       token,
+    })
+  },
+
+  /** 👍 or 👎 on an answer, with an optional comment; rating it again replaces it. */
+  rate(
+    token: string,
+    messageId: number,
+    body: { rating: AssistantFeedback; comment?: string },
+  ): Promise<{ id: number; feedback: AssistantFeedback }> {
+    return apiRequest<{ id: number; feedback: AssistantFeedback }>(`/admin/assistant/messages/${messageId}/feedback`, {
+      method: 'POST',
+      token,
+      body,
     })
   },
 

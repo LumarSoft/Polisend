@@ -37,9 +37,9 @@ export function MessageAttachments({ files }: { files: AssistantAttachment[] }) 
             href={apiAssetUrl(file.url)}
             target="_blank"
             rel="noreferrer"
-            className="flex max-w-[220px] items-center gap-2 rounded-xl border border-line-2 bg-background px-2.5 py-2 text-left shadow-xs transition-colors hover:border-ember-ring"
+            className="flex max-w-[220px] items-center gap-2 rounded-xl border border-line-2 bg-background px-2.5 py-2 text-left shadow-xs transition-colors hover:border-iris-ring"
           >
-            <FileText className="size-5 shrink-0 text-ember-2" />
+            <FileText className="size-5 shrink-0 text-iris-ink" />
             <span className="min-w-0">
               <span className="block truncate text-[12.5px] font-medium text-ink">{file.name}</span>
               <span className="block text-[12px] text-faint">{fileDetail(file)}</span>
@@ -78,7 +78,7 @@ export function PendingAttachments({
           ) : file.status === 'error' ? (
             <AlertCircle className="size-4 shrink-0 text-red-600 dark:text-red-400" />
           ) : (
-            <FileText className="size-4 shrink-0 text-ember-2" />
+            <FileText className="size-4 shrink-0 text-iris-ink" />
           )}
           <span className="flex max-w-[150px] min-w-0 flex-col">
             <span className="truncate font-medium text-ink">{file.name}</span>

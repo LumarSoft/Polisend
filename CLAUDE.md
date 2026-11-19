@@ -50,6 +50,11 @@ pnpm exec tsc --noEmit
 - Temas: cada usuario elige claro/oscuro/automático y una paleta (`src/features/admin/lib/panel-theme.ts`). Acento =
   tokens `ember`; neutros = `ink*`, `faint*`, `paper*`, `canvas*`, `line*` o los de shadcn; sin hex ni
   `bg-white`/`text-black`; los colores de estado llevan su variante `dark:`; Whatsapp usa las variables `--wa-*`.
+- El asistente tiene identidad propia, igual en todas las paletas: tokens `iris*` (`iris`, `iris-2`, `iris-3`,
+  `iris-ink` para texto, `iris-soft`, `iris-ring`, `iris-glow`, `on-iris`), su marca "Compañero"
+  (`components/assistant-mark.tsx`, con estados `idle`/`thinking`/`writing`/`happy`/`worried`) y el botón para
+  preguntarle desde una pantalla (`AskAssistantButton` en `assistant-launcher.tsx`, variantes `chip`, `icon`, `link`).
+  Nada del chat usa `ember`.
 - Convenciones completas: `docs/panel/`.
 
 ## Roles, red y principal activo (plan `docs/PLAN-OWNER-ZONAS.md` §6)
