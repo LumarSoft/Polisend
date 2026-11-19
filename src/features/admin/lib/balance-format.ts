@@ -23,7 +23,7 @@ export const BALANCE_SECTIONS: BalanceSection[] = [
     title: 'Cartera',
     metrics: [
       { key: 'policiesInForce', label: 'Pólizas vigentes', hint: 'Al cierre del mes', better: 'up' },
-      { key: 'policiesNew', label: 'Pólizas nuevas', hint: 'Empezaron en el mes', better: 'up' },
+      { key: 'policiesNew', label: 'Pólizas nuevas', hint: 'Negocio nuevo del mes, sin renovaciones', better: 'up' },
       {
         key: 'policiesLost',
         label: 'Vencidas sin renovar',
