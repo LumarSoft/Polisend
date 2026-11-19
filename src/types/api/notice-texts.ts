@@ -5,10 +5,23 @@ export type NoticeTextKind = 'payment_rejection' | 'policy_expiry'
 export type NoticeTextStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'NOT_SUBMITTED' | 'ERROR' | 'UNKNOWN'
 
 /**
- * What the account's numbers send today: the current text, an earlier one of the organization (the current is in
- * review), the platform's, nothing (no text approved there), or null when Meta could not be asked.
+ * What the account's numbers send today: the current text, an earlier one of the same scope (the current is in
+ * review), the organization's general text (for a number), the platform's, nothing (no text approved there), or null
+ * when Meta could not be asked.
  */
-export type NoticeTextSending = 'own' | 'previous' | 'platform' | 'none' | null
+export type NoticeTextSending = 'own' | 'previous' | 'general' | 'platform' | 'none' | null
+
+/** Whose text: a number's (PhoneNumber id), the general one (null), or the user's default (undefined). */
+export type NoticeTextScope = number | null | undefined
+
+/** One of the texts the user can open: the organization's general one or a number's. */
+export interface NoticeTextScopeOption {
+  numberId: number | null
+  label: string
+  /** It has a text of its own (else it sends the general one, or the platform's). */
+  hasOwn: boolean
+  editable: boolean
+}
 
 export interface NoticeTextAccount {
   id: number
@@ -33,7 +46,13 @@ export interface NoticeText {
   placeholders: NoticeTextPlaceholder[]
   /** The platform's text, with the data between braces: where the editor starts. */
   defaultBody: string
-  /** The organization's current text; null = the platform's. */
+  /** What the user can open: the general text and their numbers. */
+  scopes: NoticeTextScopeOption[]
+  /** The scope shown (null = general). */
+  numberId: number | null
+  /** The user may change this scope's text. */
+  editable: boolean
+  /** The scope's own current text; null = it sends `fallback`. */
   custom: {
     version: number
     title: string | null
@@ -41,7 +60,9 @@ export interface NoticeText {
     createdAt: string
     createdBy: { name: string | null; email: string } | null
   } | null
-  /** Meta's review in each account; empty while the organization uses the platform's text. */
+  /** What the scope sends without a text of its own: the general text (for a number), else the platform's. */
+  fallback: { source: 'general' | 'platform'; title: string | null; body: string }
+  /** Meta's review in each account the scope sends from; empty while it has no text of its own. */
   accounts: NoticeTextAccount[]
 }
 
@@ -49,4 +70,6 @@ export interface UpdateNoticeTextRequest {
   /** Empty = no title. */
   title: string
   body: string
+  /** The number whose text it is; null = the general one. */
+  phoneNumberId: number | null
 }

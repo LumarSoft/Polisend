@@ -22,11 +22,11 @@ import type {
   NoticeText,
   NoticeTextAccount,
   NoticeTextKind,
+  NoticeTextScope,
   NoticeTextSending,
   NoticeTextStatus,
 } from '@/types/api/notice-texts'
 import { useNoticeText, useNoticeTextActions } from '../hooks/use-notice-text'
-import { useRole } from '../hooks/use-role'
 import { REVIEW_CLASSES, renderMessage } from '../lib/campaigns-format'
 import { InboxMessageText } from './inbox-message-text'
 
@@ -52,6 +52,7 @@ const STATUS_CLASSES: Record<NoticeTextStatus, string> = { ...REVIEW_CLASSES, UN
 /** What the account's numbers send while the current text is not approved there. */
 const SENDING_LABELS: Record<Exclude<NoticeTextSending, 'own' | null>, string> = {
   previous: 'Mientras tanto, los avisos salen con tu texto anterior.',
+  general: 'Mientras tanto, este número manda el texto general.',
   platform: 'Mientras tanto, los avisos salen con el texto de la plataforma.',
   none: 'Esta cuenta todavía no tiene ningún texto aprobado: los avisos salen por otro número.',
 }
@@ -91,8 +92,9 @@ function NoticeTextDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { data, isError } = useNoticeText(kind, open)
-  const { canManageOrg } = useRole()
+  // Undefined until the user picks: the API opens the general text for the SuperAdmin, an admin's own number for them.
+  const [scope, setScope] = useState<NoticeTextScope>(undefined)
+  const { data, isError } = useNoticeText(kind, scope, open)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,7 +102,8 @@ function NoticeTextDialog({
         <DialogHeader>
           <DialogTitle>{TITLES[kind]}</DialogTitle>
           <DialogDescription>
-            Es el mensaje que reciben los clientes por WhatsApp, uno solo para todos los números de la organización.
+            Es el mensaje que reciben los clientes por WhatsApp. Cada número puede tener el suyo; si no, manda el
+            general de la organización.
           </DialogDescription>
         </DialogHeader>
         {isError ? (
@@ -112,8 +115,35 @@ function NoticeTextDialog({
             <Loader2 className="size-4 animate-spin" /> Cargando…
           </p>
         ) : (
-          // A new saved text (or going back to the platform's) starts the draft again from it.
-          <NoticeTextEditor key={data.custom?.version ?? 0} kind={kind} view={data} canEdit={canManageOrg} />
+          <>
+            {data.scopes.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Label htmlFor={`notice-scope-${kind}`} className="text-[12.5px]">
+                  Texto de
+                </Label>
+                <select
+                  id={`notice-scope-${kind}`}
+                  value={data.numberId ?? 'general'}
+                  onChange={e => setScope(e.target.value === 'general' ? null : Number(e.target.value))}
+                  className="h-9 rounded-md border border-line-2 bg-background px-2 text-[13px] text-ink"
+                >
+                  {data.scopes.map(option => (
+                    <option key={option.numberId ?? 'general'} value={option.numberId ?? 'general'}>
+                      {option.label}
+                      {option.numberId !== null && !option.hasOwn ? ' (sin texto propio)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {/* Another scope, a new saved text or dropping one starts the draft again from what it sends. */}
+            <NoticeTextEditor
+              key={`${data.numberId ?? 'general'}-${data.custom?.version ?? 0}`}
+              kind={kind}
+              scope={scope}
+              view={data}
+            />
+          </>
         )}
       </DialogContent>
     </Dialog>
@@ -131,11 +161,23 @@ function MessagePreview({ text }: { text: string }) {
   )
 }
 
-function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view: NoticeText; canEdit: boolean }) {
-  const { save, reset, refresh } = useNoticeTextActions(kind)
+function NoticeTextEditor({
+  kind,
+  scope,
+  view,
+}: {
+  kind: NoticeTextKind
+  /** The scope the dialog asked for (its cache key). */
+  scope: NoticeTextScope
+  view: NoticeText
+}) {
+  const { save, reset, refresh } = useNoticeTextActions(kind, scope)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const savedTitle = view.custom?.title ?? ''
-  const savedBody = view.custom?.body ?? view.defaultBody
+  const canEdit = view.editable
+  const ofNumber = view.numberId !== null
+  // Without a text of its own, the editor starts from what the scope sends: the general text, or the platform's.
+  const savedTitle = view.custom?.title ?? view.fallback.title ?? ''
+  const savedBody = view.custom?.body ?? view.fallback.body
   const [title, setTitle] = useState(savedTitle)
   const [body, setBody] = useState(savedBody)
   const [confirm, setConfirm] = useState<'save' | 'reset' | null>(null)
@@ -166,13 +208,13 @@ function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view:
   const doSave = () => {
     setConfirm(null)
     save.mutate(
-      { title: title.trim(), body: body.trim() },
+      { title: title.trim(), body: body.trim(), phoneNumberId: view.numberId },
       {
         onSuccess: result =>
           toast.success(
             result.custom
               ? 'Texto guardado y enviado a revisión de Meta'
-              : 'Es el texto de la plataforma: no cambió nada',
+              : 'Es el texto que ya se manda: no cambió nada',
           ),
         onError: e => failed(e, 'No se pudo guardar el texto'),
       },
@@ -180,9 +222,14 @@ function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view:
   }
   const doReset = () => {
     setConfirm(null)
-    reset.mutate(undefined, {
-      onSuccess: () => toast.success('Los avisos vuelven a salir con el texto de la plataforma'),
-      onError: e => failed(e, 'No se pudo volver al texto original'),
+    reset.mutate(view.numberId, {
+      onSuccess: () =>
+        toast.success(
+          ofNumber
+            ? 'El número vuelve a mandar el texto general'
+            : 'Los avisos vuelven a salir con el texto de la plataforma',
+        ),
+      onError: e => failed(e, 'No se pudo deshacer el texto'),
     })
   }
   const askMeta = () =>
@@ -196,10 +243,12 @@ function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view:
       <div className="flex flex-col gap-5">
         <p className="text-[12.5px] text-muted-foreground">
           {view.custom
-            ? `Texto propio de la organización, guardado el ${formatDay(view.custom.createdAt)}${
-                view.custom.createdBy ? ` por ${view.custom.createdBy.name ?? view.custom.createdBy.email}` : ''
-              }.`
-            : 'Hoy se manda el texto de la plataforma.'}
+            ? `${ofNumber ? 'Texto propio de este número' : 'Texto general de la organización'}, guardado el ${formatDay(
+                view.custom.createdAt,
+              )}${view.custom.createdBy ? ` por ${view.custom.createdBy.name ?? view.custom.createdBy.email}` : ''}.`
+            : view.fallback.source === 'general'
+              ? 'Este número no tiene texto propio: manda el general de la organización.'
+              : 'Hoy se manda el texto de la plataforma.'}
         </p>
 
         {canEdit ? (
@@ -265,7 +314,7 @@ function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view:
                   className="border-line-2"
                 >
                   {reset.isPending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
-                  Volver al texto original
+                  {ofNumber ? 'Volver al texto general' : 'Volver al texto original'}
                 </Button>
               )}
               {error && dirty && <span className="text-[12.5px] text-destructive">{error}</span>}
@@ -273,7 +322,9 @@ function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view:
           </>
         ) : (
           <p className="rounded-lg border border-line-2 bg-secondary/40 px-3 py-2.5 text-[12.5px] text-ink-3">
-            Solo el SuperAdmin de la organización puede cambiar este texto.
+            {ofNumber
+              ? 'Solo el Admin de este número o el SuperAdmin pueden cambiar este texto.'
+              : 'El texto general lo cambia el SuperAdmin. Vos podés cambiar el de tu número: elegilo arriba.'}
           </p>
         )}
       </div>
@@ -308,18 +359,28 @@ function NoticeTextEditor({ kind, view, canEdit }: { kind: NoticeTextKind; view:
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirm === 'reset' ? 'Volver al texto de la plataforma' : 'Mandar el texto nuevo a Meta'}
+              {confirm === 'reset'
+                ? ofNumber
+                  ? 'Volver al texto general'
+                  : 'Volver al texto de la plataforma'
+                : 'Mandar el texto nuevo a Meta'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm === 'reset'
-                ? 'Desde ahora los avisos salen con el texto de la plataforma y el de la organización deja de usarse.'
+                ? ofNumber
+                  ? 'Desde ahora este número manda el texto general de la organización y el suyo deja de usarse.'
+                  : 'Desde ahora los avisos salen con el texto de la plataforma (salvo los números con texto propio) y el general deja de usarse.'
                 : 'Meta revisa el texto en la cuenta de cada número (de minutos a un día). Mientras tanto, los avisos siguen saliendo con el texto anterior.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirm === 'reset' ? doReset : doSave}>
-              {confirm === 'reset' ? 'Volver al original' : 'Guardar y mandar a Meta'}
+              {confirm === 'reset'
+                ? ofNumber
+                  ? 'Volver al general'
+                  : 'Volver al original'
+                : 'Guardar y mandar a Meta'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { noticeTextsService } from '@/services/notice-texts.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type { NoticeText, NoticeTextKind, UpdateNoticeTextRequest } from '@/types/api/notice-texts'
+import type { NoticeText, NoticeTextKind, NoticeTextScope, UpdateNoticeTextRequest } from '@/types/api/notice-texts'
 import { useAuth } from '../context/auth-context'
 
 /** While Meta reviews the text, the editor asks again every minute. */
@@ -13,16 +13,17 @@ const listOf = (kind: NoticeTextKind) =>
   kind === 'payment_rejection' ? QUERY_KEYS.admin.rejectionsAll : QUERY_KEYS.admin.expiredPoliciesAll
 
 /**
- * The organization's text of a notice and Meta's review of it; loads only while the editor is open. When a refresh
- * finds that a number sends another text now (Meta approved or rejected it), the list's preview refreshes too.
+ * The text of a notice for a scope (the general one or a number's) and Meta's review of it; loads only while the
+ * editor is open. When a refresh finds that a number sends another text now (Meta approved or rejected it), the list's
+ * preview refreshes too.
  */
-export function useNoticeText(kind: NoticeTextKind, enabled: boolean) {
+export function useNoticeText(kind: NoticeTextKind, scope: NoticeTextScope, enabled: boolean) {
   const { token } = useAuth()
   const queryClient = useQueryClient()
 
   const query = useQuery({
-    queryKey: QUERY_KEYS.admin.noticeText(kind),
-    queryFn: () => noticeTextsService.get(token as string, kind),
+    queryKey: QUERY_KEYS.admin.noticeText(kind, scope),
+    queryFn: () => noticeTextsService.get(token as string, kind, scope),
     enabled: !!token && enabled,
     refetchInterval: query =>
       query.state.data?.accounts.some(a => a.status === 'PENDING' || a.status === 'NOT_SUBMITTED')
@@ -44,14 +45,16 @@ export function useNoticeText(kind: NoticeTextKind, enabled: boolean) {
 }
 
 /**
- * Save the text (it goes to Meta's review), go back to the platform's, or ask Meta again. The lists that show the
- * notice as the client reads it (Rechazos, Pólizas vencidas) refresh after each.
+ * Save the scope's text (it goes to Meta's review), drop it, or ask Meta again. The other scopes' views (their
+ * "has its own" marks, what a number falls back to) and the lists that show the notice as the client reads it refresh
+ * after each.
  */
-export function useNoticeTextActions(kind: NoticeTextKind) {
+export function useNoticeTextActions(kind: NoticeTextKind, scope: NoticeTextScope) {
   const { token } = useAuth()
   const queryClient = useQueryClient()
   const settle = (view: NoticeText) => {
-    queryClient.setQueryData(QUERY_KEYS.admin.noticeText(kind), view)
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'notice-texts', kind] })
+    queryClient.setQueryData(QUERY_KEYS.admin.noticeText(kind, scope), view)
     void queryClient.invalidateQueries({ queryKey: listOf(kind) })
   }
 
@@ -61,13 +64,13 @@ export function useNoticeTextActions(kind: NoticeTextKind) {
   })
 
   const reset = useMutation({
-    mutationFn: () => noticeTextsService.reset(token as string, kind),
+    mutationFn: (numberId: number | null) => noticeTextsService.reset(token as string, kind, numberId),
     onSuccess: settle,
   })
 
   // Meta may have approved it meanwhile: the lists then show the new text.
   const refresh = useMutation({
-    mutationFn: () => noticeTextsService.refresh(token as string, kind),
+    mutationFn: () => noticeTextsService.refresh(token as string, kind, scope),
     onSuccess: settle,
   })
 
