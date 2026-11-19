@@ -44,6 +44,43 @@ export function formatVisualValue(value: string | number | null | undefined, for
   return count.format(value)
 }
 
+/**
+ * A column split into the metric it belongs to and its own name. Visuals
+ * saved before columns had a group wrote both in the label ("Deuda vencida ·
+ * importe"): those are split here too.
+ */
+function partsOf(column: AssistantVisualColumn): { group?: string; name: string } {
+  if (column.group) return { group: column.group, name: column.label }
+  const at = column.label.indexOf(' · ')
+  if (column.format === 'text' || at < 0) return { name: column.label }
+  const name = column.label.slice(at + 3)
+  return { group: column.label.slice(0, at), name: name.charAt(0).toUpperCase() + name.slice(1) }
+}
+
+/** A column's full name, metric included: for a table header, a legend or a tooltip, where it stands alone. */
+export function columnName(column: AssistantVisualColumn): string {
+  const { group, name } = partsOf(column)
+  return group ? `${group} · ${name.charAt(0).toLowerCase()}${name.slice(1)}` : name
+}
+
+/**
+ * The notes as the person reads them. Visuals saved before the API wrote them
+ * for the reader may name a metric by its id ("deuda_vencida: …") or say that
+ * a past day keeps no distinct clients, a column that is not drawn: those are
+ * tidied here.
+ */
+function readerNotes(notes: string[]): string[] {
+  const tidy = notes
+    .filter(note => !/^[a-z_]+: de un día pasado la foto guarda /.test(note))
+    .map(note =>
+      note.replace(/^([a-z]+(?:_[a-z]+)+):/, (_, id: string) => {
+        const words = id.replace(/_/g, ' ')
+        return `${words.charAt(0).toUpperCase()}${words.slice(1)}:`
+      }),
+    )
+  return [...new Set(tidy)]
+}
+
 /** An axis tick: big amounts shortened ("39,7 M"). */
 function axisValue(value: number, format: AssistantVisualColumn['format']) {
   const short = Math.abs(value) >= 100_000 ? compact.format(value) : count.format(value)
@@ -74,7 +111,7 @@ function ChartLegend({ items }: { items: Array<{ label: string; color: string }>
 
 /** The rows as tab-separated text, ready to paste in a spreadsheet. */
 function asTsv(visual: AssistantVisual): string {
-  const head = visual.columns.map(c => c.label).join('\t')
+  const head = visual.columns.map(columnName).join('\t')
   const body = visual.rows.map(row =>
     visual.columns
       .map(c => (typeof row[c.key] === 'number' ? String(row[c.key]).replace('.', ',') : (row[c.key] ?? '')))
@@ -154,11 +191,11 @@ export function AssistantVisualCard({ visual }: { visual: AssistantVisual }) {
         )}
       </div>
 
-      {visual.notes.length > 0 && (
+      {readerNotes(visual.notes).length > 0 && (
         <div className="flex gap-2 border-t border-line bg-secondary/40 px-3.5 py-2 text-[11.5px] leading-snug text-faint">
           <Info className="mt-px size-3.5 shrink-0" />
           <div className="flex flex-col gap-0.5">
-            {visual.notes.map(note => (
+            {readerNotes(visual.notes).map(note => (
               <span key={note}>{note}</span>
             ))}
           </div>
@@ -224,7 +261,7 @@ function VisualTooltip({
       <div className="mb-1 font-medium text-ink">{row && nameKey ? String(row[nameKey]) : label}</div>
       {values.map(column => (
         <div key={column.key} className="flex items-center gap-2">
-          <span className="text-muted-foreground">{column.label}</span>
+          <span className="text-muted-foreground">{columnName(column)}</span>
           <span className="ml-auto pl-3 font-medium text-ink tabular-nums">
             {formatVisualValue(row?.[column.key], column.format)}
           </span>
@@ -268,7 +305,7 @@ function VisualBars({ visual }: { visual: AssistantVisual }) {
           <Tooltip cursor={{ fill: 'var(--color-iris-soft)' }} content={<VisualTooltip visual={visual} />} />
           <Bar
             dataKey={main.key}
-            name={main.label}
+            name={columnName(main)}
             radius={[0, 6, 6, 0]}
             isAnimationActive={!reduced}
             animationDuration={500}
@@ -284,7 +321,7 @@ function VisualBars({ visual }: { visual: AssistantVisual }) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-      {several && <ChartLegend items={[{ label: main.label, color: 'var(--color-iris)' }]} />}
+      {several && <ChartLegend items={[{ label: columnName(main), color: 'var(--color-iris)' }]} />}
     </>
   )
 }
@@ -320,7 +357,7 @@ function VisualLine({ visual }: { visual: AssistantVisual }) {
             <Line
               key={column.key}
               dataKey={column.key}
-              name={column.label}
+              name={columnName(column)}
               type="monotone"
               stroke={colors[i]}
               strokeWidth={2.25}
@@ -334,7 +371,7 @@ function VisualLine({ visual }: { visual: AssistantVisual }) {
         </LineChart>
       </ResponsiveContainer>
       {(drawn.length > 1 || visual.columns.filter(c => c.format !== 'text').length > 1) && (
-        <ChartLegend items={drawn.map((column, i) => ({ label: column.label, color: colors[i] }))} />
+        <ChartLegend items={drawn.map((column, i) => ({ label: columnName(column), color: colors[i] }))} />
       )}
     </>
   )
@@ -357,7 +394,7 @@ export function VisualTable({ visual }: { visual: AssistantVisual }) {
                   column.format === 'text' ? 'text-left' : 'text-right',
                 )}
               >
-                {column.label}
+                {columnName(column)}
               </th>
             ))}
           </tr>
@@ -411,51 +448,90 @@ export function VisualTable({ visual }: { visual: AssistantVisual }) {
   )
 }
 
-/** Totals side by side, each with how it changed against the period compared. */
+/** A figure's size in its tile: a long amount steps down instead of spilling into the next one. */
+function figureSize(text: string): string {
+  if (text.length > 15) return 'text-[15px]'
+  if (text.length > 12) return 'text-[17px]'
+  return 'text-[19px]'
+}
+
+/**
+ * A figure as its tile shows it. An amount of a million or more goes in whole
+ * pesos so it fits; the exact one, cents included, is in the tile's title and
+ * in the answer.
+ */
+function figureText(value: string | number | null | undefined, format: AssistantVisualColumn['format']) {
+  if (format === 'money' && typeof value === 'number' && Math.abs(value) >= 1_000_000) {
+    return { text: moneyWhole.format(Math.round(value)), exact: formatVisualValue(value, format) }
+  }
+  const text = formatVisualValue(value, format)
+  return { text, exact: text }
+}
+
+/**
+ * Totals side by side, each with how it changed against the period compared.
+ * With more than one metric, each gets its own row under its name, so a tile
+ * only says "Cuotas" or "Importe". A figure with no data is left out when
+ * others have it (a past day keeps no distinct clients).
+ */
 function Figures({ visual }: { visual: AssistantVisual }) {
-  const values = visual.columns.filter(c => c.format !== 'text' && !c.key.endsWith('.anterior'))
   const totals = visual.totals ?? {}
+  const candidates = visual.columns.filter(c => c.format !== 'text' && !c.key.endsWith('.anterior'))
+  const withData = candidates.filter(c => totals[c.key] != null)
+  const values = withData.length ? withData : candidates
+  const groups: Array<{ group?: string; columns: AssistantVisualColumn[] }> = []
+  for (const column of values) {
+    const { group } = partsOf(column)
+    const last = groups.at(-1)
+    if (last && last.group === group) last.columns.push(column)
+    else groups.push({ group, columns: [column] })
+  }
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2 px-1.5">
-      {values.map(column => {
-        const change = visual.comparison?.change[column.key]
-        const before = visual.comparison?.values[column.key]
-        return (
-          <div key={column.key} className="rounded-xl bg-secondary/50 px-3 py-2.5">
-            <p className="truncate text-[11.5px] text-faint" title={column.label}>
-              {column.label}
-            </p>
-            <p
-              className={cn(
-                'mt-0.5 font-display text-[19px] leading-tight font-medium tracking-[-0.02em] text-ink tabular-nums',
-                totals[column.key] == null && 'text-[15px] text-faint',
-              )}
-            >
-              {formatVisualValue(totals[column.key], column.format)}
-            </p>
-            {change && (
-              <p className="mt-1 flex items-center gap-1 text-[11.5px] text-iris-ink">
-                {change.absolute > 0 ? (
-                  <ArrowUpRight className="size-3.5" />
-                ) : change.absolute < 0 ? (
-                  <ArrowDownRight className="size-3.5" />
-                ) : (
-                  <Minus className="size-3.5" />
-                )}
-                <span className="tabular-nums">
-                  {change.percent != null
-                    ? `${count.format(change.percent)} %`
-                    : formatVisualValue(change.absolute, column.format)}
-                </span>
-                <span className="truncate text-faint">vs {formatVisualValue(before, column.format)}</span>
-              </p>
-            )}
+    <div className="flex flex-col gap-3 px-1.5">
+      {groups.map(({ group, columns }) => (
+        <div key={group ?? 'figures'} className="flex flex-col gap-1.5">
+          {group && <p className="px-0.5 text-[12px] font-medium text-ink-3">{group}</p>}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
+            {columns.map(column => {
+              const change = visual.comparison?.change[column.key]
+              const before = visual.comparison?.values[column.key]
+              const figure = figureText(totals[column.key], column.format)
+              const { name } = partsOf(column)
+              return (
+                <div key={column.key} className="min-w-0 rounded-xl bg-secondary/50 px-3 py-2.5" title={figure.exact}>
+                  <p className="truncate text-[11.5px] text-faint">{name}</p>
+                  <p
+                    className={cn(
+                      'mt-0.5 font-display leading-tight font-medium tracking-[-0.02em] whitespace-nowrap text-ink tabular-nums',
+                      totals[column.key] == null ? 'text-[15px] text-faint' : figureSize(figure.text),
+                    )}
+                  >
+                    {figure.text}
+                  </p>
+                  {change && (
+                    <p className="mt-1 flex items-center gap-1 text-[11.5px] text-iris-ink">
+                      {change.absolute > 0 ? (
+                        <ArrowUpRight className="size-3.5" />
+                      ) : change.absolute < 0 ? (
+                        <ArrowDownRight className="size-3.5" />
+                      ) : (
+                        <Minus className="size-3.5" />
+                      )}
+                      <span className="tabular-nums">
+                        {change.percent != null
+                          ? `${count.format(change.percent)} %`
+                          : formatVisualValue(change.absolute, column.format)}
+                      </span>
+                      <span className="truncate text-faint">vs {figureText(before, column.format).text}</span>
+                    </p>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        )
-      })}
-      {visual.comparison && (
-        <p className="col-span-full px-1 text-[11px] text-faint">Comparado con {visual.comparison.label}.</p>
-      )}
+        </div>
+      ))}
+      {visual.comparison && <p className="px-1 text-[11px] text-faint">Comparado con {visual.comparison.label}.</p>}
     </div>
   )
 }

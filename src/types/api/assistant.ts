@@ -66,8 +66,11 @@ export type AssistantFeedback = 'up' | 'down'
 /** A column of a visual: the first ones name each row (a producer, a month); the rest are values. */
 export interface AssistantVisualColumn {
   key: string
+  /** The measure ("Importe"), or the dimension that names each row. */
   label: string
   format: 'text' | 'count' | 'money' | 'percent'
+  /** The metric it belongs to ("Deuda por cobrar"), when the visual shows more than one. */
+  group?: string
 }
 
 export type AssistantVisualRow = Record<string, string | number | null>
