@@ -72,7 +72,7 @@ import { useTaskStats } from '../hooks/use-tasks'
 import { useIntegrationStatus } from '../hooks/use-integration-status'
 import { failingNames } from '../lib/integration-status'
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
-import { roleLabel } from '../lib/roles'
+import { ROLES, roleLabel } from '../lib/roles'
 import { useActingPrincipal } from '../context/acting-principal-context'
 import { useRole } from '../hooks/use-role'
 import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
@@ -559,7 +559,8 @@ export function AppSidebar() {
   const [appearanceOpen, setAppearanceOpen] = useState(false)
 
   const initials = profile?.email.slice(0, 2).toUpperCase() ?? brand.initials
-  const label = roleLabel(role)
+  // The SuperAdmin of a zone's groups is an Admin with groups for the API.
+  const label = profile?.managedGroups?.length ? roleLabel(ROLES.superAdmin) : roleLabel(role)
 
   // Open groups as the user left them (per browser). The group of the page you are on opens by itself;
   // closing it lasts until you move to another page.

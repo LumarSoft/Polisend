@@ -25,6 +25,7 @@ import {
   NewPrincipalFields,
   PrincipalCodesPreview,
   PrincipalModeSwitch,
+  GroupsPicker,
   PrincipalPicker,
   RoleCards,
   ZonePicker,
@@ -105,19 +106,9 @@ function PrincipalSection({ form }: { form: NetworkUserFormState }) {
               onChange={form.choosePrincipal}
               label={isAdminRole ? 'Depende de' : 'Principal'}
               disabled={noZone}
-              emptyText={
-                !isAdminRole && form.zoneHasGroups
-                  ? 'En esta zona solo hay principales para Admin'
-                  : 'No hay principales en esta zona'
-              }
+              withUngrouped={isAdminRole}
             />
           </div>
-          {!isAdminRole && form.zoneHasGroups && (
-            <Note>
-              Los principales que salen de la zona de Triunfo no tienen SuperAdmin: para darle sus productores, elegí
-              Admin.
-            </Note>
-          )}
         </>
       )}
     </div>
@@ -126,6 +117,18 @@ function PrincipalSection({ form }: { form: NetworkUserFormState }) {
 
 function CodesSection({ form, onEditCodes }: { form: NetworkUserFormState; onEditCodes?: () => void }) {
   const { fields, principal } = form
+
+  if (form.groupSuperAdmin) {
+    return (
+      <Section title="Principales que administra">
+        <GroupsPicker options={form.groupOptions} selected={form.groupIds} onToggle={form.toggleGroup} />
+        <Note>
+          Ve todos los productores de los principales que marques, también los que pases a ellos después. Sus usuarios y
+          la configuración de la zona siguen a tu cargo.
+        </Note>
+      </Section>
+    )
+  }
 
   if (fields.role === ROLES.superAdmin) {
     if (form.usingNewPrincipal) {
@@ -152,23 +155,9 @@ function CodesSection({ form, onEditCodes }: { form: NetworkUserFormState; onEdi
         onCreate={form.createCode}
         creating={form.creatingCode}
         canCreate={!form.zoneGroups}
-        showGroups={form.zoneGroups && form.otherGroups}
       />
       {form.zoneGroups && (
-        <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-ink-3">
-          <input
-            type="checkbox"
-            className="mt-0.5 size-4 accent-ember-2"
-            checked={form.otherGroups}
-            onChange={e => form.setOtherGroups(e.target.checked)}
-          />
-          <span>
-            Sumar productores de otros principales de la zona
-            <span className="block text-[12px] text-muted-foreground">
-              Ve solo los que marques; podés destildar los que no le correspondan.
-            </span>
-          </span>
-        </label>
+        <Note>Un Admin ve productores de un solo principal. Para varios, hacelo SuperAdmin de esos principales.</Note>
       )}
     </Section>
   )
@@ -309,7 +298,6 @@ function UserForm({
             value={fields.role}
             onChange={form.setRole}
             disabledNote={form.isSelf ? 'No podés cambiar tu propio rol.' : undefined}
-            blocked={form.blockedRole}
           />
         </Section>
 

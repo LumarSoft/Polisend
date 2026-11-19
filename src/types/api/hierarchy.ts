@@ -273,6 +273,16 @@ export interface NetworkUser {
   zone: { id: number; name: string } | null
   /** The Admin's grants; [] for a SuperAdmin (it sees every code of its principal). */
   codes: HierarchyPrincipalCode[]
+  /**
+   * The groups an ADMIN is SuperAdmin of, in a principal shown as its groups (a zone's productores): it sees every
+   * code of them, and the panel shows it as SuperAdmin. [] for anyone else; absent on older APIs.
+   */
+  groups?: NetworkUserGroup[]
+}
+
+export interface NetworkUserGroup {
+  id: number
+  name: string
 }
 
 /** The roles of the read-only rows: the platform (Lumarsoft) and the other Owners of the caller's zones. */
@@ -334,8 +344,10 @@ export interface CreateNetworkUserRequest {
   producerId?: number
   /** Only with role SUPERADMIN. */
   newPrincipal?: NewPrincipalInput
-  /** ADMIN: required, ≥ 1, codes of that principal. Ignored for a SUPERADMIN. */
+  /** ADMIN: required, ≥ 1, codes of that principal (of a single group in a zone's principal), unless `codeGroupIds`. */
   producerCodeIds?: number[]
+  /** ADMIN of a zone's principal: the groups it is SuperAdmin of (no codes with it). Never a SUPERADMIN there. */
+  codeGroupIds?: number[]
 }
 
 export interface CreateNetworkUserResponse extends NetworkUser {
@@ -358,8 +370,9 @@ export interface UpdateNetworkUserRequest {
   role?: NetworkUserRole
   /** Developer only: moves the account to another principal (its grants go; an ADMIN sends the new codes). */
   producerId?: number
-  /** Required when the role becomes ADMIN or the principal changes; replaces the grants. */
+  /** Required when the role becomes ADMIN or the principal changes; with `codeGroupIds`, either one replaces both. */
   producerCodeIds?: number[]
+  codeGroupIds?: number[]
 }
 
 /** `POST /hierarchy/users/:id/restore` (Developer, Owner, SuperAdmin). */
@@ -368,8 +381,9 @@ export interface RestoreNetworkUserRequest {
   password?: string
   role: NetworkUserRole
   name?: string
-  /** ADMIN: ≥ 1. */
+  /** ADMIN: ≥ 1, unless `codeGroupIds`. */
   producerCodeIds?: number[]
+  codeGroupIds?: number[]
 }
 
 export interface RestoreNetworkUserResponse extends NetworkUser {

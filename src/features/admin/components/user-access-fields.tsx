@@ -12,7 +12,7 @@ import type { NetworkUserRole, Zone } from '@/types/api/hierarchy'
 import type { CodeOption, NewPrincipalDraft } from '../hooks/use-network-user-form'
 import { newCodeRow } from '../hooks/use-network-user-form'
 import { NO_ZONE, type ZoneKey } from '../lib/network'
-import { choiceValue, groupChoices, type FormPrincipal, type FormZone } from '../lib/network-users'
+import { choiceValue, groupChoices, type FormPrincipal, type FormZone, type GroupChoice } from '../lib/network-users'
 import { CODE_HINT, isValidCode } from '../lib/producer-code'
 import { ROLES } from '../lib/roles'
 
@@ -37,14 +37,11 @@ export function RoleCards({
   value,
   onChange,
   disabledNote,
-  blocked,
 }: {
   value: NetworkUserRole
   onChange: (role: NetworkUserRole) => void
   /** Set when the role cannot change (one's own): the reason, shown under the cards. */
   disabledNote?: string
-  /** A role the account cannot take where it is, and why (an Admin of a zone's productores is never SuperAdmin). */
-  blocked?: { role: NetworkUserRole; note: string }
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -58,7 +55,7 @@ export function RoleCards({
               type="button"
               role="radio"
               aria-checked={selected}
-              disabled={!!disabledNote || blocked?.role === card.role}
+              disabled={!!disabledNote}
               onClick={() => onChange(card.role)}
               className={cn(
                 'flex items-start gap-3 rounded-lg border p-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
@@ -74,9 +71,7 @@ export function RoleCards({
           )
         })}
       </div>
-      {(disabledNote ?? blocked?.note) && (
-        <p className="text-[12px] text-muted-foreground">{disabledNote ?? blocked?.note}</p>
-      )}
+      {disabledNote && <p className="text-[12px] text-muted-foreground">{disabledNote}</p>}
     </div>
   )
 }
@@ -87,7 +82,7 @@ const plural = (n: number, one: string, many: string) => `${n.toLocaleString('es
  * The principals of a zone at the level of a principal: each one, and, instead of one that holds the zone's productores,
  * each of its groups (an organizer's principal or an independent productor) and its codes without a group. By name.
  */
-function principalOptions(principals: FormPrincipal[]): ComboboxOption[] {
+function principalOptions(principals: FormPrincipal[], withUngrouped: boolean): ComboboxOption[] {
   const options = principals.flatMap<ComboboxOption & { sort: string }>(principal => {
     if (!principal.groupsAsPrincipals) {
       const hint = [
@@ -99,18 +94,21 @@ function principalOptions(principals: FormPrincipal[]): ComboboxOption[] {
         .join(' · ')
       return [{ value: String(principal.id), label: principal.name, hint: hint || undefined, sort: principal.name }]
     }
-    return groupChoices(principal).map(group => ({
-      value: choiceValue(principal.id, group.groupId),
-      label: group.name,
-      hint:
-        group.groupId === null && principal.groups.length > 0
-          ? `${plural(group.codes, 'productor', 'productores')} sin grupo`
-          : group.codes === 1
-            ? 'Productor independiente'
-            : plural(group.codes, 'productor', 'productores'),
-      // The codes without a group go last.
-      sort: group.groupId === null && principal.groups.length > 0 ? '\uffff' : group.name,
-    }))
+    // The codes without a group are an Admin's choice only: a SuperAdmin is of groups.
+    return groupChoices(principal)
+      .filter(group => withUngrouped || group.groupId !== null)
+      .map(group => ({
+        value: choiceValue(principal.id, group.groupId),
+        label: group.name,
+        hint:
+          group.groupId === null && principal.groups.length > 0
+            ? `${plural(group.codes, 'productor', 'productores')} sin grupo`
+            : group.codes === 1
+              ? 'Productor independiente'
+              : plural(group.codes, 'productor', 'productores'),
+        // The codes without a group go last.
+        sort: group.groupId === null && principal.groups.length > 0 ? '\uffff' : group.name,
+      }))
   })
   return options
     .sort((a, b) => a.sort.localeCompare(b.sort, 'es'))
@@ -152,9 +150,12 @@ export function PrincipalPicker({
   label = 'Principal',
   disabled = false,
   emptyText = 'No hay principales en esta zona',
+  withUngrouped = true,
 }: {
   /** The zone's principals; one that holds the zone's productores is offered as its groups. */
   principals: FormPrincipal[]
+  /** Offer a zone's codes without a group («Sin clasificar»): to an Admin, never to a SuperAdmin of groups. */
+  withUngrouped?: boolean
   /** `principalId` or `principalId:groupId`. */
   value: string | null
   onChange: (value: string) => void
@@ -170,7 +171,7 @@ export function PrincipalPicker({
       searchPlaceholder="Buscar principal…"
       emptyText={emptyText}
       value={value}
-      options={principalOptions(principals)}
+      options={principalOptions(principals, withUngrouped)}
       onChange={onChange}
       disabled={disabled}
       className="w-full"
@@ -407,6 +408,66 @@ export function PrincipalCodesPreview({
   )
 }
 
+/**
+ * "Principales que administra": the groups of a zone's productores a SuperAdmin of groups works, with a search box. It
+ * sees every productor of them, also those moved into one later.
+ */
+export function GroupsPicker({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: GroupChoice[]
+  selected: number[]
+  onToggle: (id: number) => void
+}) {
+  const [query, setQuery] = useState('')
+  const needle = query.trim().toLowerCase()
+  const visible = needle ? options.filter(option => option.name.toLowerCase().includes(needle)) : options
+  return (
+    <div className="flex flex-col gap-2">
+      {options.length > 6 && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar principal…"
+            className="h-9 pl-9 text-[13px]"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+        </div>
+      )}
+      <div className="max-h-52 overflow-y-auto rounded-md border border-line-2 p-1.5">
+        {visible.length === 0 && (
+          <p className="px-1.5 py-2 text-[13px] text-muted-foreground">Ningún principal coincide.</p>
+        )}
+        {visible.map(option =>
+          option.groupId === null ? null : (
+            <label
+              key={option.groupId}
+              className="flex cursor-pointer items-center gap-2.5 rounded px-1.5 py-1.5 hover:bg-secondary"
+            >
+              <input
+                type="checkbox"
+                className="size-4 accent-ember-2"
+                checked={selected.includes(option.groupId)}
+                onChange={() => onToggle(option.groupId as number)}
+              />
+              <span className="text-[13px] text-ink">
+                <span className="font-medium">{option.name}</span>
+                <span className="text-muted-foreground">
+                  {' '}
+                  · {option.codes === 1 ? 'Productor independiente' : plural(option.codes, 'productor', 'productores')}
+                </span>
+              </span>
+            </label>
+          ),
+        )}
+      </div>
+    </div>
+  )
+}
+
 /** "Códigos que ve": the Admin's codes, with a search box and "+ Crear código" (single code endpoint, left checked). */
 export function CodesPicker({
   options,
@@ -415,7 +476,6 @@ export function CodesPicker({
   onCreate,
   creating,
   canCreate,
-  showGroups = false,
 }: {
   options: CodeOption[]
   selected: number[]
@@ -424,8 +484,6 @@ export function CodesPicker({
   onCreate: (code: string, holderName: string) => Promise<string | null>
   creating: boolean
   canCreate: boolean
-  /** Say each code's group (a zone's productores, several of its principals listed). */
-  showGroups?: boolean
 }) {
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
@@ -435,9 +493,7 @@ export function CodesPicker({
 
   const needle = query.trim().toLowerCase()
   const visible = needle
-    ? options.filter(option =>
-        `${option.code} ${option.holderName ?? ''} ${option.groupName ?? ''}`.toLowerCase().includes(needle),
-      )
+    ? options.filter(option => `${option.code} ${option.holderName ?? ''}`.toLowerCase().includes(needle))
     : options
 
   const create = async () => {
@@ -460,7 +516,7 @@ export function CodesPicker({
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder={showGroups ? 'Buscar código, titular o principal…' : 'Buscar código o titular…'}
+            placeholder="Buscar código o titular…"
             className="h-9 pl-9 text-[13px]"
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -489,7 +545,6 @@ export function CodesPicker({
               <span className="font-medium">{option.code}</span>
               {option.holderName && <span className="text-muted-foreground"> · {option.holderName}</span>}
               {option.isMaster && <span className="text-muted-foreground"> · master</span>}
-              {showGroups && option.groupName && <span className="text-ember-2"> · {option.groupName}</span>}
               {!option.isActive && <span className="text-amber-700 dark:text-amber"> · inactivo</span>}
             </span>
           </label>

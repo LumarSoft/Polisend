@@ -17,7 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { NetworkUser, ReadOnlyNetworkUser } from '@/types/api/hierarchy'
-import { formatJoinDate } from '../lib/network-users'
+import { formatJoinDate, shownRole, type UserHeading } from '../lib/network-users'
 import { ROLES, roleLabel } from '../lib/roles'
 import { TwoFactorBadge } from './account-access-dialog'
 
@@ -34,6 +34,8 @@ interface NetworkUsersTableProps {
   readOnlyUsers?: ReadOnlyNetworkUser[]
   /** Principal and Zona columns: hidden for a SuperAdmin (every row is of its principal). */
   showPrincipal: boolean
+  /** The heading a row goes under: its principal, or the groups of a zone's productores. */
+  headingOf?: (user: NetworkUser) => UserHeading
   emptyText: string
   onEdit: (user: NetworkUser) => void
   onSendPasswordLink: (user: NetworkUser) => void
@@ -42,6 +44,9 @@ interface NetworkUsersTableProps {
 }
 
 function CodesCell({ user }: { user: NetworkUser }) {
+  if (user.groups?.length) {
+    return <span className="text-[12.5px] text-ink-3">Los de sus principales</span>
+  }
   if (user.role === ROLES.superAdmin) {
     return <span className="text-[12.5px] text-ink-3">Todos los del principal</span>
   }
@@ -165,6 +170,7 @@ export function NetworkUsersTable({
   selfId,
   readOnlyUsers = [],
   showPrincipal,
+  headingOf = user => ({ key: `p${user.principal.id}`, name: user.principal.name }),
   emptyText,
   onEdit,
   onSendPasswordLink,
@@ -214,14 +220,16 @@ export function NetworkUsersTable({
 
             {users?.map((user, index) => {
               const isSelf = user.id === selfId
-              const firstOfPrincipal = showPrincipal && users[index - 1]?.principal.id !== user.principal.id
-              const ofPrincipal = firstOfPrincipal ? users.filter(u => u.principal.id === user.principal.id).length : 0
+              const heading = headingOf(user)
+              const previous = users[index - 1]
+              const firstOfPrincipal = showPrincipal && (!previous || headingOf(previous).key !== heading.key)
+              const ofPrincipal = firstOfPrincipal ? users.filter(u => headingOf(u).key === heading.key).length : 0
               return (
                 <Fragment key={user.id}>
                   {firstOfPrincipal && (
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
                       <TableCell colSpan={columns} className="py-2 pl-5">
-                        <span className="text-[13px] font-semibold text-ink">{user.principal.name}</span>
+                        <span className="text-[13px] font-semibold text-ink">{heading.name}</span>
                         <span className="ml-2 text-[12px] text-muted-foreground">
                           {user.zone?.name ?? 'Sin zona'} ·{' '}
                           {ofPrincipal === 1 ? '1 usuario' : `${ofPrincipal} usuarios`}
@@ -235,7 +243,7 @@ export function NetworkUsersTable({
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="font-normal text-ink-3">
-                        {roleLabel(user.role)}
+                        {roleLabel(shownRole(user))}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
