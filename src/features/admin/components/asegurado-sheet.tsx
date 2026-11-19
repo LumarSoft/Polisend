@@ -44,6 +44,7 @@ import {
 import { AseguradoDocumentosTab } from './asegurado-documentos'
 import { PolizaStatusBadge } from './poliza-status-badge'
 import { useAssistantRecord } from '../context/assistant-context'
+import { AskAssistantButton } from './assistant-launcher'
 
 type SheetTab = 'polizas' | 'pagos' | 'documentos'
 
@@ -543,6 +544,11 @@ export function AseguradoSheet({ clientId, onClose, defaultTab = 'polizas' }: As
                         </Badge>
                       )}
                     </div>
+                    <AskAssistantButton
+                      question="Resumime este asegurado: pólizas, lo que debe y sus siniestros."
+                      label="Resumir con el asistente"
+                      className="mt-2.5"
+                    />
                   </div>
                 </div>
 

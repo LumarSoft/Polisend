@@ -80,6 +80,22 @@
   --color-polisend: #1f4fe0;
   --color-on-polisend: #ffffff;
 
+  /*
+   * The assistant's own identity (iris): its mark, its chat and its buttons, the
+   * same in every palette so it is recognized on any screen. Fills take iris
+   * with on-iris text; text on a surface takes iris-ink; the mark's gradient
+   * runs iris-3 → iris → iris-2. Dark mode at the end of this file.
+   */
+  --color-iris: #4f46e5;
+  --color-iris-2: #7c3aed;
+  --color-iris-3: #6366f1;
+  --color-iris-ink: #4338ca;
+  --color-iris-soft: rgba(79, 70, 229, 0.075);
+  --color-iris-soft-2: rgba(79, 70, 229, 0.13);
+  --color-iris-ring: rgba(79, 70, 229, 0.3);
+  --color-iris-glow: rgba(124, 58, 237, 0.2);
+  --color-on-iris: #ffffff;
+
   --color-amber: #f5c060;
   --color-amber-2: #e8a820;
   --color-amber-subtle: rgba(232, 168, 32, 0.09);
@@ -707,3 +723,33 @@
 .overflow-x-auto > [data-slot='table-container'] {
   overflow-x: visible;
 }
+
+/* ── The assistant's identity ─────────────────────────────────────────── */
+/*
+ * Declared here too, not only in @theme: Tailwind emits a theme variable only
+ * when a utility uses it, and the mark's SVG gradient reads them with var().
+ */
+:root {
+  --color-iris: #4f46e5;
+  --color-iris-2: #7c3aed;
+  --color-iris-3: #6366f1;
+  --color-iris-ink: #4338ca;
+  --color-iris-soft: rgba(79, 70, 229, 0.075);
+  --color-iris-soft-2: rgba(79, 70, 229, 0.13);
+  --color-iris-ring: rgba(79, 70, 229, 0.3);
+  --color-iris-glow: rgba(124, 58, 237, 0.2);
+  --color-on-iris: #ffffff;
+}
+
+/* ── The assistant's identity in dark mode ───────────────────────────── */
+/* Brighter gradient and text on a dark page; fills stay deep enough for white text. */
+:is(.dark, .dark *) {
+  --color-iris-2: #8b5cf6;
+  --color-iris-3: #818cf8;
+  --color-iris-ink: #a5b4fc;
+  --color-iris-soft: rgba(129, 140, 248, 0.11);
+  --color-iris-soft-2: rgba(129, 140, 248, 0.18);
+  --color-iris-ring: rgba(129, 140, 248, 0.38);
+  --color-iris-glow: rgba(139, 92, 246, 0.26);
+}
+

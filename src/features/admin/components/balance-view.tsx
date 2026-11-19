@@ -26,6 +26,7 @@ import {
 } from '../lib/balance-format'
 import { RequirePrincipal } from './require-principal'
 import { SectionScopeFilter } from './section-scope-filter'
+import { AskAssistantButton } from './assistant-launcher'
 
 // Recharts is heavy and never needed on first paint — load it lazily.
 const BalanceCharts = dynamic(() => import('./balance-charts').then(m => m.BalanceCharts), {
@@ -192,6 +193,11 @@ function BalanceContent() {
             El cierre de cada mes: cartera, cobranzas, siniestros, ventas y atención. Las flechas comparan con el mes
             anterior; verde es buena noticia y rojo es para mirar.
           </p>
+          <AskAssistantButton
+            question="¿Cómo viene este mes contra el anterior: pólizas nuevas, terminadas y renovación, cotizaciones y deuda?"
+            label="Explicame el mes"
+            className="mt-3"
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SectionScopeFilter value={scope} onChange={setScope} />

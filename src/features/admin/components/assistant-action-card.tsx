@@ -79,15 +79,21 @@ export function AssistantActionCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className={cn(
-        'overflow-hidden rounded-xl border bg-card text-[12.5px] shadow-sm',
-        status === 'pending' ? 'border-ember-ring' : 'border-line-2',
+        'relative overflow-hidden rounded-2xl border bg-card text-[12.5px] shadow-sm',
+        status === 'pending' ? 'border-iris-ring shadow-[0_8px_24px_-14px_var(--color-iris-glow)]' : 'border-line-2',
       )}
     >
+      {status === 'pending' && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5 bg-[linear-gradient(90deg,var(--color-iris-3),var(--color-iris),var(--color-iris-2))]"
+        />
+      )}
       <div className="flex items-start gap-3 px-3.5 pt-3.5">
         <span
           className={cn(
             'grid size-8 shrink-0 place-items-center rounded-lg',
-            settled ? 'bg-secondary text-muted-foreground' : 'bg-ember-soft text-ember-2',
+            settled ? 'bg-secondary text-muted-foreground' : 'bg-iris-soft text-iris-ink',
           )}
         >
           <Icon className="size-4" />
@@ -96,6 +102,11 @@ export function AssistantActionCard({
           <p className="text-[13.5px] leading-snug font-semibold text-ink">{preview.title}</p>
           <p className="truncate text-[12px] text-muted-foreground">{preview.target}</p>
         </div>
+        {status === 'pending' && (
+          <span className="shrink-0 rounded-full bg-iris-soft px-2 py-0.5 text-[10.5px] font-medium text-iris-ink">
+            Para confirmar
+          </span>
+        )}
       </div>
 
       {preview.changes.length > 0 && (
@@ -138,14 +149,24 @@ export function AssistantActionCard({
             <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy} className="h-8">
               Cancelar
             </Button>
-            <Button type="button" size="sm" onClick={onConfirm} disabled={busy} className="h-8 gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              onClick={onConfirm}
+              disabled={busy}
+              className="h-8 gap-1.5 bg-iris text-on-iris shadow-[0_4px_12px_-6px_var(--color-iris-glow)] hover:bg-iris/90"
+            >
               {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
               {preview.confirmLabel}
             </Button>
           </div>
         )}
         {status === 'confirmed' && (
-          <div className="flex flex-col gap-1.5 border-t border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-1.5 border-t border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+          >
             <p className="flex items-start gap-2">
               <CircleCheck className="mt-px size-4 shrink-0" />
               <span>{action.summary ?? 'Listo.'}</span>
@@ -174,7 +195,7 @@ export function AssistantActionCard({
                 )}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
         {status === 'failed' && (
           <div className="flex items-start gap-2 border-t border-red-200 bg-red-50 px-3.5 py-2.5 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">

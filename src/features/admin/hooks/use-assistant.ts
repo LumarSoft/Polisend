@@ -8,8 +8,10 @@ import type {
   AssistantAction,
   AssistantAttachment,
   AssistantConversation,
+  AssistantFeedback,
   AssistantMessage,
   AssistantStep,
+  AssistantVisual,
   SendAssistantMessageRequest,
 } from '@/types/api/assistant'
 import { useAuth } from '../context/auth-context'
@@ -24,6 +26,8 @@ export interface LiveTurn {
   text: string
   steps: AssistantStep[]
   actions: AssistantAction[]
+  /** Charts and tables drawn from what its tools returned. */
+  visuals: AssistantVisual[]
   streaming: boolean
   /** Why it stopped short: the API's message, or null when the person stopped it. */
   error: string | null
@@ -132,7 +136,17 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
     if ((!question && !attachments.length) || streaming || !token) return
     const controller = new AbortController()
     abortRef.current = controller
-    setLive({ question, attachments, text: '', steps: [], actions: [], streaming: true, error: null, stopped: false })
+    setLive({
+      question,
+      attachments,
+      text: '',
+      steps: [],
+      actions: [],
+      visuals: [],
+      streaming: true,
+      error: null,
+      stopped: false,
+    })
 
     let id = conversationId
     let answer: AssistantMessage | null = null
@@ -166,6 +180,9 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
               break
             case 'action':
               setLive(l => l && { ...l, actions: [...l.actions, event.data] })
+              break
+            case 'visual':
+              setLive(l => l && { ...l, visuals: [...l.visuals, event.data] })
               break
             case 'done':
               answer = event.data.message
@@ -267,6 +284,38 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
     setLive(null)
   }
 
+  /** 👍 / 👎: shown at once, saved behind; a failure puts it back. */
+  const rate = useMutation({
+    mutationFn: ({ messageId, rating, comment }: { messageId: number; rating: AssistantFeedback; comment?: string }) =>
+      assistantService.rate(token as string, messageId, { rating, ...(comment ? { comment } : {}) }),
+    onMutate: ({ messageId, rating }) => {
+      if (conversationId === null) return undefined
+      const key = QUERY_KEYS.admin.assistantConversation(conversationId)
+      const before = queryClient.getQueryData<AssistantConversation>(key)
+      queryClient.setQueryData<AssistantConversation>(
+        key,
+        old =>
+          old && { ...old, messages: old.messages.map(m => (m.id === messageId ? { ...m, feedback: rating } : m)) },
+      )
+      return { key, before }
+    },
+    onError: (error, _vars, context) => {
+      if (context?.before) queryClient.setQueryData(context.key, context.before)
+      toast.error(assistantErrorText(error))
+    },
+  })
+
+  /** Asks again the question an answer replied to: a new answer below, the old one stays. */
+  const regenerate = (answerId: number) => {
+    const messages = conversation.data?.messages ?? []
+    const at = messages.findIndex(m => m.id === answerId)
+    const question = messages
+      .slice(0, at)
+      .reverse()
+      .find(m => m.role === 'user')
+    if (question) void send(question.content, question.attachments ?? [])
+  }
+
   const remove = useMutation({
     mutationFn: (id: number) => assistantService.remove(token as string, id),
     onSuccess: (_data, id) => {
@@ -289,6 +338,9 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
     retry,
     confirm: (actionId: number) => confirm.mutate(actionId),
     cancel: (actionId: number) => cancel.mutate(actionId),
+    rate: (messageId: number, rating: AssistantFeedback, comment?: string) =>
+      rate.mutate({ messageId, rating, comment }),
+    regenerate,
     busyActions,
     open,
     remove: (id: number) => remove.mutate(id),

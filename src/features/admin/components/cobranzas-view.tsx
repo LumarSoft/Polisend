@@ -46,6 +46,7 @@ import { CobranzasSortSelect, DEFAULT_COBRANZA_SORT } from './cobranzas-sort-sel
 import { ExpiredPoliciesTab } from './expired-policies-tab'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUrlTab } from '../hooks/use-panel-link'
+import { AskAssistantButton } from './assistant-launcher'
 
 const PAGE_SIZE = 25
 
@@ -444,6 +445,11 @@ export function CobranzasView() {
           <p className="mt-1.5 text-[14px] text-muted-foreground">
             Seguimiento de la deuda de tu cartera. Identificá a quién contactar y resolvé los pagos pendientes.
           </p>
+          <AskAssistantButton
+            question="Analizá la deuda vencida: por productor, por antigüedad y quiénes deben más."
+            label="Analizar la deuda"
+            className="mt-3"
+          />
         </div>
         <div className="flex w-full max-w-xs flex-col gap-2">
           {/* A narrow column: an Owner's Zona, Principal, Productor and number stack at its full width. */}

@@ -1,9 +1,10 @@
 'use client'
 
-import { Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AssistantConversationSummary } from '@/types/api/assistant'
 import { useAssistantHistory } from '../hooks/use-assistant'
+import { AssistantMark } from './assistant-mark'
 
 const DAY_MS = 86_400_000
 
@@ -36,15 +37,17 @@ export function AssistantHistory({ currentId, onOpen, onRemove }: AssistantHisto
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      <div className="flex flex-col gap-2 px-5 py-5" aria-busy>
+        {[0, 1, 2, 3, 4].map(i => (
+          <div key={i} className="h-8 animate-pulse rounded-lg bg-secondary" style={{ width: `${88 - i * 9}%` }} />
+        ))}
       </div>
     )
   }
   if (isError || !data?.length) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <MessageSquareText className="size-5 text-faint" />
+        <AssistantMark size={40} mood={isError ? 'worried' : 'idle'} still />
         <p className="text-[13px] text-muted-foreground">
           {isError ? 'No se pudo cargar el historial.' : 'Todavía no tenés conversaciones guardadas.'}
         </p>
@@ -70,7 +73,7 @@ export function AssistantHistory({ currentId, onOpen, onRemove }: AssistantHisto
               key={item.id}
               className={cn(
                 'group flex items-center gap-1 rounded-lg pr-1 transition-colors hover:bg-secondary',
-                item.id === currentId && 'bg-ember-soft hover:bg-ember-soft',
+                item.id === currentId && 'bg-iris-soft hover:bg-iris-soft',
               )}
             >
               <button
@@ -81,7 +84,7 @@ export function AssistantHistory({ currentId, onOpen, onRemove }: AssistantHisto
                 <span
                   className={cn(
                     'min-w-0 flex-1 truncate text-[13px] text-ink-2',
-                    item.id === currentId && 'text-ember-2',
+                    item.id === currentId && 'font-medium text-iris-ink',
                   )}
                 >
                   {item.title}

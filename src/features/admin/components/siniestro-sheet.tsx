@@ -27,6 +27,7 @@ import {
 import { useAdminSiniestro, useUpdateAdminSiniestro } from '../hooks/use-admin-siniestro'
 import { ClaimCoverageBanner } from './claim-coverage-banner'
 import { useAssistantRecord } from '../context/assistant-context'
+import { AskAssistantButton } from './assistant-launcher'
 
 interface SiniestroSheetProps {
   siniestroId: number | null
@@ -125,6 +126,11 @@ function SiniestroContent({ siniestro }: { siniestro: AdminSiniestroDetail }) {
             Siniestro #{siniestro.id} · {tipoLabel(siniestro.type)}
           </DialogTitle>
           <div className="mt-1 text-[12.5px] text-muted-foreground">Recibido el {formatDate(siniestro.createdAt)}</div>
+          <AskAssistantButton
+            question="¿Qué falta para avanzar con este siniestro?"
+            label="Próximos pasos"
+            className="mt-2.5"
+          />
         </div>
         <EstadoBadge estado={estado} className="mt-0.5 shrink-0" />
       </header>

@@ -15,6 +15,7 @@ import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import type { DashboardData } from '@/types/api/dashboard'
 import { PlanLimitAlerts } from './plan-limit-alerts'
 import { useRole } from '../hooks/use-role'
+import { AskAssistantButton } from './assistant-launcher'
 
 // Recharts is heavy and never needed on first paint — load it lazily.
 const DashboardCharts = dynamic(() => import('./dashboard-charts').then(m => m.DashboardCharts), {
@@ -31,6 +32,16 @@ interface Kpi {
   hint: string
   icon: LucideIcon
   tone: KpiTone
+  /** What the assistant is asked from the card's corner. */
+  ask?: string
+}
+
+/** The questions behind each card: the card says how much, the assistant says why and what to do. */
+const KPI_QUESTIONS: Record<string, string> = {
+  asegurados: '¿Cómo viene la cartera: pólizas vigentes, negocio nuevo y renovación del mes?',
+  solicitudes: '¿Qué solicitudes nuevas hay y cuáles conviene atender primero?',
+  deuda: 'Explicame la deuda por cobrar: cuánto está vencido, de qué productores y con cuánto atraso.',
+  siniestros: '¿Qué siniestros abiertos necesitan atención y qué falta en cada uno?',
 }
 
 const TONES: Record<KpiTone, string> = {
@@ -126,8 +137,17 @@ function buildOwnerKpis(data: DashboardData): Kpi[] {
 
 function KpiCard({ kpi }: { kpi: Kpi }) {
   const Icon = kpi.icon
+  const question = kpi.ask ?? KPI_QUESTIONS[kpi.key]
   return (
-    <Card className="border-line-2 p-4 shadow-sm">
+    <Card className="group/kpi relative border-line-2 p-4 shadow-sm">
+      {question && (
+        <AskAssistantButton
+          question={question}
+          label={`Preguntarle al asistente por ${kpi.label.toLowerCase()}`}
+          variant="icon"
+          className="absolute top-3 right-3 opacity-60 transition-opacity group-hover/kpi:opacity-100 focus-visible:opacity-100"
+        />
+      )}
       <span
         className={`flex size-10 items-center justify-center rounded-xl border border-transparent ${TONES[kpi.tone]}`}
       >
@@ -207,6 +227,13 @@ export function DashboardHome() {
               ? `Cuánto se usa el panel en ${zoneId !== null ? 'toda la zona' : 'este principal'}: asegurados, solicitudes, el bot y siniestros. Solo cantidades.`
               : 'Un resumen en vivo de tu operación: asegurados, solicitudes, cobranzas y siniestros.'}
           </p>
+          {!isOwner && (
+            <AskAssistantButton
+              question="Resumime lo más importante de hoy: pendientes, deuda vencida, pólizas que vencen y siniestros abiertos."
+              label="Resumime el día"
+              className="mt-3"
+            />
+          )}
         </div>
         <SectionScopeFilter value={scope} onChange={setScope} allowZoneTotal={isOwner} />
       </motion.div>
