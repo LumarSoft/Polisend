@@ -3,6 +3,7 @@ import {
   apiRequest,
   apiRequestReportingPrincipal,
   reportActingPrincipalInvalid,
+  reportSupportUserInvalid,
 } from '@/lib/api-client'
 import { isOwnerRole } from '@/features/admin/lib/roles'
 import type {
@@ -34,6 +35,8 @@ export const adminAuthService = {
       token,
       forPrincipal,
     })
+    // The user an Owner was giving support to can no longer be helped: the panel leaves support (SupportProvider).
+    if (data.supportInvalid) reportSupportUserInvalid()
     if (actingPrincipalId !== null && isOwnerRole(data.role)) {
       if (data.actingInvalid) reportActingPrincipalInvalid(actingPrincipalId)
       else if (data.actingProducerId !== actingPrincipalId) {

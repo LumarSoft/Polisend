@@ -2,7 +2,7 @@
 
 import { Fragment } from 'react'
 
-import { Ellipsis, Lock, Send, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
+import { Ellipsis, LifeBuoy, Lock, Send, ShieldOff, SquarePen, Trash2, UserPlus } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,8 @@ interface NetworkUsersTableProps {
   onSendPasswordLink: (user: NetworkUser) => void
   onResetTwoFactor: (user: NetworkUser) => void
   onDelete: (user: NetworkUser) => void
+  /** The Owner's «Entrar a dar soporte»: inside this user's panel, with its functions. Absent for every other role. */
+  onSupport?: (user: NetworkUser) => void
 }
 
 function CodesCell({ user }: { user: NetworkUser }) {
@@ -176,6 +178,7 @@ export function NetworkUsersTable({
   onSendPasswordLink,
   onResetTwoFactor,
   onDelete,
+  onSupport,
 }: NetworkUsersTableProps) {
   // Across principals the rows come grouped by principal (users-view sorts them): a heading per principal instead of
   // a Principal and a Zona column on every row.
@@ -262,6 +265,15 @@ export function NetworkUsersTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-72">
+                            {onSupport && !isSelf && (
+                              <>
+                                <DropdownMenuItem onClick={() => onSupport(user)}>
+                                  <LifeBuoy />
+                                  Entrar a dar soporte
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             <DropdownMenuItem onClick={() => onEdit(user)}>
                               <SquarePen />
                               Editar

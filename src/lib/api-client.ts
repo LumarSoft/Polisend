@@ -111,6 +111,47 @@ export function actingPrincipalFor(token: string | null | undefined): number | n
   return token && actingPrincipal?.token === token ? actingPrincipal.principalId : null
 }
 
+// ─── Support ───────────────────────────────────────────────────────────────────
+
+/** An Owner inside a SuperAdmin's or Admin's panel to help: the API answers every request as that user. */
+export const SUPPORT_USER_HEADER = 'X-Support-User'
+/** The API cannot answer as that user (gone, moved out of the Owner's network): the panel leaves support. */
+export const SUPPORT_USER_INVALID = 'SUPPORT_USER_INVALID'
+/** Something of the user's own account (its password, its two-step verification), never touched from support. */
+export const SUPPORT_ROUTE_BLOCKED = 'SUPPORT_ROUTE_BLOCKED'
+
+interface SupportBinding {
+  /** The Owner's session: requests made with any other token never carry it. */
+  token: string
+  userId: number
+}
+
+let supportUser: SupportBinding | null = null
+const supportInvalidListeners = new Set<() => void>()
+
+/** The user every request of this session is answered as while the Owner gives support (SupportProvider); else null. */
+export function setSupportUser(binding: SupportBinding | null): void {
+  supportUser = binding
+}
+
+/** The user a request made with this token would be answered as, or null. */
+export function supportUserFor(token: string | null | undefined): number | null {
+  return token && supportUser?.token === token ? supportUser.userId : null
+}
+
+/** For GET /users/me, which answers a refused support user with `supportInvalid: true` instead of a 403. */
+export function reportSupportUserInvalid(): void {
+  supportInvalidListeners.forEach(listener => listener())
+}
+
+/** Hears the API refusing the user given support to (403 SUPPORT_USER_INVALID, or `supportInvalid` on /users/me). */
+export function onSupportUserInvalid(listener: () => void): () => void {
+  supportInvalidListeners.add(listener)
+  return () => {
+    supportInvalidListeners.delete(listener)
+  }
+}
+
 // ─── Requests ──────────────────────────────────────────────────────────────────
 
 interface PreparedRequest {
@@ -128,7 +169,9 @@ function prepareRequest(
   headers: Record<string, string> = {},
   forPrincipal?: number,
 ): PreparedRequest {
-  const acting = actingPrincipalFor(token)
+  // Giving support, the request is the user's: it never carries the Owner's acting principal.
+  const support = supportUserFor(token)
+  const acting = support !== null ? null : actingPrincipalFor(token)
   const actingPrincipalId = acting !== null && forPrincipal !== undefined ? forPrincipal : acting
   return {
     actingPrincipalId,
@@ -136,6 +179,7 @@ function prepareRequest(
       ...headers,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(actingPrincipalId !== null ? { [ACTING_PRINCIPAL_HEADER]: String(actingPrincipalId) } : {}),
+      ...(support !== null ? { [SUPPORT_USER_HEADER]: String(support) } : {}),
     },
   }
 }
@@ -186,6 +230,7 @@ async function ensureResponse(
     if (error.code === ACTING_PRINCIPAL_INVALID && actingPrincipalId !== null) {
       reportActingPrincipalInvalid(actingPrincipalId)
     }
+    if (error.code === SUPPORT_USER_INVALID) supportInvalidListeners.forEach(listener => listener())
     throw error
   }
   if (!checkPrincipal || actingPrincipalId === null) return

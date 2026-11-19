@@ -25,6 +25,7 @@ import { TourOverlay } from './tour-overlay'
 import { RequirePrincipal } from './require-principal'
 import { TriunfoStatusBanner } from './triunfo-status-banner'
 import { SectionFocus } from './section-focus'
+import { SupportBanner } from './support-banner'
 
 const TITLES: Record<string, string> = {
   '/admin': 'Inicio',
@@ -109,13 +110,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
-            {!fullScreen && (
-              <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b border-line bg-background/85 px-4 backdrop-blur-md">
-                <SidebarTrigger className="-ml-1 text-muted-foreground" />
-                <Separator orientation="vertical" className="mr-1 !h-4" />
-                <span className="font-display text-[14.5px] tracking-[-0.01em] text-ink">{title}</span>
-                <AssistantLauncher />
-              </header>
+            {/* An Owner giving support sees, over every screen, whose panel it is in and how to leave. */}
+            {fullScreen ? (
+              <SupportBanner />
+            ) : (
+              <div className="sticky top-0 z-10 shrink-0 overflow-hidden rounded-t-xl">
+                <SupportBanner />
+                <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-background/85 px-4 backdrop-blur-md">
+                  <SidebarTrigger className="-ml-1 text-muted-foreground" />
+                  <Separator orientation="vertical" className="mr-1 !h-4" />
+                  <span className="font-display text-[14.5px] tracking-[-0.01em] text-ink">{title}</span>
+                  <AssistantLauncher />
+                </header>
+              </div>
             )}
             {/* The Developer sees each organization's outage in Organizaciones instead. */}
             <TriunfoStatusBanner enabled={tenant} />

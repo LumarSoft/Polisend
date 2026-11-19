@@ -63,6 +63,9 @@ pnpm exec tsc --noEmit
   "Mi red" + el menú de SuperAdmin del principal activo, nunca un importe), SUPERADMIN y ADMIN. Ningún literal de rol
   fuera de `src/features/admin/lib/roles.ts` y `src/types/api/` (lo frena una regla de ESLint): usar `useRole()`
   (`isDeveloper`, `isOwner`, `isSuperAdmin`, `isAdmin`, `canManageOrg`, `seesMoney`) o `ROLES`.
+- Soporte (19/11): el Owner entra al panel de un SuperAdmin o Admin desde Usuarios («Entrar a dar soporte»):
+  `useSupport()` (`context/support-context.tsx`) manda `X-Support-User` en vez de `X-Acting-Principal` y el panel es
+  el de esa persona, con `SupportBanner` arriba. Detalle en `docs/panel/owner-zones.md`.
 - Principal activo del Owner: `useActingPrincipal()` (`context/acting-principal-context.tsx`). El cliente HTTP
   (`src/lib/api-client.ts`) manda `X-Acting-Principal` en cada request del Owner y descarta la respuesta de otro
   principal. Cambiar de principal remonta el contenido con un `QueryClient` nuevo (`src/app/admin/providers.tsx`);

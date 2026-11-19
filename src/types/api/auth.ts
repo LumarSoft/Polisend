@@ -47,10 +47,21 @@ export interface AdminUser {
   actingProducerId?: number
   /** /users/me: the Owner's X-Acting-Principal was refused and ignored; `organization` is its own principal. */
   actingInvalid?: boolean
+  /** /users/me: an Owner is inside this user's panel giving support (X-Support-User); null otherwise. */
+  supportedBy?: SupportActor | null
+  /** /users/me: the Owner's X-Support-User was refused; this is the Owner itself. */
+  supportInvalid?: boolean
   /** /users/me: two-step verification is on. */
   twoFactorEnabled?: boolean
   createdAt: string
   updatedAt: string
+}
+
+/** The Owner giving support inside another user's panel. */
+export interface SupportActor {
+  id: number
+  name: string | null
+  email: string
 }
 
 export interface LoginRequest {
