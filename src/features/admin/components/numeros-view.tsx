@@ -45,6 +45,7 @@ import { useTenantQueriesEnabled } from '../hooks/use-tenant-queries'
 import { NetworkFilter } from './network-filter'
 import { RequirePrincipal } from './require-principal'
 import { TokensHint } from './billing-ui'
+import { BotCodesPicker, botCodeIds, botCodesLabel } from './bot-codes-picker'
 
 const int = (n: number) => n.toLocaleString('es-AR')
 
@@ -166,18 +167,19 @@ function NumberForm({ existing, onDone }: { existing: AdminPhoneNumber | null; o
   const [number, setNumber] = useState(existing?.number ?? '')
   const [branchName, setBranchName] = useState(existing?.branchName ?? '')
   const [responsible, setResponsible] = useState<number | undefined>(existing?.responsibleCode?.id)
-  const [served, setServed] = useState<number[]>(existing?.servedCodes.map(c => c.id) ?? [])
+  // The codes the bot answers for. A number with no code at all answers for every one (as a new one does), so it
+  // comes all checked: giving it a responsible code then keeps it answering for all, not only for that code.
+  const [picked, setPicked] = useState<number[] | null>(existing ? botCodeIds(existing) : null)
+  const answered = picked ?? (codes ?? []).filter(c => c.isActive).map(c => c.id)
 
   const pending = create.isPending || update.isPending
-  const toggleServed = (id: number) =>
-    setServed(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     const body = {
       branchName: branchName.trim(),
       responsibleProducerCodeId: responsible,
-      servedCodeIds: served,
+      servedCodeIds: answered.filter(id => id !== responsible),
     }
     if (isEdit) {
       update.mutate(
@@ -234,6 +236,9 @@ function NumberForm({ existing, onDone }: { existing: AdminPhoneNumber | null; o
 
       <div className="flex flex-col gap-2">
         <Label>Código responsable (facturación)</Label>
+        <p className="text-[12px] text-muted-foreground">
+          El código al que se factura. El bot siempre responde por él.
+        </p>
         <select
           value={responsible ?? ''}
           onChange={e => setResponsible(e.target.value ? Number(e.target.value) : undefined)}
@@ -250,33 +255,23 @@ function NumberForm({ existing, onDone }: { existing: AdminPhoneNumber | null; o
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Códigos que también atiende</Label>
-        <div className="max-h-40 overflow-y-auto rounded-md border border-line-2 p-2">
-          {(codes ?? []).map(c => (
-            <label
-              key={c.id}
-              className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1.5 hover:bg-secondary"
-            >
-              <input
-                type="checkbox"
-                className="size-4 accent-ember-2"
-                checked={served.includes(c.id)}
-                onChange={() => toggleServed(c.id)}
-              />
-              <span className="text-[13px] text-ink">
-                <span className="font-medium">{c.code}</span>
-                {c.holderName ? <span className="text-muted-foreground"> · {c.holderName}</span> : null}
-              </span>
-            </label>
-          ))}
-        </div>
+        <Label>El bot responde por</Label>
+        <p className="text-[12px] text-muted-foreground">
+          Los asegurados de estos códigos que le escriban a este número. A uno de otro código el bot no lo encuentra en
+          la cartera. Lo que se ve en el panel no cambia.
+        </p>
+        {codes ? (
+          <BotCodesPicker codes={codes} value={answered} onChange={setPicked} responsibleId={responsible} />
+        ) : (
+          <Skeleton className="h-40 w-full" />
+        )}
       </div>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || !codes}>
           {pending ? (
             <>
               <Loader2 className="size-4 animate-spin" /> Guardando…
@@ -301,6 +296,8 @@ export function NumerosView() {
   const tenantEnabled = useTenantQueriesEnabled()
   const { data: numbers, isLoading, isError } = usePhoneNumbers(canView && tenantEnabled, period)
   const { remove } = usePhoneNumberMutations()
+  // Every code of the principal, to tell a number that answers for all of them.
+  const { data: orgCodes } = useProducerCodes(canManageOrg && tenantEnabled)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AdminPhoneNumber | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminPhoneNumber | null>(null)
@@ -374,6 +371,8 @@ export function NumerosView() {
                 <p className="mt-1 text-[13px] text-muted-foreground">
                   Abre el alta de Meta y deja el número listo para recibir mensajes. El número sigue funcionando en la
                   app de WhatsApp Business del celular.
+                  {canManageOrg &&
+                    ' El bot del número nuevo responde por todos los códigos: en Editar elegís por cuáles.'}
                 </p>
               </div>
             )}
@@ -495,11 +494,13 @@ export function NumerosView() {
                             IA en pausa
                           </Badge>
                         )}
-                        {n.servedCodes.length > 0 && (
-                          <Badge variant="secondary" className="text-ink-3">
-                            {n.servedCodes.length} código(s) servidos
-                          </Badge>
-                        )}
+                        <Badge
+                          variant="secondary"
+                          className="text-ink-3"
+                          title="Los códigos por los que responde el bot de este número. En el panel se ve todo igual."
+                        >
+                          Bot: {botCodesLabel(botCodeIds(n), orgCodes)}
+                        </Badge>
                         {n.assistant?.customized && (
                           <Badge
                             className="gap-1 bg-ember-soft text-ember-2"
@@ -600,14 +601,14 @@ export function NumerosView() {
       </RequirePrincipal>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="font-display text-[20px]">
               {editing ? 'Editar número' : 'Registrar número'}
             </DialogTitle>
             <DialogDescription>
               {editing
-                ? 'Actualizá el número visible, el código responsable o los códigos servidos.'
+                ? 'Actualizá el número visible, el código responsable o los códigos por los que responde el bot.'
                 : 'Registrá un número de Meta para que el bot lo atienda.'}
             </DialogDescription>
           </DialogHeader>
