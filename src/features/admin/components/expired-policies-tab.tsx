@@ -38,7 +38,6 @@ import { useProfile } from '../hooks/use-profile'
 import { formatDate, initials, policyName, RISK_LABELS, RiskIcon } from '../lib/asegurados-ui'
 import { CobranzasSortSelect, DEFAULT_COBRANZA_SORT } from './cobranzas-sort-select'
 import { InboxMessageText } from './inbox-message-text'
-import { NoticeTextButton } from './notice-text-dialog'
 
 const PAGE_SIZE = 25
 
@@ -623,7 +622,6 @@ export function ExpiredPoliciesTab({
               </Button>
             </>
           )}
-          {!showHidden && <NoticeTextButton kind="policy_expiry" />}
           <CobranzasSortSelect value={sort} onChange={changeSort} />
           <Button
             type="button"
