@@ -37,6 +37,7 @@ import { useExpiredPolicies, useExpiredPolicyActions } from '../hooks/use-expire
 import { useProfile } from '../hooks/use-profile'
 import { formatDate, initials, policyName, RISK_LABELS, RiskIcon } from '../lib/asegurados-ui'
 import { CobranzasSortSelect, DEFAULT_COBRANZA_SORT } from './cobranzas-sort-select'
+import { InboxMessageText } from './inbox-message-text'
 
 const PAGE_SIZE = 25
 
@@ -64,6 +65,8 @@ function itemOf(policy: ExpiredPolicy): string {
 
 /** The notice as the client will read it (the same text as the Meta template). */
 function noticeText(policy: ExpiredPolicy, orgName: string): string {
+  // The API sends it with the text the notices use today (the organization's own once Meta approved it).
+  if (policy.message) return policy.message
   const name = policy.client.firstName.split(/\s+/)[0] || policy.client.firstName
   return (
     `Hola ${name}, te escribimos de ${orgName}, tu productor de seguros. ` +
@@ -430,7 +433,7 @@ function SendDialog({
         </DialogHeader>
         {sample && (
           <div className="rounded-lg border border-line-2 bg-secondary/40 p-3 text-[13px] leading-relaxed text-ink-3">
-            {noticeText(sample, orgName)}
+            <InboxMessageText text={noticeText(sample, orgName)} />
           </div>
         )}
         <div className="flex justify-end gap-2">

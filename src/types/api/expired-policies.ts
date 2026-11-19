@@ -31,6 +31,8 @@ export interface ExpiredPolicy {
   hiddenReason: string | null
   /** The last WhatsApp notice tried for this policy, or null. */
   notice: ExpiryNotice | null
+  /** The notice as the client would read it today (the organization's own text once Meta approved it). */
+  message?: string
 }
 
 export type ExpiryNoticeStatus = 'SENDING' | 'SENT' | 'FAILED' | 'MARKED'
