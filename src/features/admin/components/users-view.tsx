@@ -20,7 +20,14 @@ import { useProfile } from '../hooks/use-profile'
 import { useRole } from '../hooks/use-role'
 import { NO_ZONE, zoneKeyOf } from '../lib/network'
 import { USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
-import { isManagedUser, isReadOnlyUser, matchesSearch } from '../lib/network-users'
+import {
+  isManagedUser,
+  isReadOnlyUser,
+  matchesSearch,
+  shownRole,
+  userHeading,
+  type UserHeading,
+} from '../lib/network-users'
 import { ROLES, roleLabel } from '../lib/roles'
 import { AccountAccessDialog } from './account-access-dialog'
 import { BranchOnboardingDialog } from './branch-onboarding-dialog'
@@ -48,15 +55,22 @@ const TWO_FACTOR_OPTIONS: Array<{ value: TwoFactorFilter; label: string }> = [
   { value: 'sin', label: 'Sin dos pasos' },
 ]
 
-/** By zone, principal, role (SuperAdmin first) and name: the table groups each principal's accounts together. */
-function sortByPrincipal(users: NetworkUser[] | undefined): NetworkUser[] | undefined {
-  const order = (user: NetworkUser) => (user.role === ROLES.superAdmin ? 0 : 1)
+/**
+ * By zone, heading (the principal, or the groups of a zone's productores), role (SuperAdmin first) and name: the table
+ * groups each principal's accounts together.
+ */
+function sortByPrincipal(
+  users: NetworkUser[] | undefined,
+  headingOf: (user: NetworkUser) => UserHeading,
+): NetworkUser[] | undefined {
+  const order = (user: NetworkUser) => (shownRole(user) === ROLES.superAdmin ? 0 : 1)
   return users
     ?.slice()
     .sort(
       (a, b) =>
         (a.zone?.name ?? '\uffff').localeCompare(b.zone?.name ?? '\uffff', 'es') ||
-        a.principal.name.localeCompare(b.principal.name, 'es') ||
+        headingOf(a).name.localeCompare(headingOf(b).name, 'es') ||
+        headingOf(a).key.localeCompare(headingOf(b).key) ||
         order(a) - order(b) ||
         (a.name ?? a.email).localeCompare(b.name ?? b.email, 'es'),
     )
@@ -146,7 +160,7 @@ function narrowUsers(
   }
   const codeId = filter.producerCodeId
   if (codeId !== null) {
-    rows = rows.filter(user => user.role === ROLES.superAdmin || user.codes.some(code => code.id === codeId))
+    rows = rows.filter(user => shownRole(user) === ROLES.superAdmin || user.codes.some(code => code.id === codeId))
   }
   return rows
 }
@@ -193,15 +207,22 @@ function UsersScreen() {
   const query: NetworkUsersQuery = {
     ...(typeof filter.zoneKey === 'number' && filter.principalId === null ? { zoneId: filter.zoneKey } : {}),
     ...(filter.principalId !== null ? { producerId: filter.principalId } : {}),
-    ...(role ? { role } : {}),
     ...(search ? { q: search } : {}),
     ...(withReadOnly ? { includeReadOnly: true } : {}),
   }
   const usersQuery = useNetworkUsers(query)
+  const headingOf = (user: NetworkUser) =>
+    userHeading(
+      user,
+      principals.find(p => p.id === user.principal.id),
+    )
   const users = sortByPrincipal(
     narrowUsers(usersQuery.data?.filter(isManagedUser), filter, principals)?.filter(
-      user => twoFactor === ALL || user.twoFactorEnabled === (twoFactor === 'con'),
+      user =>
+        // By the role shown: a zone's SuperAdmin of groups is an Admin for the API, so the role is filtered here.
+        (!role || shownRole(user) === role) && (twoFactor === ALL || user.twoFactorEnabled === (twoFactor === 'con')),
     ),
+    headingOf,
   )
   // The SuperAdmin's own principal: its name, its codes (filter and "Productores").
   const tree = useNetworkTree(isSuperAdmin)
@@ -376,6 +397,7 @@ function UsersScreen() {
             selfId={profile?.id ?? null}
             readOnlyUsers={readOnlyUsers}
             showPrincipal={!isSuperAdmin}
+            headingOf={headingOf}
             emptyText={emptyText}
             onEdit={user => {
               setEditing(user)

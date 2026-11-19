@@ -14,6 +14,7 @@ import {
   choiceValue,
   formZoneKey,
   formZonesOf,
+  groupChoices,
   groupNameOf,
   MIN_PASSWORD_LENGTH,
   nameList,
@@ -113,15 +114,18 @@ export function useNetworkUserForm({
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [password, setPassword] = useState('')
-  const [role, setRoleState] = useState<NetworkUserRole>(user?.role ?? defaultRole)
+  // The SuperAdmin of a zone's groups is an Admin with groups for the API: the form shows it as SuperAdmin.
+  const [role, setRoleState] = useState<NetworkUserRole>(
+    user ? (user.groups?.length ? ROLES.superAdmin : user.role) : defaultRole,
+  )
   const [principalMode, setPrincipalMode] = useState<PrincipalMode>('existing')
   const [principalId, setPrincipalIdState] = useState<number | null>(user?.principal.id ?? defaultPrincipalId)
   /** The zone chosen in "Zona"; undefined = none yet (then the principal's, or the only one). */
   const [zoneChoice, setZoneChoice] = useState<ZoneKey | null | undefined>(defaultZoneKey ?? undefined)
   /** The group chosen as principal in a zone's productores; undefined = none (then the one of the checked codes). */
   const [groupChoice, setGroupChoice] = useState<number | null | undefined>(undefined)
-  /** "Sumar productores de otros principales de la zona": every code of the zone in the list. */
-  const [otherGroups, setOtherGroups] = useState(false)
+  /** The groups of a zone's productores a SuperAdmin of groups administers. */
+  const [groupIds, setGroupIds] = useState<number[]>(user?.groups?.map(group => group.id) ?? [])
   const [draft, setDraft] = useState<NewPrincipalDraft>(EMPTY_DRAFT)
   const [codeIds, setCodeIds] = useState<number[]>(user?.codes.map(code => code.id) ?? [])
   const [createdCodes, setCreatedCodes] = useState<Array<CodeOption & { principalId: number }>>([])
@@ -142,26 +146,13 @@ export function useNetworkUserForm({
         : zones.length === 1
           ? zones[0].key
           : null
-  /**
-   * The principals of the chosen zone. A zone's productores are never given to a SuperAdmin (it would see the whole
-   * zone): only an Admin gets them, one group as a principal and the codes chosen.
-   */
-  const selectablePrincipals =
-    zoneKey === null
-      ? []
-      : options.principals.filter(
-          p =>
-            formZoneKey(p) === zoneKey &&
-            (role === ROLES.admin || !p.groupsAsPrincipals || p.id === user?.principal.id),
-        )
+  /** The principals of the chosen zone (one that holds the zone's productores is offered as its groups). */
+  const selectablePrincipals = zoneKey === null ? [] : options.principals.filter(p => formZoneKey(p) === zoneKey)
   const principal = isSuperAdmin
     ? (options.principals[0] ?? null)
     : isEdit && !isDeveloper
       ? (options.principals.find(p => p.id === user.principal.id) ?? null)
       : (selectablePrincipals.find(p => p.id === principalId) ?? null)
-  /** The zone has productores that only an Admin can get (to say why a SuperAdmin does not see them). */
-  const zoneHasGroups =
-    zoneKey !== null && options.principals.some(p => formZoneKey(p) === zoneKey && p.groupsAsPrincipals)
   /** The Developer moved an existing user to another principal. */
   const movedFrom = isEdit && principal !== null && principal.id !== user.principal.id ? user.principal : null
 
@@ -172,50 +163,76 @@ export function useNetworkUserForm({
   // ── a zone's productores: each group is a principal ────────────
 
   const zoneGroups = principal?.groupsAsPrincipals === true
+  /**
+   * Nobody sees a whole zone (Lucas, 19/11): there the SuperAdmin is of one or more groups (an Admin with those groups
+   * for the API), and an Admin sees the codes of a single group.
+   */
+  const groupSuperAdmin = zoneGroups && role === ROLES.superAdmin
   const allCodes: CodeOption[] = principalCodes(principal, createdCodes)
     .filter(code => code.isActive || codeIds.includes(code.id))
     .map(code => (zoneGroups && principal ? { ...code, groupName: groupNameOf(principal, code.groupId) } : code))
   const checkedGroups = [...new Set(allCodes.filter(c => codeIds.includes(c.id)).map(c => c.groupId ?? null))]
-  /** The group shown as the principal: the one chosen, else the only one of the checked codes. */
-  const groupId = groupChoice !== undefined ? groupChoice : checkedGroups.length === 1 ? checkedGroups[0] : null
-  /** The groups whose codes the list shows by default: the chosen one, or (editing) those of the account's codes. */
-  const focusGroups = new Set(groupChoice === undefined && checkedGroups.length > 0 ? checkedGroups : [groupId])
-  const codeOptions =
-    !zoneGroups || otherGroups
-      ? allCodes
-      : allCodes.filter(code => focusGroups.has(code.groupId ?? null) || codeIds.includes(code.id))
+  /** The group shown as the principal: the one chosen, else the first administered one, else that of the codes. */
+  const groupId = groupSuperAdmin
+    ? groupChoice != null && groupIds.includes(groupChoice)
+      ? groupChoice
+      : (groupIds[0] ?? null)
+    : groupChoice !== undefined
+      ? groupChoice
+      : checkedGroups.length === 1
+        ? checkedGroups[0]
+        : null
+  /** An Admin's list: the codes of its group (and any it already had elsewhere, to uncheck them). */
+  const codeOptions = zoneGroups
+    ? allCodes.filter(code => (code.groupId ?? null) === groupId || codeIds.includes(code.id))
+    : allCodes
   const selectedCodes = allCodes.filter(code => codeIds.includes(code.id))
+  /** The groups a SuperAdmin of groups may administer, with their codes. */
+  const groupOptions = principal && zoneGroups ? groupChoices(principal).filter(group => group.groupId !== null) : []
+  const groupCodes = (principal?.codes ?? []).filter(
+    code => code.isActive && code.groupId != null && groupIds.includes(code.groupId),
+  )
   /** The value of the "Depende de" select: the principal, or one of the zone's groups. */
-  const principalChoice = principal ? choiceValue(principal.id, zoneGroups ? groupId : null) : null
+  const principalChoice =
+    principal && !(groupSuperAdmin && groupId === null) ? choiceValue(principal.id, zoneGroups ? groupId : null) : null
   /** What the form calls the principal: a zone's productores go by their groups' names. */
   const principalLabel =
     principal && zoneGroups
-      ? selectedCodes.length > 0
-        ? nameList([...new Set(selectedCodes.map(code => code.groupName ?? ''))])
-        : groupNameOf(principal, groupId)
+      ? groupSuperAdmin
+        ? nameList(
+            groupOptions.filter(group => group.groupId !== null && groupIds.includes(group.groupId)).map(g => g.name),
+          )
+        : selectedCodes.length > 0
+          ? nameList([...new Set(selectedCodes.map(code => code.groupName ?? ''))])
+          : groupNameOf(principal, groupId)
       : (principal?.name ?? '')
 
-  /** An account of a zone's productores that stays there (edited by the Owner) never becomes its SuperAdmin. */
-  const blockedRole =
-    zoneGroups && principalFixed
-      ? {
-          role: ROLES.superAdmin,
-          note: 'Los principales de la zona de Triunfo no tienen SuperAdmin: sigue como Admin.',
-        }
-      : undefined
+  const activeCodesOf = (target: FormPrincipal, group: number) =>
+    target.codes.filter(code => code.isActive && code.groupId === group).map(code => code.id)
 
   const clearPrincipal = () => {
     setPrincipalIdState(null)
     setGroupChoice(undefined)
-    setOtherGroups(false)
+    setGroupIds([])
     setCodeIds([])
   }
 
   const setRole = (next: NetworkUserRole) => {
     setRoleState(next)
     if (next === ROLES.admin) setPrincipalMode('existing')
-    // Nobody is SuperAdmin of a zone's productores.
-    else if (zoneGroups && !principalFixed) clearPrincipal()
+    if (!zoneGroups || !principal) return
+    if (next === ROLES.superAdmin) {
+      // SuperAdmin of the group chosen (or of the codes' groups); the codes without a group have none.
+      const groups = groupId !== null ? [groupId] : checkedGroups.filter((g): g is number => g !== null)
+      setCodeIds([])
+      if (groups.length === 0 && !principalFixed) clearPrincipal()
+      else setGroupIds(groups)
+    } else {
+      // An Admin of one group: its productores come checked, to uncheck any.
+      setGroupIds([])
+      setGroupChoice(groupId)
+      setCodeIds(groupId === null ? [] : activeCodesOf(principal, groupId))
+    }
   }
 
   const setZone = (key: ZoneKey) => {
@@ -230,19 +247,25 @@ export function useNetworkUserForm({
     const target = options.principals.find(p => p.id === id)
     setPrincipalIdState(id)
     setGroupChoice(chosenGroup)
-    setOtherGroups(false)
     if (target?.groupsAsPrincipals) {
-      // Its productores come checked, to uncheck any or add others of the zone; none for the codes without a group.
-      setCodeIds(
-        chosenGroup === null
-          ? []
-          : target.codes.filter(code => code.isActive && code.groupId === chosenGroup).map(code => code.id),
-      )
-    } else if (id !== principalId) {
+      if (role === ROLES.superAdmin) {
+        // SuperAdmin of this group; more of the zone's can be checked below.
+        setCodeIds([])
+        setGroupIds(chosenGroup === null ? [] : [chosenGroup])
+      } else {
+        // Its productores come checked, to uncheck any; none for the codes without a group.
+        setGroupIds([])
+        setCodeIds(chosenGroup === null ? [] : activeCodesOf(target, chosenGroup))
+      }
+    } else {
+      setGroupIds([])
       // Codes belong to one principal.
-      setCodeIds([])
+      if (id !== principalId) setCodeIds([])
     }
   }
+
+  const toggleGroup = (id: number) =>
+    setGroupIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
 
   const changePrincipalMode = (mode: PrincipalMode) => {
     setPrincipalMode(mode)
@@ -278,7 +301,9 @@ export function useNetworkUserForm({
       ? selectedCodes.map(code => code.code)
       : usingNewPrincipal
         ? newPrincipalCodes
-        : (principal?.codes ?? []).filter(code => code.isActive).map(code => code.code)
+        : groupSuperAdmin
+          ? groupCodes.map(code => code.code)
+          : (principal?.codes ?? []).filter(code => code.isActive).map(code => code.code)
   const principalName = usingNewPrincipal ? draft.name.trim() : principalLabel
   const who = name.trim() || email.trim() || 'El usuario'
   const summary =
@@ -317,10 +342,20 @@ export function useNetworkUserForm({
     else problems.push(role === ROLES.admin ? 'Elegí de qué principal depende.' : 'Elegí el principal.')
   }
   if (role === ROLES.admin && codeIds.length === 0) problems.push('Marcá al menos un código que vea.')
+  if (groupSuperAdmin && groupIds.length === 0) problems.push('Marcá al menos un principal que administre.')
+  if (zoneGroups && role === ROLES.admin && checkedGroups.length > 1) {
+    problems.push('Un Admin ve productores de un solo principal: para varios, hacelo SuperAdmin de esos principales.')
+  }
 
   // ── saving ──────────────────────────────────────────────
 
-  const codesBody = role === ROLES.admin ? { producerCodeIds: codeIds } : {}
+  /** What the API is told: the SuperAdmin of a zone's groups is an Admin with those groups. */
+  const apiRole = groupSuperAdmin ? ROLES.admin : role
+  const codesBody = groupSuperAdmin
+    ? { codeGroupIds: groupIds }
+    : role === ROLES.admin
+      ? { producerCodeIds: codeIds }
+      : {}
 
   const newPrincipalBody = (): NewPrincipalInput => ({
     zoneId: draft.zoneId,
@@ -339,7 +374,7 @@ export function useNetworkUserForm({
   const create = () => {
     const body: CreateNetworkUserRequest = {
       email: email.trim(),
-      role,
+      role: apiRole,
       ...(name.trim() ? { name: name.trim() } : {}),
       // The platform never chooses a password: its accounts are always invited.
       ...(!isDeveloper && password ? { password } : {}),
@@ -374,7 +409,7 @@ export function useNetworkUserForm({
     // Never one's own role. The platform never re-addresses an account nor sets a password (it sends a link instead),
     // and is the only one that moves an account to another principal.
     const access = {
-      ...(isSelf ? {} : { role }),
+      ...(isSelf ? {} : { role: apiRole }),
       ...(movedFrom && principal ? { producerId: principal.id } : {}),
       ...codesBody,
     }
@@ -424,7 +459,7 @@ export function useNetworkUserForm({
     const chosen = isDeveloper ? '' : password
     const base = { ...(chosen ? { password: chosen } : {}), ...(name.trim() ? { name: name.trim() } : {}) }
     const anchor = target.codes.find(code => code.isMaster) ?? target.codes[0]
-    const viaAdmin = role === ROLES.superAdmin && !isSuperAdmin
+    const viaAdmin = role === ROLES.superAdmin && !isSuperAdmin && !groupSuperAdmin
 
     setRestoring(true)
     setErrorMessage(null)
@@ -435,7 +470,7 @@ export function useNetworkUserForm({
           id,
           data: viaAdmin
             ? { ...base, role: ROLES.admin, producerCodeIds: anchor ? [anchor.id] : [] }
-            : { ...base, role, ...codesBody },
+            : { ...base, role: apiRole, ...codesBody },
         })
       } catch (error) {
         setRestoreUserId(null)
@@ -482,18 +517,18 @@ export function useNetworkUserForm({
     formZones: zones,
     zoneKey,
     setZone,
-    zoneHasGroups,
     allPrincipals: options.principals,
     selectablePrincipals,
     principalFixed,
     principal,
     principalChoice,
     principalLabel,
-    blockedRole,
     choosePrincipal,
     zoneGroups,
-    otherGroups,
-    setOtherGroups,
+    groupSuperAdmin,
+    groupOptions,
+    groupIds,
+    toggleGroup,
     canCreatePrincipal,
     usingNewPrincipal,
     fields: { name, email, password, role, principalMode, principalId, draft },

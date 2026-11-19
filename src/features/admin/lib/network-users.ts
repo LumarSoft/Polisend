@@ -192,6 +192,47 @@ export function accessSummary({ who, role, principalName, codes, newPrincipal = 
   return `${person} va a administrar ${principal} y ver ${seen}`
 }
 
+/**
+ * The role the panel shows: the SuperAdmin of a zone's groups is an Admin with groups for the API (so nothing of the
+ * whole zone reaches it), and a SuperAdmin here.
+ */
+export function shownRole(user: NetworkUser): NetworkUserRole {
+  return user.groups?.length ? ROLES.superAdmin : user.role
+}
+
+/** The heading a row of Usuarios goes under: its principal, or for a zone's productores the group(s) it works. */
+export interface UserHeading {
+  key: string
+  name: string
+}
+
+/**
+ * Where a user is listed. A principal that holds a zone's productores is never a heading of its own: its SuperAdmin of
+ * groups goes under those groups, its Admin under the group of its codes («Sin clasificar» for the codes without one).
+ */
+export function userHeading(
+  user: NetworkUser,
+  principal:
+    | {
+        groupsAsPrincipals?: boolean
+        groups?: Array<{ id: number; name: string }>
+        codes: Array<{ id: number; groupId?: number | null }>
+      }
+    | undefined,
+): UserHeading {
+  const own = { key: `p${user.principal.id}`, name: user.principal.name }
+  if (!principal?.groupsAsPrincipals) return own
+  const nameOf = (groupId: number | null | undefined) =>
+    principal.groups?.find(group => group.id === groupId)?.name ?? UNGROUPED_LABEL
+  if (user.groups?.length) {
+    return { key: `${own.key}:${user.groups.map(g => g.id).join(',')}`, name: nameList(user.groups.map(g => g.name)) }
+  }
+  // An old SuperAdmin of the whole principal (from before 19/11) has neither: it stays under the principal.
+  if (!user.codes.length) return own
+  const groupIds = [...new Set(user.codes.map(code => principal.codes.find(c => c.id === code.id)?.groupId ?? null))]
+  return { key: `${own.key}:${groupIds.join(',')}`, name: nameList(groupIds.map(nameOf)) }
+}
+
 /** An account the caller manages (every row but the Owner's read-only ones). */
 export function isManagedUser(row: NetworkUserRow): row is NetworkUser {
   return row.readOnly !== true

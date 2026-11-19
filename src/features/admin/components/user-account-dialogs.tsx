@@ -16,6 +16,7 @@ import { useNetworkUserActions } from '../hooks/use-hierarchy'
 import { useRole } from '../hooks/use-role'
 import { apiErrorMessage } from '../lib/api-error-message'
 import { roleLabel } from '../lib/roles'
+import { shownRole } from '../lib/network-users'
 
 interface TargetDialogProps {
   user: NetworkUser | null
@@ -45,8 +46,8 @@ export function DeleteUserDialog({ user, onClose }: TargetDialogProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
           <AlertDialogDescription>
-            {who(user)} ({user ? `${roleLabel(user.role)} de ${user.principal.name}` : ''}) deja de entrar al panel en
-            el acto. Si después lo volvés a dar de alta con el mismo correo, te vamos a ofrecer restaurarlo.
+            {who(user)} ({user ? `${roleLabel(shownRole(user))} de ${user.principal.name}` : ''}) deja de entrar al
+            panel en el acto. Si después lo volvés a dar de alta con el mismo correo, te vamos a ofrecer restaurarlo.
             {isDeveloper && ' Los SuperAdmin y los Owners de su principal reciben un aviso.'}
           </AlertDialogDescription>
         </AlertDialogHeader>

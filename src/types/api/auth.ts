@@ -32,6 +32,11 @@ export interface AdminUser {
   // Codes this admin can access (empty for SUPERADMIN = all). Present on /users/me and /users.
   producerCodes?: AdminUserProducerCode[]
   /**
+   * /users/me: the groups of a zone's productores this ADMIN is SuperAdmin of (it sees every code of them; the panel
+   * calls it SuperAdmin). [] or absent for anyone else.
+   */
+  managedGroups?: Array<{ id: number; name: string }>
+  /**
    * Present on /users/me: for an OWNER, the acting principal (the X-Acting-Principal it sent); for every other role,
    * its own organization. Absent on older APIs.
    */
