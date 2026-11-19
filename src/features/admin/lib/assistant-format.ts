@@ -24,7 +24,9 @@ export interface ReplyInline {
  * numbered list (one line per item), a heading, or a table.
  */
 export type ReplyBlock =
-  | { kind: 'paragraph' | 'list' | 'ordered'; lines: ReplyInline[][] }
+  | { kind: 'paragraph' | 'list'; lines: ReplyInline[][] }
+  /** `start`: the number its first item was written with, so a list cut by a blank line or a sub-list goes on counting. */
+  | { kind: 'ordered'; lines: ReplyInline[][]; start: number }
   | { kind: 'heading'; level: 1 | 2 | 3; lines: ReplyInline[][] }
   | { kind: 'table'; header: ReplyInline[][]; rows: ReplyInline[][][]; align: ReplyAlign[] }
 
@@ -93,7 +95,8 @@ export function parseReply(reply: string): ReplyBlock[] {
     }
     const kind = LIST_ITEM.test(line) ? 'list' : ORDERED_ITEM.test(line) ? 'ordered' : 'paragraph'
     if (!current || current.kind !== kind) {
-      current = { kind, lines: [] }
+      current =
+        kind === 'ordered' ? { kind, lines: [], start: Number(/\d+/.exec(line)?.[0] ?? 1) } : { kind, lines: [] }
       blocks.push(current)
     }
     const text =

@@ -201,6 +201,7 @@ export function AssistantReply({
             return (
               <List
                 key={i}
+                {...(block.kind === 'ordered' ? { start: block.start } : {})}
                 className={cn(
                   'flex flex-col gap-1 pl-4.5',
                   block.kind === 'list'
@@ -454,9 +455,10 @@ function AnswerTools({
     <div
       className={cn(
         'flex items-center gap-0.5 transition-opacity duration-150',
+        // Hidden tools take no taps either: on a touch screen an invisible 👎 was still there to hit.
         visible || asking
           ? 'opacity-100'
-          : 'opacity-0 group-focus-within/turn:opacity-100 group-hover/turn:opacity-100',
+          : 'pointer-events-none opacity-0 group-focus-within/turn:pointer-events-auto group-focus-within/turn:opacity-100 group-hover/turn:pointer-events-auto group-hover/turn:opacity-100',
       )}
     >
       {content && (
@@ -519,6 +521,7 @@ function AnswerTools({
                 value={comment}
                 onChange={event => setComment(event.target.value.slice(0, 400))}
                 rows={2}
+                aria-label="Qué esperabas de esta respuesta (opcional)"
                 placeholder="Contanos qué esperabas (opcional)"
                 className="mt-2 w-full resize-none rounded-lg border border-line-2 bg-background px-2.5 py-1.5 text-[12.5px] text-ink placeholder:text-faint focus-visible:border-iris focus-visible:outline-none"
               />

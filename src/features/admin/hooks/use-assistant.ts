@@ -288,9 +288,12 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
   const rate = useMutation({
     mutationFn: ({ messageId, rating, comment }: { messageId: number; rating: AssistantFeedback; comment?: string }) =>
       assistantService.rate(token as string, messageId, { rating, ...(comment ? { comment } : {}) }),
-    onMutate: ({ messageId, rating }) => {
+    onMutate: async ({ messageId, rating }) => {
       if (conversationId === null) return undefined
       const key = QUERY_KEYS.admin.assistantConversation(conversationId)
+      // A refetch already on its way (the one after an answer, or on window focus) would land
+      // after this and show the answer as unrated again.
+      await queryClient.cancelQueries({ queryKey: key })
       const before = queryClient.getQueryData<AssistantConversation>(key)
       queryClient.setQueryData<AssistantConversation>(
         key,
