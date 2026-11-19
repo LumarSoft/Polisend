@@ -154,6 +154,20 @@ export function MyAccountSection() {
   const { data: profile, isLoading, isError } = useProfile()
   if (isLoading) return <AccountSkeleton />
   if (isError || !profile) return <p className="text-[14px] text-destructive">No se pudo cargar tu perfil.</p>
+  // Giving support: the account is the user's own, and only that person changes it (the API refuses it too).
+  if (profile.supportedBy) {
+    return (
+      <Card className="border-line-2 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display text-[17px]">La cuenta es de {profile.name || profile.email}</CardTitle>
+          <CardDescription>
+            Estás dando soporte: su nombre, su correo, su contraseña y la verificación en dos pasos solo los cambia esa
+            persona. Para un enlace de contraseña o reiniciar sus dos pasos, salí del soporte y usá Usuarios.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
   return (
     <div className="flex flex-col gap-5">
       <AccountForm key={profile.id} initialEmail={profile.email} initialName={profile.name ?? ''} />

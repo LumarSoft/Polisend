@@ -7,6 +7,7 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import type { AdminUser } from '@/types/api/auth'
 import { ActingPrincipalProvider, usePanelScope } from '@/features/admin/context/acting-principal-context'
 import { AuthProvider } from '@/features/admin/context/auth-context'
+import { SupportProvider } from '@/features/admin/context/support-context'
 import { PanelToaster } from '@/features/admin/components/panel-toaster'
 import { PanelThemeProvider } from '@/features/admin/context/panel-theme-context'
 
@@ -31,9 +32,12 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={sessionClient}>
       <PanelThemeProvider>
         <AuthProvider>
-          <ActingPrincipalProvider>
-            <PrincipalContent>{children}</PrincipalContent>
-          </ActingPrincipalProvider>
+          {/* An Owner inside another user's panel: above the acting principal, which does not apply there. */}
+          <SupportProvider>
+            <ActingPrincipalProvider>
+              <PrincipalContent>{children}</PrincipalContent>
+            </ActingPrincipalProvider>
+          </SupportProvider>
           {/* Outside the principal's content: a toast survives the remount it announces. */}
           <PanelToaster />
         </AuthProvider>

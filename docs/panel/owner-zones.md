@@ -261,3 +261,22 @@ Inicio. Reclassifying is moving codes between groups in Mi red: no data moves.
   stays under the principal and is fixed by editing it (choose its groups).
 - The summary and the fixed principal of an edit name the groups.
 - Codes of different real principals still cannot share one account (a user belongs to one principal).
+
+## Support: the Owner inside a SuperAdmin's or Admin's panel (19/11/2026)
+
+Lucas: the Owner must be able to help any SuperAdmin or Admin of its network "con las mismas funcionalidades que tenga
+este", clearly apart from its own Owner view so configuration is never mixed up. The Owner's own panel stays as it was
+(network, Inicio of the zone, cartera in counts); everything else is done inside the person.
+
+- **Entering.** Usuarios (Owner) › a row's menu › «Entrar a dar soporte». `SupportProvider`
+  (`context/support-context.tsx`, above the acting principal) keeps the user in this tab's sessionStorage
+  (`lib/support-storage.ts`, tied to the session's token) and the API client sends `X-Support-User` on every request
+  instead of `X-Acting-Principal`. `/users/me` then answers the user's profile with `supportedBy`, so the role, menu,
+  Inicio with amounts, organization and its Configuración are the user's own. Another tab stays in the Owner's panel.
+- **Seeing it.** `SupportBanner` sits over every screen: «Modo soporte · Estás en el panel de … (rol de principal). Lo
+  que hagas queda registrado a tu nombre» and «Salir del soporte», which goes back to the Owner's Usuarios.
+- **What stays the person's.** Mi cuenta shows that only that person changes its account (the API answers
+  `SUPPORT_ROUTE_BLOCKED` to `PATCH /users/me` and `/auth/2fa`). Its "seen" marks don't move, and the assistant's
+  history made in support is the Owner's. Every change is in the activity log against the person and the Owner.
+- **Refused.** A user that can no longer be helped (`SUPPORT_USER_INVALID`, or `supportInvalid` on `/users/me`) takes
+  the panel out of support with «Ya no podés dar soporte a esa cuenta». Logging out or another login forgets it.

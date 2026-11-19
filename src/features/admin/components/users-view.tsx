@@ -18,6 +18,7 @@ import { useHierarchyPrincipals, useNetworkTree, useNetworkUsers } from '../hook
 import { setUrlParams, useLinkedId, useUrlTab } from '../hooks/use-panel-link'
 import { useProfile } from '../hooks/use-profile'
 import { useRole } from '../hooks/use-role'
+import { useSupport } from '../context/support-context'
 import { NO_ZONE, zoneKeyOf } from '../lib/network'
 import { USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
 import {
@@ -167,6 +168,7 @@ function narrowUsers(
 
 function UsersScreen() {
   const { isDeveloper, isOwner, isSuperAdmin } = useRole()
+  const support = useSupport()
   const { data: profile } = useProfile()
   const guided = useGuidedOnboarding()
   const [tab, setTab] = useUrlTab(TABS, 'usuarios')
@@ -406,6 +408,7 @@ function UsersScreen() {
             onSendPasswordLink={user => setAccess({ action: 'password-setup', user })}
             onResetTwoFactor={user => setAccess({ action: 'reset-two-factor', user })}
             onDelete={setDeleteTarget}
+            onSupport={isOwner ? support.enter : undefined}
           />
         </>
       )}
