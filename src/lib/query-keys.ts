@@ -3,7 +3,7 @@ import type { BalanceQuery } from '@/types/api/balance'
 import type { AdminClientsQuery } from '@/types/api/clients'
 import type { CobranzasQuery } from '@/types/api/cobranzas'
 import type { ExpiredPoliciesQuery } from '@/types/api/expired-policies'
-import type { NoticeTextKind } from '@/types/api/notice-texts'
+import type { NoticeTextKind, NoticeTextScope } from '@/types/api/notice-texts'
 import type { NetworkUsersQuery } from '@/types/api/hierarchy'
 import type {
   ImprovementsQuery,
@@ -78,7 +78,8 @@ export const QUERY_KEYS = {
     campaignCandidates: (kind: CampaignKind, params: CampaignCandidatesQuery) =>
       ['admin', 'campaigns', 'candidates', kind, params] as const,
     campaignResults: (params: CampaignResultsQuery) => ['admin', 'campaigns', 'results', params] as const,
-    noticeText: (kind: NoticeTextKind) => ['admin', 'notice-texts', kind] as const,
+    noticeText: (kind: NoticeTextKind, scope: NoticeTextScope) =>
+      ['admin', 'notice-texts', kind, scope === undefined ? 'default' : (scope ?? 'general')] as const,
     rejectionsAll: ['admin', 'rejections'] as const,
     rejectionImports: ['admin', 'rejections', 'list'] as const,
     rejectionImport: (id: number) => ['admin', 'rejections', 'detail', id] as const,
