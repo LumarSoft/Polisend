@@ -52,10 +52,24 @@ function axisValue(value: number, format: AssistantVisualColumn['format']) {
   return short
 }
 
-/** The series a chart draws first: an amount if there is one, else the first count. */
+/** The series a chart draws: the first one the API names, which is the one the result is ranked by. */
 function mainSeries(visual: AssistantVisual): AssistantVisualColumn | undefined {
-  const series = visual.columns.filter(c => visual.series.includes(c.key))
-  return series.find(c => c.format === 'money') ?? series[0]
+  const series = visual.series.flatMap(key => visual.columns.filter(c => c.key === key))
+  return series[0]
+}
+
+/** What each bar or line of a chart is: the tooltip shows every column, the drawing only these. */
+function ChartLegend({ items }: { items: Array<{ label: string; color: string }> }) {
+  return (
+    <ul className="flex flex-wrap gap-x-3 gap-y-0.5 px-2 pt-1.5 text-[11px] text-faint">
+      {items.map(item => (
+        <li key={item.label} className="flex items-center gap-1.5">
+          <span aria-hidden className="size-2 rounded-full" style={{ background: item.color }} />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 /** The rows as tab-separated text, ready to paste in a spreadsheet. */
@@ -230,41 +244,48 @@ function VisualBars({ visual }: { visual: AssistantVisual }) {
   if (!main || !nameKey) return <VisualTable visual={visual} />
   const rows: AssistantVisualRow[] = visual.rows.map(row => ({ ...row, __name: shortName(String(row[nameKey] ?? '')) }))
   const height = Math.min(44 + rows.length * 30, 420)
+  // More than one figure per row: say which one the bars are.
+  const several = visual.columns.filter(c => c.format !== 'text').length > 1
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }} barCategoryGap={6}>
-        <defs>
-          <linearGradient id={`bar-${visual.id}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="var(--color-iris)" />
-            <stop offset="1" stopColor="var(--color-iris-2)" />
-          </linearGradient>
-        </defs>
-        <CartesianGrid horizontal={false} stroke="var(--color-line)" />
-        <XAxis
-          type="number"
-          tickLine={false}
-          axisLine={false}
-          tick={axisTick}
-          tickFormatter={(value: number) => axisValue(value, main.format)}
-        />
-        <YAxis type="category" dataKey="__name" tickLine={false} axisLine={false} tick={axisTick} width={118} />
-        <Tooltip cursor={{ fill: 'var(--color-iris-soft)' }} content={<VisualTooltip visual={visual} />} />
-        <Bar
-          dataKey={main.key}
-          name={main.label}
-          radius={[0, 6, 6, 0]}
-          isAnimationActive={!reduced}
-          animationDuration={500}
-        >
-          {rows.map((row, i) => (
-            <Cell
-              key={i}
-              fill={String(row[nameKey]).startsWith('Otros (') ? 'var(--color-line-strong)' : `url(#bar-${visual.id})`}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <>
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }} barCategoryGap={6}>
+          <defs>
+            <linearGradient id={`bar-${visual.id}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="var(--color-iris)" />
+              <stop offset="1" stopColor="var(--color-iris-2)" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid horizontal={false} stroke="var(--color-line)" />
+          <XAxis
+            type="number"
+            tickLine={false}
+            axisLine={false}
+            tick={axisTick}
+            tickFormatter={(value: number) => axisValue(value, main.format)}
+          />
+          <YAxis type="category" dataKey="__name" tickLine={false} axisLine={false} tick={axisTick} width={118} />
+          <Tooltip cursor={{ fill: 'var(--color-iris-soft)' }} content={<VisualTooltip visual={visual} />} />
+          <Bar
+            dataKey={main.key}
+            name={main.label}
+            radius={[0, 6, 6, 0]}
+            isAnimationActive={!reduced}
+            animationDuration={500}
+          >
+            {rows.map((row, i) => (
+              <Cell
+                key={i}
+                fill={
+                  String(row[nameKey]).startsWith('Otros (') ? 'var(--color-line-strong)' : `url(#bar-${visual.id})`
+                }
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      {several && <ChartLegend items={[{ label: main.label, color: 'var(--color-iris)' }]} />}
+    </>
   )
 }
 
@@ -272,42 +293,50 @@ function VisualBars({ visual }: { visual: AssistantVisual }) {
 function VisualLine({ visual }: { visual: AssistantVisual }) {
   const reduced = useReducedMotion()
   const nameKey = visual.columns[0]?.key
-  const series = visual.columns.filter(c => visual.series.includes(c.key)).slice(0, 3)
   const main = mainSeries(visual)
   if (!nameKey || !main) return <VisualTable visual={visual} />
-  // An amount and a count do not share an axis: the line draws the amounts, the tooltip the rest.
-  const drawn = series.filter(c => c.format === main.format)
+  // An amount and a count do not share an axis: the lines are the first series and the ones
+  // measured like it, the tooltip has the rest.
+  const drawn = visual.series
+    .flatMap(key => visual.columns.filter(c => c.key === key))
+    .filter(c => c.format === main.format)
+    .slice(0, 3)
   const colors = ['var(--color-iris)', 'var(--color-iris-2)', 'var(--color-faint)']
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={visual.rows} margin={{ top: 8, right: 16, left: 4, bottom: 0 }}>
-        <CartesianGrid vertical={false} stroke="var(--color-line)" />
-        <XAxis dataKey={nameKey} tickLine={false} axisLine={false} tick={axisTick} minTickGap={12} />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          tick={axisTick}
-          width={58}
-          tickFormatter={(value: number) => axisValue(value, main.format)}
-        />
-        <Tooltip content={<VisualTooltip visual={visual} />} />
-        {drawn.map((column, i) => (
-          <Line
-            key={column.key}
-            dataKey={column.key}
-            name={column.label}
-            type="monotone"
-            stroke={colors[i]}
-            strokeWidth={2.25}
-            dot={{ r: 2.5, strokeWidth: 0, fill: colors[i] }}
-            activeDot={{ r: 4.5 }}
-            connectNulls={false}
-            isAnimationActive={!reduced}
-            animationDuration={600}
+    <>
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={visual.rows} margin={{ top: 8, right: 16, left: 4, bottom: 0 }}>
+          <CartesianGrid vertical={false} stroke="var(--color-line)" />
+          <XAxis dataKey={nameKey} tickLine={false} axisLine={false} tick={axisTick} minTickGap={12} />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tick={axisTick}
+            width={58}
+            tickFormatter={(value: number) => axisValue(value, main.format)}
           />
-        ))}
-      </LineChart>
-    </ResponsiveContainer>
+          <Tooltip content={<VisualTooltip visual={visual} />} />
+          {drawn.map((column, i) => (
+            <Line
+              key={column.key}
+              dataKey={column.key}
+              name={column.label}
+              type="monotone"
+              stroke={colors[i]}
+              strokeWidth={2.25}
+              dot={{ r: 2.5, strokeWidth: 0, fill: colors[i] }}
+              activeDot={{ r: 4.5 }}
+              connectNulls={false}
+              isAnimationActive={!reduced}
+              animationDuration={600}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+      {(drawn.length > 1 || visual.columns.filter(c => c.format !== 'text').length > 1) && (
+        <ChartLegend items={drawn.map((column, i) => ({ label: column.label, color: colors[i] }))} />
+      )}
+    </>
   )
 }
 
