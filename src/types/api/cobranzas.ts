@@ -23,8 +23,18 @@ export interface CobranzaCliente {
   overdueCount: number
   rejectedCount: number
   paidCount: number
+  /** Pending, overdue and rejected cuotas: the rest of the policy too. What the office sees. */
   totalDebt: string
+  /** Overdue and rejected cuotas only: what the client has to pay now. What the reminder quotes. */
+  dueDebt: string
+  nextInstallment: CobranzaNextInstallment | null
   oldestOverdueDate: string | null
+}
+
+/** The pending cuota that falls due first (`dueDate` null when Triunfo sent none). */
+export interface CobranzaNextInstallment {
+  amount: string
+  dueDate: string | null
 }
 
 export interface CobranzasPage {
