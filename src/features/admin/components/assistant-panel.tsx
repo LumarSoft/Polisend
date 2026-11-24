@@ -146,6 +146,16 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route, scr
 
   const close = () => onOpenChange(false)
 
+  // Starting a question (words or a file) gets the model ready while it is written; opening the panel does not.
+  const write = (text: string) => {
+    setDraft(text.slice(0, MAX_QUESTION))
+    if (text.trim()) assistant.warm()
+  }
+  const attach = (list: File[]) => {
+    files.add(list)
+    if (list.length) assistant.warm()
+  }
+
   // A question with files may go without words; never while a file is still being read.
   const canSend = (!!draft.trim() || files.ready.length > 0) && !files.uploading
   const submit = () => {
@@ -160,14 +170,14 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route, scr
     const pasted = Array.from(event.clipboardData.files)
     if (!pasted.length) return
     event.preventDefault()
-    files.add(pasted)
+    attach(pasted)
   }
 
   const onDrop = (event: DragEvent<HTMLElement>) => {
     if (!event.dataTransfer.types.includes('Files')) return
     event.preventDefault()
     setDragging(false)
-    if (plan.included && view === 'chat') files.add(Array.from(event.dataTransfer.files))
+    if (plan.included && view === 'chat') attach(Array.from(event.dataTransfer.files))
   }
   const onDragOver = (event: DragEvent<HTMLElement>) => {
     if (!event.dataTransfer.types.includes('Files') || !plan.included || view !== 'chat') return
@@ -187,7 +197,7 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route, scr
       void assistant.send(suggestion.label)
       return
     }
-    setDraft(suggestion.fill)
+    write(suggestion.fill)
     requestAnimationFrame(() => {
       const input = inputRef.current
       input?.focus()
@@ -460,7 +470,7 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route, scr
                 <textarea
                   ref={inputRef}
                   value={draft}
-                  onChange={event => setDraft(event.target.value.slice(0, MAX_QUESTION))}
+                  onChange={event => write(event.target.value)}
                   onKeyDown={onKeyDown}
                   onPaste={onPaste}
                   rows={1}
@@ -477,7 +487,7 @@ export function AssistantPanel({ open, onOpenChange, assistant, plan, route, scr
                     multiple
                     hidden
                     onChange={event => {
-                      files.add(Array.from(event.target.files ?? []))
+                      attach(Array.from(event.target.files ?? []))
                       event.target.value = ''
                     }}
                   />
