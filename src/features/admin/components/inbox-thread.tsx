@@ -37,6 +37,7 @@ import { BlockedClaimBadge } from './blocked-claim-badge'
 import { InboxContactDialog } from './inbox-contact-dialog'
 import { DayDivider, InboxMessageBubble, InboxNotice } from './inbox-message-bubble'
 import { InboxSearchPanel } from './inbox-search-panel'
+import { ChatStartDialog } from './chat-start-dialog'
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
 
@@ -108,21 +109,31 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
   const [text, setText] = useState('')
   const [editingContact, setEditingContact] = useState(false)
   const [windowExpired, setWindowExpired] = useState(false)
+  // The office wrote last, less than a day ago, and the client has not answered
+  // since: another message to retake the chat would only repeat it.
+  const [awaitingReply, setAwaitingReply] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [attachment, setAttachment] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
 
   // Detect the 24-hour Meta window: free-text replies are only allowed within
-  // 24 h of the last inbound user message. The clock is read asynchronously (in
-  // a timer callback, not during render) and re-checked every minute so the
-  // banner flips on its own if the window expires while the chat is open.
+  // 24 h of the last inbound user message, so a chat the client never wrote in
+  // (a notice or a chat started from the panel) is closed too, as the API says.
+  // The clock is read asynchronously (in a timer callback, not during render)
+  // and re-checked every minute so the banner flips on its own if the window
+  // expires while the chat is open.
   useEffect(() => {
     const check = () => {
+      const now = Date.now()
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+      const last = messages[messages.length - 1]
       setWindowExpired(
-        lastUserMsg !== undefined && Date.now() - new Date(lastUserMsg.createdAt).getTime() > TWENTY_FOUR_HOURS_MS,
+        !isLoading &&
+          (lastUserMsg === undefined || now - new Date(lastUserMsg.createdAt).getTime() > TWENTY_FOUR_HOURS_MS),
       )
+      setAwaitingReply(last?.role === 'agent' && now - new Date(last.createdAt).getTime() <= TWENTY_FOUR_HOURS_MS)
     }
     const first = setTimeout(check, 0)
     const interval = setInterval(check, 60_000)
@@ -130,7 +141,7 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
       clearTimeout(first)
       clearInterval(interval)
     }
-  }, [messages])
+  }, [messages, isLoading])
 
   // Grow the box with its content up to six lines, like WhatsApp's composer.
   useEffect(() => {
@@ -141,6 +152,7 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
   }, [text])
 
   const humanAttention = conversation.botPaused || !!conversation.numberBotDisabled
+  const hasClientMessage = messages.some(m => m.role === 'user')
   const canSend = humanAttention && !windowExpired
   const isSending = sendMessage.isPending
 
@@ -386,10 +398,25 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
                   </Fragment>
                 )
               })}
-              {windowExpired && humanAttention && (
+              {windowExpired && (
                 <InboxNotice tone="warning">
-                  El cliente no escribe hace más de 24 h. WhatsApp no permite enviarle un mensaje libre hasta que vuelva
-                  a escribir.
+                  {awaitingReply ? (
+                    'Esperando que el cliente responda. Cuando conteste, vas a poder escribirle libre.'
+                  ) : (
+                    <>
+                      {hasClientMessage
+                        ? 'El cliente no escribe hace más de 24 h. WhatsApp no permite enviarle un mensaje libre hasta que vuelva a escribir.'
+                        : 'El cliente todavía no escribió en este chat. WhatsApp no permite enviarle un mensaje libre hasta que responda.'}{' '}
+                      <button
+                        type="button"
+                        data-help="chat-retomar"
+                        onClick={() => setResuming(true)}
+                        className="font-medium text-(--wa-green-dark) hover:underline"
+                      >
+                        Enviar mensaje para retomar
+                      </button>
+                    </>
+                  )}
                 </InboxNotice>
               )}
             </div>
@@ -476,7 +503,13 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
                 onChange={e => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={!canSend || isSending}
-                placeholder={windowExpired ? 'No se puede escribir: pasaron más de 24 h' : 'Escribí un mensaje'}
+                placeholder={
+                  windowExpired
+                    ? hasClientMessage
+                      ? 'No se puede escribir: pasaron más de 24 h'
+                      : 'No se puede escribir hasta que el cliente responda'
+                    : 'Escribí un mensaje'
+                }
                 rows={1}
                 className="min-h-[42px] flex-1 resize-none rounded-lg bg-(--wa-surface) px-3 py-[10px] text-[15px] leading-[22px] text-(--wa-text) outline-none placeholder:text-(--wa-text-2) disabled:cursor-not-allowed disabled:opacity-60"
               />
@@ -528,6 +561,14 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
             sending={sendMedia.isPending}
             onCancel={() => setAttachment(null)}
             onSend={sendAttachment}
+          />
+        )}
+
+        {resuming && (
+          <ChatStartDialog
+            conversation={conversation}
+            onClose={() => setResuming(false)}
+            onStarted={() => setResuming(false)}
           />
         )}
 
