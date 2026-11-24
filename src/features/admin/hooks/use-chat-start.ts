@@ -4,6 +4,9 @@ import { QUERY_KEYS } from '@/lib/query-keys'
 import { useAuth } from '../context/auth-context'
 import type { StartChatRequest } from '@/types/api/chat-start'
 
+/** The API's answer when a chat has no client linked: the panel asks whose chat it is. */
+export const CHAT_START_NEEDS_POLICY = 'CHAT_START_NEEDS_POLICY'
+
 /** The clients a search finds, or the one linked to the chat being written to again. */
 export function useChatStartClients(search: string, conversationId?: number) {
   const { token } = useAuth()

@@ -38,6 +38,7 @@ import { InboxContactDialog } from './inbox-contact-dialog'
 import { DayDivider, InboxMessageBubble, InboxNotice } from './inbox-message-bubble'
 import { InboxSearchPanel } from './inbox-search-panel'
 import { ChatStartDialog } from './chat-start-dialog'
+import { CHAT_START_NEEDS_POLICY, useStartChat } from '../hooks/use-chat-start'
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
 
@@ -113,6 +114,7 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
   // since: another message to retake the chat would only repeat it.
   const [awaitingReply, setAwaitingReply] = useState(false)
   const [resuming, setResuming] = useState(false)
+  const resume = useStartChat()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [attachment, setAttachment] = useState<File | null>(null)
@@ -155,6 +157,38 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
   const hasClientMessage = messages.some(m => m.role === 'user')
   const canSend = humanAttention && !windowExpired
   const isSending = sendMessage.isPending
+
+  /**
+   * Sends the approved message to this chat, from its own number, naming its
+   * client's newest policy. Only a chat with no client linked asks whose it is.
+   */
+  function resumeChat() {
+    if (resume.isPending) return
+    resume.mutate(
+      { conversationId: conversation.id },
+      {
+        onSuccess: result => {
+          if (result.sent) {
+            toast.success('Mensaje enviado. Cuando el cliente responda, vas a poder escribirle libre.')
+          } else {
+            toast.info('El cliente escribió en las últimas 24 h: ya podés escribirle.')
+          }
+          scrollToBottom()
+        },
+        onError: error => {
+          if (error instanceof ApiError && error.code === CHAT_START_NEEDS_POLICY) {
+            setResuming(true)
+            return
+          }
+          toast.error(
+            error instanceof ApiError && (error.status < 500 || error.status === 502)
+              ? error.message
+              : 'No se pudo enviar el mensaje por WhatsApp. Probá de nuevo.',
+          )
+        },
+      },
+    )
+  }
 
   function handleSend() {
     const trimmed = text.trim()
@@ -410,9 +444,11 @@ export function InboxThread({ conversation, onOpenClient, onBack }: Props) {
                       <button
                         type="button"
                         data-help="chat-retomar"
-                        onClick={() => setResuming(true)}
-                        className="font-medium text-(--wa-green-dark) hover:underline"
+                        onClick={resumeChat}
+                        disabled={resume.isPending}
+                        className="inline-flex items-center gap-1 font-medium text-(--wa-green-dark) hover:underline disabled:opacity-60"
                       >
+                        {resume.isPending && <Loader2 className="size-3.5 animate-spin" />}
                         Enviar mensaje para retomar
                       </button>
                     </>
