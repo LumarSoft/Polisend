@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Loader2, MoreVertical, Search, Trash2 } from 'lucide-react'
+import { Loader2, MoreVertical, Search, SquarePen, Trash2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { inboxService } from '@/services/inbox.service'
@@ -25,6 +25,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { useInboxConversations } from '../hooks/use-inbox-conversations'
 import { InboxList } from './inbox-list'
 import { InboxThread } from './inbox-thread'
+import { ChatStartDialog } from './chat-start-dialog'
 import { AseguradoSheet } from './asegurado-sheet'
 import { ScopeFilter } from './scope-filter'
 import { NetworkFilter } from './network-filter'
@@ -96,6 +97,7 @@ export function InboxView() {
     window.history.replaceState(window.history.state, '', '/admin/inbox')
   }
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null)
+  const [startingChat, setStartingChat] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [filter, setFilter] = useState<InboxFilter>('all')
   // Opens on the office line for a SuperAdmin; see useScopeFilterState.
@@ -168,6 +170,16 @@ export function InboxView() {
           <SidebarTrigger className="text-(--wa-icon) hover:bg-(--wa-tint)" />
           <h2 className="text-[22px] font-bold text-(--wa-text)">Chats</h2>
           <div className="ml-auto flex min-w-0 items-center gap-1">
+            <button
+              type="button"
+              data-help="chat-nuevo"
+              onClick={() => setStartingChat(true)}
+              aria-label="Nuevo chat"
+              title="Nuevo chat"
+              className="shrink-0 rounded-full p-2 text-(--wa-icon) outline-none hover:bg-(--wa-tint)"
+            >
+              <SquarePen className="size-5" />
+            </button>
             <AssistantLauncher compact />
             <ScopeFilter
               value={scope}
@@ -316,6 +328,16 @@ export function InboxView() {
       </AlertDialog>
 
       <AseguradoSheet clientId={selectedClientId} onClose={() => setSelectedClientId(null)} />
+
+      {startingChat && (
+        <ChatStartDialog
+          onClose={() => setStartingChat(false)}
+          onStarted={id => {
+            setStartingChat(false)
+            selectConversation(id)
+          }}
+        />
+      )}
     </div>
   )
 }
