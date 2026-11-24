@@ -12,6 +12,7 @@ import {
   senderLabel,
   splitReplyButtons,
 } from '../lib/inbox-format'
+import { policyLabel } from '../lib/rejections-format'
 import { InboxAudio } from './inbox-audio'
 import { InboxMessageText } from './inbox-message-text'
 
@@ -240,6 +241,11 @@ export function InboxMessageBubble({
             </div>
           )}
         </div>
+        {message.rejection && (
+          <p className="self-end px-1 text-[11.5px] leading-4 text-(--wa-text-2)">
+            Aviso de rechazo · {policyLabel(message.rejection)} · cuota {message.rejection.installmentNumber}
+          </p>
+        )}
         {buttons.map(label => (
           <div
             key={label}

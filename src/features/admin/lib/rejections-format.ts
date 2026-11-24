@@ -37,6 +37,15 @@ export function statusLabel(row: Rejection): { text: string; tone: string } {
   }
 }
 
+/**
+ * The policy as the office looks it up in Triunfo: article and certificate
+ * ("Art. 465 · 1234567"). The certificate alone does not say which of a
+ * client's policies it is. Just the certificate when the Excel had no article.
+ */
+export function policyLabel(row: { branch: number | null; certificateNumber: string }): string {
+  return row.branch === null ? row.certificateNumber : `Art. ${row.branch} · ${row.certificateNumber}`
+}
+
 /** Counts for the summary of an import. */
 export function summarize(rows: Rejection[]) {
   const count = (test: (row: Rejection) => boolean) => rows.filter(test).length

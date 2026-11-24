@@ -30,6 +30,7 @@ import {
   isOpen,
   paymentMeans,
   statusLabel,
+  policyLabel,
   summarize,
 } from '../lib/rejections-format'
 import { personName } from '../lib/tasks-format'
@@ -180,7 +181,7 @@ export function RejectionImportDetail({ importId, onDeleted }: { importId: numbe
                 />
               </th>
               <th className="px-2 py-2 font-medium">Asegurado</th>
-              <th className="px-2 py-2 font-medium">Póliza · cuota</th>
+              <th className="px-2 py-2 font-medium">Póliza</th>
               <th className="px-2 py-2 font-medium">Vencimiento</th>
               <th className="px-2 py-2 text-right font-medium">Importe</th>
               <th className="px-2 py-2 font-medium">Medio · motivo</th>
@@ -212,7 +213,8 @@ export function RejectionImportDetail({ importId, onDeleted }: { importId: numbe
                     </p>
                   </td>
                   <td className="px-2 py-2.5 whitespace-nowrap tabular-nums">
-                    {row.certificateNumber} · {row.installmentNumber}
+                    <p>{policyLabel(row)}</p>
+                    <p className="text-[11.5px] text-muted-foreground">Cuota {row.installmentNumber}</p>
                   </td>
                   <td className="px-2 py-2.5 whitespace-nowrap tabular-nums">{formatDay(row.dueDate)}</td>
                   <td className="px-2 py-2.5 text-right whitespace-nowrap tabular-nums">{formatMoney(row.amount)}</td>

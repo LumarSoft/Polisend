@@ -56,6 +56,9 @@ export interface InboxMessage {
   readAt: string | null
   failedAt: string | null
   deliveryError: string | null
+  // A rejection notice sent from Rechazos: the policy it is about, with the
+  // article the client's text leaves out. Null on any other message.
+  rejection?: { branch: number | null; certificateNumber: string; installmentNumber: number } | null
   media: {
     url: string
     mimeType: string
