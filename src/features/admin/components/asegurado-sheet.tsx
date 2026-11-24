@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { AdminClientDetail, AdminCuota, AdminPolizaDetail } from '@/types/api/clients'
+import type { CobranzaNextInstallment } from '@/types/api/cobranzas'
 import { useAdminClient } from '../hooks/use-admin-client'
 import { usePanelBrand } from '../hooks/use-panel-brand'
 import {
@@ -85,14 +86,30 @@ function debtorWhatsappUrl(client: AdminClientDetail, signature: string): string
   const debt = computeDebt(client.policies)
   if (!client.phone) return ''
   if (debt.totalDeuda <= 0) return whatsappLink(client.phone)
+  const cuotas = client.policies.flatMap(p => p.installments)
+  const dueDebt = cuotas
+    .filter(c => c.status === 'overdue' || c.status === 'rejected')
+    .reduce((s, c) => s + debtAmount(c.amount), 0)
   return buildCobranzaWhatsappUrl(client.phone, {
     firstName: client.firstName,
     signature,
-    totalDebt: debt.totalDeuda.toFixed(2),
+    dueDebt: dueDebt.toFixed(2),
     overdueCount: debt.overdueCount,
     rejectedCount: debt.rejectedCount,
-    pendingCount: debt.pendingCount,
+    nextInstallment: nextPendingCuota(cuotas),
   })
+}
+
+/** The pending cuota that falls due first (one without a date last), as the API gives it in Cobranzas. */
+function nextPendingCuota(cuotas: AdminCuota[]): CobranzaNextInstallment | null {
+  const payable = cuotas.filter(c => c.status === 'pending' && parseFloat(c.amount) > 0)
+  if (payable.length === 0) return null
+  const next = payable.reduce((first, c) => {
+    if (!first.dueDate) return c
+    if (!c.dueDate) return first
+    return c.dueDate < first.dueDate ? c : first
+  })
+  return { amount: next.amount, dueDate: next.dueDate }
 }
 
 interface ContactButtonProps {

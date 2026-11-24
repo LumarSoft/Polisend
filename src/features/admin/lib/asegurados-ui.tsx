@@ -6,6 +6,7 @@ import type {
   EstadoVigencia,
   RiskType,
 } from '@/types/api/clients'
+import type { CobranzaNextInstallment } from '@/types/api/cobranzas'
 
 export const RISK_LABELS: Record<RiskType, string> = {
   auto: 'Automotor',
@@ -182,30 +183,61 @@ export function overdueLabel(dueDate: string | null | undefined): string | null 
   return `hace ${days} ${days === 1 ? 'día' : 'días'}`
 }
 
-interface CobranzaReminderInput {
+export interface CobranzaReminderInput {
   firstName: string
   /** The organization the office writes for; empty = the message is not signed. */
   signature: string
-  totalDebt: string
+  /** What the client has to pay now: the overdue and rejected cuotas, never the rest of the policy. */
+  dueDebt: string
   overdueCount: number
   rejectedCount: number
-  pendingCount: number
+  /** The pending cuota that falls due first, for a client with nothing overdue. */
+  nextInstallment: CobranzaNextInstallment | null
+}
+
+/** "05/12": a cuota due date as Triunfo gives it (midnight UTC), without sliding to the day before. */
+function shortDueDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
+}
+
+function startOfTodayUtc(): number {
+  const now = new Date()
+  return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
+/**
+ * The reminder quotes only what is due. A client one cuota behind on a
+ * renewal was told the whole policy (three cuotas) was owed and thought it a
+ * mistake; the cuotas still to come are left out, or named alone when nothing
+ * is due yet.
+ */
+function reminderText(input: CobranzaReminderInput): string | null {
+  const overdue = input.overdueCount
+  const rejected = input.rejectedCount
+  const dueCount = overdue + rejected
+  if (dueCount > 0 && parseFloat(input.dueDebt) > 0) {
+    const parts: string[] = []
+    if (overdue > 0) parts.push(`${overdue} ${overdue === 1 ? 'cuota vencida' : 'cuotas vencidas'}`)
+    if (rejected > 0) parts.push(`${rejected} ${rejected === 1 ? 'cuota rechazada' : 'cuotas rechazadas'}`)
+    const amount = formatCurrency(input.dueDebt)
+    return dueCount === 1 ? `tenés ${parts[0]} de ${amount}` : `tenés ${parts.join(' y ')} por un total de ${amount}`
+  }
+  const next = input.nextInstallment
+  if (!next || parseFloat(next.amount) <= 0) return null
+  const amount = formatCurrency(next.amount)
+  if (next.dueDate && new Date(next.dueDate).getTime() >= startOfTodayUtc())
+    return `tu próxima cuota, de ${amount}, vence el ${shortDueDate(next.dueDate)}`
+  return `tenés una cuota pendiente de ${amount}`
 }
 
 /** Pre-filled WhatsApp link with a friendly payment reminder for a debtor. */
 export function buildCobranzaWhatsappUrl(phone: string, input: CobranzaReminderInput): string {
   const digits = phone.replace(/\D/g, '')
-  const parts: string[] = []
-  if (input.overdueCount > 0)
-    parts.push(`${input.overdueCount} ${input.overdueCount === 1 ? 'cuota vencida' : 'cuotas vencidas'}`)
-  if (input.rejectedCount > 0)
-    parts.push(`${input.rejectedCount} ${input.rejectedCount === 1 ? 'cuota rechazada' : 'cuotas rechazadas'}`)
-  if (input.pendingCount > 0)
-    parts.push(`${input.pendingCount} ${input.pendingCount === 1 ? 'cuota pendiente' : 'cuotas pendientes'}`)
-  const detalle = parts.length ? ` (${parts.join(', ')})` : ''
+  const owed = reminderText(input)
+  if (!owed) return `https://wa.me/${digits}`
   const message =
     `Hola ${input.firstName}, te escribimos${input.signature ? ` de ${input.signature}` : ''}. ` +
-    `Queríamos recordarte que figura un saldo pendiente de ${formatCurrency(input.totalDebt)}${detalle}. ` +
+    `Queríamos recordarte que ${owed}. ` +
     `¿Coordinamos el pago? ¡Gracias!`
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
 }
