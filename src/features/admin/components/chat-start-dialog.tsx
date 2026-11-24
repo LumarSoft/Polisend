@@ -20,7 +20,6 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import type { ChatStartClient, ChatStartPolicy } from '@/types/api/chat-start'
 import type { InboxConversation } from '@/types/api/inbox'
 import { useChatStartClients, useChatStartPreview, useChatStartSenders, useStartChat } from '../hooks/use-chat-start'
-import { formatPhone } from '../lib/inbox-contact'
 
 const SELECT =
   'h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30'
@@ -84,17 +83,14 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
     setPhoneInput(null)
   }
 
-  const canSend = !!client && policyId !== null && senderId !== undefined && (!!conversation || !!phone.trim())
+  // A chat goes out from its own number: only a new one picks the number and the phone.
+  const canSend = !!client && policyId !== null && (conversation ? true : senderId !== undefined && !!phone.trim())
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
     if (!canSend || policyId === null || start.isPending) return
     start.mutate(
-      {
-        policyId,
-        senderId,
-        ...(conversation ? { conversationId: conversation.id } : { phone: phone.trim() }),
-      },
+      conversation ? { policyId, conversationId: conversation.id } : { policyId, senderId, phone: phone.trim() },
       {
         onSuccess: result => {
           if (result.sent) {
@@ -119,10 +115,11 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
     <Dialog open onOpenChange={open => !open && !start.isPending && onClose()}>
       <DialogContent className="max-h-[90svh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{conversation ? 'Retomar el chat' : 'Nuevo chat'}</DialogTitle>
+          <DialogTitle>{conversation ? '¿De quién es este chat?' : 'Nuevo chat'}</DialogTitle>
           <DialogDescription>
-            WhatsApp solo deja escribirle primero a alguien con un mensaje aprobado por Meta, que nombra una de sus
-            pólizas. Cuando el cliente responda, vas a poder escribirle libre.
+            {conversation
+              ? 'El mensaje para retomar el chat nombra una póliza del asegurado, y este chat no está vinculado a ninguno: buscalo para mandarlo.'
+              : 'WhatsApp solo deja escribirle primero a alguien con un mensaje aprobado por Meta, que nombra una de sus pólizas. Cuando el cliente responda, vas a poder escribirle libre.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -151,11 +148,6 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
             ) : null}
             {searching && (
               <>
-                {conversation && (
-                  <p className="text-muted-foreground text-xs">
-                    Este chat no está vinculado a un asegurado: buscalo para elegir la póliza.
-                  </p>
-                )}
                 <div className="relative">
                   <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
                   <Input
@@ -217,11 +209,9 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
                 </select>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="chat-start-phone">Celular</Label>
-                {conversation ? (
-                  <p className="text-[13px] text-ink">{formatPhone(conversation.waId)}</p>
-                ) : (
+              {!conversation && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="chat-start-phone">Celular</Label>
                   <>
                     <Input
                       id="chat-start-phone"
@@ -238,14 +228,14 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
                         : 'La ficha no tiene celular: escribilo con la característica.'}
                     </p>
                   </>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="chat-start-sender">Sale desde</Label>
-            {senders.isLoading ? (
+            {!conversation && <Label htmlFor="chat-start-sender">Sale desde</Label>}
+            {conversation ? null : senders.isLoading ? (
               <div className="h-9 animate-pulse rounded-lg bg-muted" />
             ) : senderList.length === 0 ? (
               <p className="text-muted-foreground text-[13px]">No tenés números de WhatsApp conectados.</p>
