@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { Play } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
@@ -13,7 +15,9 @@ import { useImprovements } from '../hooks/use-improvements'
 import { useImprovementsVisit } from '../hooks/use-improvements-visit'
 import { useListPage } from '../hooks/use-list-page'
 import { useRole } from '../hooks/use-role'
+import { hasGuide, playGuide } from '../lib/improvement-guides'
 import { ImprovementCard } from './improvement-card'
+import { ImprovementGuidesShelf } from './improvement-guides-shelf'
 import { ListPagination } from './list-pagination'
 
 const PAGE_SIZE = 10
@@ -76,6 +80,8 @@ export function MejorasView() {
           ` ${newCount === 1 ? 'Hay 1 nueva' : `Hay ${newCount} nuevas`} desde tu última visita.`}
       </p>
 
+      <ImprovementGuidesShelf />
+
       {areas.length > 1 && (
         <div className="mb-5 flex flex-wrap gap-2">
           {[
@@ -128,6 +134,13 @@ export function MejorasView() {
                 key={improvement.id}
                 improvement={improvement}
                 isNew={!isOwner && isNewSince(improvement, previousVisitAt)}
+                actions={
+                  hasGuide(improvement) ? (
+                    <Button variant="outline" size="sm" onClick={() => playGuide(improvement)}>
+                      <Play className="size-3.5 fill-current" /> Ver paso a paso
+                    </Button>
+                  ) : undefined
+                }
               />
             ))}
           </section>

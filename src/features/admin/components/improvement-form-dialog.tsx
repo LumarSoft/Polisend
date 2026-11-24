@@ -18,6 +18,7 @@ import type { OrganizationSummary } from '@/types/api/organizations'
 import { usePlatformImprovementActions } from '../hooks/use-improvements'
 import { useOrganizations } from '../hooks/use-organizations'
 import { ImprovementCard } from './improvement-card'
+import { ImprovementGuideFields, ImprovementGuidePreview } from './improvement-guide-fields'
 
 interface ImprovementFormDialogProps {
   /** Null = new improvement. */
@@ -53,6 +54,24 @@ function initialForm(
     area: improvement?.area ?? 'BOT',
     releasedOn: improvement ? (improvement.releasedOn?.slice(0, 10) ?? null) : todayYmd(),
     producerId: improvement ? improvement.producerId : defaultOrganizationId(organizations),
+    screen: improvement?.screen ?? null,
+    steps: improvement?.steps ?? [],
+  }
+}
+
+/** What is sent: no screen = no announcement and no guide; steps trimmed, the element only if given. */
+function guidePayload(form: ImprovementRequest): Pick<ImprovementRequest, 'screen' | 'steps'> {
+  const steps = form.screen ? (form.steps ?? []) : []
+  return {
+    screen: form.screen,
+    steps: steps.length
+      ? steps.map(step => ({
+          title: step.title.trim(),
+          text: step.text?.trim() || null,
+          target: step.target?.trim() || null,
+          waitForClick: !!step.target?.trim() && step.waitForClick,
+        }))
+      : null,
   }
 }
 
@@ -78,7 +97,11 @@ function ImprovementForm({
       toast.error('Completá el título y el resumen.')
       return
     }
-    const data = { ...form, published }
+    if (form.screen && (form.steps ?? []).some(step => !step.title.trim())) {
+      toast.error('Cada paso del paso a paso necesita su título.')
+      return
+    }
+    const data = { ...form, ...guidePayload(form), published }
     const callbacks = {
       onSuccess: () => {
         toast.success(published ? 'Mejora publicada' : 'Borrador guardado')
@@ -103,6 +126,7 @@ function ImprovementForm({
     example: form.example.trim() || null,
     releasedOn: form.releasedOn ? `${form.releasedOn}T00:00:00.000Z` : null,
     publishedAt: improvement?.publishedAt ?? null,
+    ...guidePayload(form),
   }
 
   return (
@@ -214,6 +238,12 @@ function ImprovementForm({
             aclaración.
           </span>
         </div>
+        <ImprovementGuideFields
+          screen={form.screen}
+          steps={form.steps ?? []}
+          onScreenChange={screen => set('screen', screen)}
+          onStepsChange={steps => set('steps', steps)}
+        />
       </div>
 
       <div className="flex min-h-0 flex-col gap-3 overflow-y-auto border-t border-line-2 bg-paper-2 p-5 lg:border-t-0 lg:border-l">
@@ -221,6 +251,14 @@ function ImprovementForm({
           Así lo van a ver en el panel
         </span>
         <ImprovementCard improvement={preview} />
+        {form.screen && (
+          <ImprovementGuidePreview
+            title={form.title}
+            summary={form.summary}
+            screen={form.screen}
+            steps={form.steps ?? []}
+          />
+        )}
         <div className="mt-auto flex flex-wrap justify-end gap-2 pt-2">
           {isPublished ? (
             <Button type="submit" disabled={pending} className="h-10">

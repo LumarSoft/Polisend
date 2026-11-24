@@ -753,3 +753,14 @@
   --color-iris-glow: rgba(139, 92, 246, 0.26);
 }
 
+
+/* An improvement's guide: a soft pulse around the element its step rings (tour-overlay). */
+@keyframes guide-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-ember) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 14px color-mix(in oklab, var(--color-ember) 0%, transparent);
+  }
+}

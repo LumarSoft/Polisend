@@ -10,6 +10,18 @@ export const IMPROVEMENT_AREA_LABEL: Record<ImprovementArea, string> = {
   PORTAL: 'Portal de clientes',
 }
 
+/** One step of an improvement's guide, shown on its screen. */
+export interface ImprovementStep {
+  title: string
+  text: string | null
+  /** `data-help` anchor of the element the step rings; null = a card in the middle of the screen. */
+  target: string | null
+  /** The step moves on when the person taps the element (it opens what the next step points at). */
+  waitForClick: boolean
+}
+
+export const MAX_GUIDE_STEPS = 6
+
 export interface Improvement {
   id: number
   title: string
@@ -22,6 +34,24 @@ export interface Improvement {
   releasedOn: string | null
   /** Null = draft (only the Developer sees it). */
   publishedAt: string | null
+  /** Panel screen id (`whatsapp`) where it is announced once to each user; null = only listed in Mejoras. */
+  screen: string | null
+  /** Its step-by-step guide on that screen; null = none. */
+  steps: ImprovementStep[] | null
+}
+
+/** An improvement announced on a screen: its card shows there once, and its guide replays from Mejoras. */
+export interface ImprovementGuide {
+  id: number
+  title: string
+  summary: string
+  area: ImprovementArea
+  screen: string
+  steps: ImprovementStep[]
+  releasedOn: string | null
+  publishedAt: string | null
+  /** Show its card on its screen now: recent, and this user has not closed it yet. */
+  announce: boolean
 }
 
 export interface PlatformImprovement extends Improvement {
@@ -83,6 +113,10 @@ export interface ImprovementRequest {
   releasedOn: string | null
   /** Null = every organization. */
   producerId: number | null
+  /** Null = no announcement. */
+  screen: string | null
+  /** Null or empty = no guide (a guide needs its screen). */
+  steps: ImprovementStep[] | null
   published?: boolean
 }
 

@@ -74,6 +74,7 @@ export const QUERY_KEYS = {
     motoCoverages: ['admin', 'moto-coverages'] as const,
     improvements: (params?: ImprovementsQuery) => ['admin', 'improvements', 'list', params ?? {}] as const,
     improvementsUnseen: ['admin', 'improvements', 'unseen'] as const,
+    improvementGuides: ['admin', 'improvements', 'guides'] as const,
     proposalsAll: ['admin', 'improvement-proposals'] as const,
     proposals: (params?: PageQuery) => ['admin', 'improvement-proposals', 'list', params ?? {}] as const,
     tasksAll: ['admin', 'tasks'] as const,
