@@ -41,7 +41,7 @@ export const assistantService = {
     return apiRequest<AssistantAttachment>('/admin/assistant/attachments', { method: 'POST', token, body })
   },
 
-  /** The panel opened: the API gets the model ready so the first question answers sooner. */
+  /** The person started writing a question: the API gets the model ready so the answer starts sooner. */
   warm(token: string, page: SendAssistantMessageRequest['page']): Promise<void> {
     return apiRequest<void>('/admin/assistant/warm', { method: 'POST', token, body: { page } })
   },

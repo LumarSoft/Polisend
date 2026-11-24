@@ -1,10 +1,8 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { assistantService } from '@/services/assistant.service'
 import type { AssistantOpenRecord } from '@/types/api/assistant'
-import { useAuth } from './auth-context'
 import { useAssistant } from '../hooks/use-assistant'
 import { usePlanFeature } from '../hooks/use-billing'
 import { AssistantPanel } from '../components/assistant-panel'
@@ -56,9 +54,6 @@ export function useAssistantRecord(record: AssistantOpenRecord | null, { overlay
     return register({ kind, id }, overlay)
   }, [register, kind, id, overlay])
 }
-
-/** The API keeps the model ready for 5 minutes: opening again sooner asks for nothing. */
-const WARM_EVERY_MS = 4 * 60_000
 
 interface AssistantProviderProps {
   /** Off for the Developer (no cartera) and for an Owner without an active principal. */
@@ -115,23 +110,9 @@ export function AssistantProvider({ enabled, route, screen, children }: Assistan
     if (unread) toast('El asistente terminó de responder', { action: { label: 'Ver', onClick: () => setOpen(true) } })
   }, [unread])
 
-  // Opening the panel gets the model ready while the person writes.
-  const { token } = useAuth()
-  const warmedAt = useRef(0)
-  useEffect(() => {
-    if (!open || !available || !token || Date.now() - warmedAt.current < WARM_EVERY_MS) return
-    warmedAt.current = Date.now()
-    assistantService.warm(token, page).catch(() => {
-      // Only a head start: the question works the same without it.
-      warmedAt.current = 0
-    })
-  }, [open, available, token, page])
-
   const { streaming, send } = assistant
   const ask = useCallback(
     (question: string) => {
-      // The question itself gets the model ready: no separate warm-up.
-      warmedAt.current = Date.now()
       setOpen(true)
       if (!streaming) void send(question)
     },

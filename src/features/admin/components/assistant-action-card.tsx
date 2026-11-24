@@ -19,6 +19,7 @@ import {
   Loader2,
   ShieldAlert,
   Sparkles,
+  Trash2,
   Undo2,
   type LucideIcon,
 } from 'lucide-react'
@@ -33,15 +34,30 @@ const ICONS: Record<string, LucideIcon> = {
   bot_numero: Bot,
   cierre: CalendarOff,
   tarea: ListTodo,
+  tarea_cambio: ListTodo,
+  tarea_borrar: ListTodo,
   asunto: Inbox,
   siniestro: ShieldAlert,
   solicitud: FileText,
   mejora: Lightbulb,
 }
 
+/** Cards that delete something for good (the API offers no undo): confirmed like the panel's own deletions. */
+const DELETES = new Set(['tarea_borrar'])
+
 /** A pending card past its time counts as expired, even before the API is asked again. */
 function statusOf(action: AssistantAction): AssistantActionStatus {
   return action.status === 'pending' && new Date(action.expiresAt).getTime() <= Date.now() ? 'expired' : action.status
+}
+
+/**
+ * How a cancelled card ended: replaced by another one before it was confirmed (the API says by which in its
+ * summary, "reemplazada por la propuesta #17") or cancelled by the person (no summary).
+ */
+function cancelledText(summary: string | null): string {
+  return summary
+    ? `${summary.charAt(0).toUpperCase()}${summary.slice(1)}: no se cambió nada.`
+    : 'Cancelada: no se cambió nada.'
 }
 
 interface AssistantActionCardProps {
@@ -70,6 +86,8 @@ export function AssistantActionCard({
   const status = statusOf(action)
   const { preview } = action
   const Icon = ICONS[action.type] ?? Sparkles
+  const deletes = DELETES.has(action.type)
+  const ConfirmIcon = deletes ? Trash2 : Check
   const settled = status !== 'pending'
 
   return (
@@ -124,7 +142,7 @@ export function AssistantActionCard({
                     change.after === null ? 'text-faint italic' : 'font-medium text-ink',
                   )}
                 >
-                  {change.after ?? 'Vacío'}
+                  {change.after ?? (deletes ? 'Se borra' : 'Vacío')}
                 </span>
               </dd>
             </div>
@@ -152,11 +170,15 @@ export function AssistantActionCard({
             <Button
               type="button"
               size="sm"
+              variant={deletes ? 'destructive' : 'default'}
               onClick={onConfirm}
               disabled={busy}
-              className="h-8 gap-1.5 bg-iris text-on-iris shadow-[0_4px_12px_-6px_var(--color-iris-glow)] hover:bg-iris/90"
+              className={cn(
+                'h-8 gap-1.5',
+                !deletes && 'bg-iris text-on-iris shadow-[0_4px_12px_-6px_var(--color-iris-glow)] hover:bg-iris/90',
+              )}
             >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <ConfirmIcon className="size-3.5" />}
               {preview.confirmLabel}
             </Button>
           </div>
@@ -204,7 +226,7 @@ export function AssistantActionCard({
           </div>
         )}
         {status === 'cancelled' && (
-          <p className="border-t border-line px-3.5 py-2.5 text-muted-foreground">Cancelada: no se cambió nada.</p>
+          <p className="border-t border-line px-3.5 py-2.5 text-muted-foreground">{cancelledText(action.summary)}</p>
         )}
         {status === 'expired' && (
           <p className="border-t border-line px-3.5 py-2.5 text-muted-foreground">

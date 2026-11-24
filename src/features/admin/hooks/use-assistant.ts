@@ -34,6 +34,9 @@ export interface LiveTurn {
   stopped: boolean
 }
 
+/** The model keeps the prompt ready for 5 minutes after a warm-up or a question: a little less, to be safe. */
+const WARM_EVERY_MS = 4 * 60_000
+
 /** Per user and, for an Owner, per acting principal: the API keeps a conversation per user and principal. */
 const currentKey = (scope: string) => `assistant:current:${scope}`
 
@@ -105,6 +108,8 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
   const [live, setLive] = useState<LiveTurn | null>(null)
   const [busyActions, setBusyActions] = useState<number[]>([])
   const abortRef = useRef<AbortController | null>(null)
+  // When the prompt last went to the model, by a warm-up or a question.
+  const warmedAt = useRef(0)
 
   // Whoever signs in gets their own conversation back (never another user's).
   if (conversationScope !== loadedFor) {
@@ -134,6 +139,8 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
   const send = async (text: string, attachments: AssistantAttachment[] = []) => {
     const question = text.trim()
     if ((!question && !attachments.length) || streaming || !token) return
+    // The question itself gets the model ready: no warm-up for the next few minutes.
+    warmedAt.current = Date.now()
     const controller = new AbortController()
     abortRef.current = controller
     setLive({
@@ -231,6 +238,21 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
     setLive(null)
     void queryClient.invalidateQueries({ queryKey: key })
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.assistantConversations })
+  }
+
+  /**
+   * Gets the model ready while the person writes, so the first answer after a pause starts sooner. Called when a
+   * question is started (typed, filled in by a suggestion, a file added), never on opening the panel or moving
+   * around: each warm-up writes the whole prompt to the model's cache, and the panel is often opened only to read an
+   * answer or confirm a card. At most once while the cache lasts; a question keeps it ready by itself.
+   */
+  const warm = () => {
+    if (!enabled || !token || Date.now() - warmedAt.current < WARM_EVERY_MS) return
+    warmedAt.current = Date.now()
+    assistantService.warm(token, page).catch(() => {
+      // Only a head start: the question works the same without it.
+      warmedAt.current = 0
+    })
   }
 
   /** Stops the answer being written (the API stops too and saves nothing). */
@@ -337,6 +359,7 @@ export function useAssistant(page: SendAssistantMessageRequest['page'], enabled 
     live,
     streaming,
     send,
+    warm,
     stop,
     retry,
     confirm: (actionId: number) => confirm.mutate(actionId),
