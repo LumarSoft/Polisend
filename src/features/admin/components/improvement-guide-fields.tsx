@@ -43,8 +43,8 @@ export function ImprovementGuideFields({ screen, steps, onScreenChange, onStepsC
           <Sparkles className="size-4 text-ember-2" /> Aviso y paso a paso
         </p>
         <p className="mt-0.5 text-[12px] leading-relaxed text-faint">
-          Cada usuario ve el aviso una sola vez en la pantalla que elijas (los primeros 30 días), con el paso a paso
-          para usar lo nuevo. Después lo puede volver a ver desde Mejoras.
+          El aviso se abre en el medio de la pantalla que elijas, una sola vez en cada navegador (los primeros 30 días),
+          con el paso a paso para usar lo nuevo. Después se puede volver a ver desde Mejoras.
         </p>
       </div>
 
@@ -214,7 +214,7 @@ export function ImprovementGuidePreview({
         guide={{ title: title || 'Título de la mejora', summary: summary || 'El resumen.', screen, steps: ready }}
         onPlay={() => setIndex(0)}
         onDismiss={() => undefined}
-        className="max-w-[360px] shrink-0"
+        className="max-w-[420px] shrink-0"
       />
       {step && (
         <>

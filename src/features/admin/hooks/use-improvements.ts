@@ -1,12 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { improvementsService } from '@/services/improvements.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type {
-  ImprovementGuide,
-  ImprovementRequest,
-  ImprovementsQuery,
-  PlatformImprovementsQuery,
-} from '@/types/api/improvements'
+import type { ImprovementRequest, ImprovementsQuery, PlatformImprovementsQuery } from '@/types/api/improvements'
 import { useAuth } from '../context/auth-context'
 import { useTenantQueriesEnabled } from './use-tenant-queries'
 
@@ -47,20 +42,6 @@ export function useImprovementGuides() {
     // A new announcement can wait a few minutes; the list barely changes.
     staleTime: 5 * 60_000,
     refetchInterval: 15 * 60_000,
-  })
-}
-
-/** The person closed an announcement (or started its guide from it): it is gone at once, never to show again. */
-export function useMarkImprovementSeen() {
-  const { token } = useAuth()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: number) => improvementsService.markSeen(token as string, id),
-    onMutate: id => {
-      qc.setQueryData<ImprovementGuide[]>(QUERY_KEYS.admin.improvementGuides, guides =>
-        guides?.map(guide => (guide.id === id ? { ...guide, announce: false } : guide)),
-      )
-    },
   })
 }
 

@@ -50,7 +50,7 @@ export interface ImprovementGuide {
   steps: ImprovementStep[]
   releasedOn: string | null
   publishedAt: string | null
-  /** Show its card on its screen now: recent, and this user has not closed it yet. */
+  /** Its notice may show now (recent, and to this kind of user); whether this browser closed it is local. */
   announce: boolean
 }
 
