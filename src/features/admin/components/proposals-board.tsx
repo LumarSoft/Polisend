@@ -18,7 +18,21 @@ const PAGE_SIZE = 10
 const fieldClass =
   'w-full rounded-xl border border-line-2 bg-paper px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-[border-color,box-shadow] focus:border-ember focus:shadow-[0_0_0_3px_var(--color-ember-soft)]'
 
-function ProposalForm({ onCreated }: { onCreated: () => void }) {
+const DESCRIPTION_MAX = 5000
+/** Room left at the end of the detail for the line that names the screen it was sent from. */
+const SCREEN_NOTE_ROOM = 100
+
+interface ProposalFormProps {
+  onCreated: () => void
+  /** The panel screen the person was on, added to the detail so Lumar knows what it is about. */
+  screen?: string
+  /** Inside a dialog: no card around it and no heading (the dialog has its own). */
+  bare?: boolean
+  /** Extra action on the thank-you toast, like opening the board from anywhere in the panel. */
+  toastAction?: { label: string; onClick: () => void }
+}
+
+export function ProposalForm({ onCreated, screen, bare = false, toastAction }: ProposalFormProps) {
   const create = useCreateProposal()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -29,11 +43,15 @@ function ProposalForm({ onCreated }: { onCreated: () => void }) {
       toast.error('Completá el título y el detalle.')
       return
     }
+    const detail = screen ? `${description.trim()}\n\n(Enviada desde la pantalla «${screen}»)` : description
     create.mutate(
-      { title, description },
+      { title, description: detail },
       {
         onSuccess: () => {
-          toast.success('¡Gracias! Le llegó tu propuesta a Lumar.')
+          toast.success('¡Gracias! Le llegó tu propuesta a Lumar.', {
+            description: 'Te avisamos en Mejoras cuando la respondamos.',
+            action: toastAction,
+          })
           setTitle('')
           setDescription('')
           onCreated()
@@ -47,11 +65,13 @@ function ProposalForm({ onCreated }: { onCreated: () => void }) {
     <form
       data-help="propuesta-form"
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-2xl border border-line-2 bg-card p-5 shadow-sm"
+      className={cn('flex flex-col gap-3', !bare && 'rounded-2xl border border-line-2 bg-card p-5 shadow-sm')}
     >
-      <h2 className="flex items-center gap-2 font-display text-[16px] font-semibold text-ink">
-        <Lightbulb className="size-4 text-ember-2" /> Proponer una mejora
-      </h2>
+      {!bare && (
+        <h2 className="flex items-center gap-2 font-display text-[16px] font-semibold text-ink">
+          <Lightbulb className="size-4 text-ember-2" /> Proponer una mejora
+        </h2>
+      )}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="proposal-title">¿Qué te gustaría que cambie?</Label>
         <Input
@@ -67,7 +87,7 @@ function ProposalForm({ onCreated }: { onCreated: () => void }) {
         <textarea
           id="proposal-description"
           value={description}
-          maxLength={5000}
+          maxLength={screen ? DESCRIPTION_MAX - SCREEN_NOTE_ROOM : DESCRIPTION_MAX}
           rows={4}
           onChange={e => setDescription(e.target.value)}
           placeholder="Qué pasa hoy, por qué molesta y, si tenés, un ejemplo de un chat o de un cliente."
