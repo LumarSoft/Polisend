@@ -15,8 +15,8 @@ export const chatStartService = {
     return apiRequest<ChatStartSenders>(`/admin/chat-start/senders${qs}`, { token })
   },
 
-  preview(token: string, policyId: number, senderId?: number): Promise<{ text: string }> {
-    const params = new URLSearchParams({ policyId: String(policyId) })
+  preview(token: string, clientId: number, senderId?: number): Promise<{ text: string }> {
+    const params = new URLSearchParams({ clientId: String(clientId) })
     if (senderId) params.set('senderId', String(senderId))
     return apiRequest<{ text: string }>(`/admin/chat-start/preview?${params.toString()}`, { token })
   },

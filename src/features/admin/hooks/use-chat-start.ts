@@ -26,12 +26,12 @@ export function useChatStartSenders(conversationId?: number) {
   })
 }
 
-export function useChatStartPreview(policyId: number | null, senderId?: number) {
+export function useChatStartPreview(clientId: number | null, senderId?: number) {
   const { token } = useAuth()
   return useQuery({
-    queryKey: QUERY_KEYS.chatStart.preview(policyId ?? 0, senderId),
-    queryFn: () => chatStartService.preview(token as string, policyId as number, senderId),
-    enabled: !!token && policyId !== null,
+    queryKey: QUERY_KEYS.chatStart.preview(clientId ?? 0, senderId),
+    queryFn: () => chatStartService.preview(token as string, clientId as number, senderId),
+    enabled: !!token && clientId !== null,
   })
 }
 

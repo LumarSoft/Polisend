@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { ApiError } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
-import type { ChatStartClient, ChatStartPolicy } from '@/types/api/chat-start'
+import type { ChatStartClient } from '@/types/api/chat-start'
 import type { InboxConversation } from '@/types/api/inbox'
 import { useChatStartClients, useChatStartPreview, useChatStartSenders, useStartChat } from '../hooks/use-chat-start'
 
@@ -31,31 +31,15 @@ interface Props {
   onStarted: (conversationId: number) => void
 }
 
-/** dd/mm/yyyy of a date-only value (stored at UTC midnight). */
-function formatDate(iso: string): string {
-  const date = new Date(iso)
-  const dd = String(date.getUTCDate()).padStart(2, '0')
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0')
-  return `${dd}/${mm}/${date.getUTCFullYear()}`
-}
-
-function policyLabel(policy: ChatStartPolicy): string {
-  const end = policy.validTo
-    ? `${new Date(policy.validTo).getTime() < Date.now() ? 'venció' : 'vence'} el ${formatDate(policy.validTo)}`
-    : null
-  return [`Póliza ${policy.certificateNumber}`, policy.item, end].filter(Boolean).join(' · ')
-}
-
 /**
- * Writing first to a client (Nuevo chat) or again to a chat whose 24 h are
- * over: WhatsApp only allows it with a message Meta approved, which names one
- * of the client's policies. The chat is then taken by whoever sent it.
+ * Writing first to a client (Nuevo chat) or again to a chat with no client
+ * linked: WhatsApp only allows it with a message Meta approved, which greets
+ * the client by name. The chat is then taken by whoever sent it.
  */
 export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<Props>) {
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput, 300)
   const [pickedClient, setPickedClient] = useState<ChatStartClient | null>(null)
-  const [pickedPolicyId, setPickedPolicyId] = useState<number | null>(null)
   const [phoneInput, setPhoneInput] = useState<string | null>(null)
   const [pickedSenderId, setPickedSenderId] = useState<number | null>(null)
 
@@ -67,30 +51,27 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
   // A chat with a client linked starts on that client; any other is searched.
   const client = pickedClient ?? (conversation ? (linked.data?.[0] ?? null) : null)
   const searching = !client && (!conversation || linked.isSuccess)
-  const policyId =
-    pickedPolicyId !== null && client?.policies.some(p => p.id === pickedPolicyId)
-      ? pickedPolicyId
-      : (client?.policies[0]?.id ?? null)
   const phone = phoneInput ?? client?.phone ?? ''
   const senderList = senders.data?.senders ?? []
   const senderId = pickedSenderId ?? senders.data?.defaultId ?? undefined
   const anyReady = senderList.some(s => s.ready)
-  const preview = useChatStartPreview(policyId, senderId)
+  const preview = useChatStartPreview(client?.id ?? null, senderId)
 
   const pickClient = (next: ChatStartClient | null) => {
     setPickedClient(next)
-    setPickedPolicyId(null)
     setPhoneInput(null)
   }
 
   // A chat goes out from its own number: only a new one picks the number and the phone.
-  const canSend = !!client && policyId !== null && (conversation ? true : senderId !== undefined && !!phone.trim())
+  const canSend = !!client && (conversation ? true : senderId !== undefined && !!phone.trim())
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    if (!canSend || policyId === null || start.isPending) return
+    if (!canSend || !client || start.isPending) return
     start.mutate(
-      conversation ? { policyId, conversationId: conversation.id } : { policyId, senderId, phone: phone.trim() },
+      conversation
+        ? { clientId: client.id, conversationId: conversation.id }
+        : { clientId: client.id, senderId, phone: phone.trim() },
       {
         onSuccess: result => {
           if (result.sent) {
@@ -118,8 +99,8 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
           <DialogTitle>{conversation ? '¿De quién es este chat?' : 'Nuevo chat'}</DialogTitle>
           <DialogDescription>
             {conversation
-              ? 'El mensaje para retomar el chat nombra una póliza del asegurado, y este chat no está vinculado a ninguno: buscalo para mandarlo.'
-              : 'WhatsApp solo deja escribirle primero a alguien con un mensaje aprobado por Meta, que nombra una de sus pólizas. Cuando el cliente responda, vas a poder escribirle libre.'}
+              ? 'El mensaje para retomar el chat saluda al asegurado por su nombre, y este chat no está vinculado a ninguno: buscalo para mandarlo.'
+              : 'WhatsApp solo deja escribirle primero a alguien con un mensaje aprobado por Meta, que lo saluda por su nombre. Cuando el cliente responda, vas a poder escribirle libre.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -193,22 +174,6 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
 
           {client && (
             <>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="chat-start-policy">Póliza que nombra el mensaje</Label>
-                <select
-                  id="chat-start-policy"
-                  value={policyId ?? ''}
-                  onChange={e => setPickedPolicyId(Number(e.target.value))}
-                  className={SELECT}
-                >
-                  {client.policies.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {policyLabel(p)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {!conversation && (
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="chat-start-phone">Celular</Label>
@@ -262,7 +227,7 @@ export function ChatStartDialog({ conversation, onClose, onStarted }: Readonly<P
             )}
           </div>
 
-          {client && policyId !== null && (
+          {client && (
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">Mensaje que va a recibir</span>
               {preview.isLoading ? (

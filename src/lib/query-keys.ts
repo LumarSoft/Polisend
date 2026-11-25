@@ -26,8 +26,8 @@ export const QUERY_KEYS = {
     clients: (search: string, conversationId?: number) =>
       ['admin', 'chat-start', 'clients', search, conversationId ?? 0] as const,
     senders: (conversationId?: number) => ['admin', 'chat-start', 'senders', conversationId ?? 0] as const,
-    preview: (policyId: number, senderId?: number) =>
-      ['admin', 'chat-start', 'preview', policyId, senderId ?? 0] as const,
+    preview: (clientId: number, senderId?: number) =>
+      ['admin', 'chat-start', 'preview', clientId, senderId ?? 0] as const,
   },
   admin: {
     dashboard: ['admin', 'dashboard'] as const,
