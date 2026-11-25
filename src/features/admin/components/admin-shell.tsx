@@ -21,6 +21,7 @@ import {
 import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
 import { AppSidebar } from './app-sidebar'
 import { AssistantFab, AssistantLauncher } from './assistant-launcher'
+import { ImprovementAnnouncement } from './improvement-announcement'
 import { TourOverlay } from './tour-overlay'
 import { RequirePrincipal } from './require-principal'
 import { TriunfoStatusBanner } from './triunfo-status-banner'
@@ -134,6 +135,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <TourOverlay />
           {/* Whatsapp has its own button and its box to write in sits there. */}
           <AssistantFab hidden={fullScreen} />
+          {/* What's new on this screen, once per person (Mejoras with a screen). */}
+          <ImprovementAnnouncement placement={fullScreen ? 'inbox' : 'fab'} />
           {/* ?seccion= of a link: the exact section lights up once it shows. */}
           <Suspense fallback={null}>
             <SectionFocus />

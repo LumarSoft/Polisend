@@ -1,5 +1,6 @@
 import { apiRequest } from '@/lib/api-client'
 import type {
+  ImprovementGuide,
   ImprovementRequest,
   ImprovementsListPage,
   ImprovementsPage,
@@ -30,6 +31,9 @@ export const improvementsService = {
     apiRequest<ImprovementsPage>(`/admin/improvements${toQueryString({ ...query })}`, { token }),
   unseenCount: (token: string) => apiRequest<{ count: number }>('/admin/improvements/unseen-count', { token }),
   visit: (token: string) => apiRequest<ImprovementsVisit>('/admin/improvements/visit', { method: 'POST', token }),
+  guides: (token: string) => apiRequest<ImprovementGuide[]>('/admin/improvements/guides', { token }),
+  markSeen: (token: string, id: number) =>
+    apiRequest<{ ok: true }>(`/admin/improvements/${id}/seen`, { method: 'POST', token }),
 
   platformList: (token: string, query: PlatformImprovementsQuery) =>
     apiRequest<PlatformImprovementsPage>(`/platform/improvements${toQueryString({ ...query })}`, { token }),

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { PlatformImprovement, PlatformImprovementFilter } from '@/types/api/improvements'
+import { guideScreenLabel } from '../lib/improvement-guides'
 import { usePlatformImprovementActions, usePlatformImprovements } from '../hooks/use-improvements'
 import { useListPage } from '../hooks/use-list-page'
 import { ImprovementCard } from './improvement-card'
@@ -146,6 +147,14 @@ export function MejorasEditorView() {
                     {published ? 'Publicada' : 'Borrador'}
                   </span>
                   <span className="text-faint">· {improvement.producer?.name ?? 'Todas las organizaciones'}</span>
+                  {improvement.screen && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-ember-soft px-2 py-0.5 text-[11px] font-semibold text-ember-2">
+                      <Sparkles className="size-3" />
+                      Aviso en {guideScreenLabel(improvement.screen)}
+                      {!!improvement.steps?.length &&
+                        ` · ${improvement.steps.length === 1 ? '1 paso' : `${improvement.steps.length} pasos`}`}
+                    </span>
+                  )}
                 </>
               }
               actions={

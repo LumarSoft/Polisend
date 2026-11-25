@@ -1,8 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { improvementsService } from '@/services/improvements.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
-import type { ImprovementRequest, ImprovementsQuery, PlatformImprovementsQuery } from '@/types/api/improvements'
+import type {
+  ImprovementGuide,
+  ImprovementRequest,
+  ImprovementsQuery,
+  PlatformImprovementsQuery,
+} from '@/types/api/improvements'
 import { useAuth } from '../context/auth-context'
+import { useTenantQueriesEnabled } from './use-tenant-queries'
 
 /** One page of the published improvements for the organization's users. */
 export function useImprovements(params: ImprovementsQuery) {
@@ -24,6 +30,37 @@ export function useImprovementsUnseenCount(enabled = true) {
     enabled: !!token && enabled,
     // New improvements are rare; a few minutes is plenty for the badge.
     refetchInterval: 5 * 60_000,
+  })
+}
+
+/**
+ * Improvements announced on a screen: the card each screen shows once, and the guides Mejoras replays.
+ * A principal's list (never the Developer's, who has no cartera screens).
+ */
+export function useImprovementGuides() {
+  const { token } = useAuth()
+  const tenant = useTenantQueriesEnabled()
+  return useQuery({
+    queryKey: QUERY_KEYS.admin.improvementGuides,
+    queryFn: () => improvementsService.guides(token as string),
+    enabled: !!token && tenant,
+    // A new announcement can wait a few minutes; the list barely changes.
+    staleTime: 5 * 60_000,
+    refetchInterval: 15 * 60_000,
+  })
+}
+
+/** The person closed an announcement (or started its guide from it): it is gone at once, never to show again. */
+export function useMarkImprovementSeen() {
+  const { token } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => improvementsService.markSeen(token as string, id),
+    onMutate: id => {
+      qc.setQueryData<ImprovementGuide[]>(QUERY_KEYS.admin.improvementGuides, guides =>
+        guides?.map(guide => (guide.id === id ? { ...guide, announce: false } : guide)),
+      )
+    },
   })
 }
 

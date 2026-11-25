@@ -55,6 +55,11 @@ pnpm exec tsc --noEmit
   (`components/assistant-mark.tsx`, con estados `idle`/`thinking`/`writing`/`happy`/`worried`) y el botón para
   preguntarle desde una pantalla (`AskAssistantButton` en `assistant-launcher.tsx`, variantes `chip`, `icon`, `link`).
   Nada del chat usa `ember`.
+- Novedades con aviso y paso a paso (24/11): una mejora de Mejoras puede tener `screen` (id de `SCREENS`) y `steps`
+  (hasta 6). Se anuncia una vez por usuario en esa pantalla (`ImprovementAnnouncement`, los primeros 30 días) y su
+  paso a paso se repite desde Mejoras (`ImprovementGuidesShelf`); lo corre el mismo `TourOverlay` del asistente
+  (`tourStore.play`). Lumar lo escribe en el formulario de la mejora. **Toda función nueva lleva `data-help="…"` en
+  sus elementos principales**, así su paso a paso los puede marcar. Detalle en `lib/improvement-guides.ts`.
 - Convenciones completas: `docs/panel/`.
 
 ## Roles, red y principal activo (plan `docs/PLAN-OWNER-ZONAS.md` §6)

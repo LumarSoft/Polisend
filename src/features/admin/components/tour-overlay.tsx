@@ -6,11 +6,13 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Pointer, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTour } from '../hooks/use-tour'
-import { getTour } from '../lib/panel-tours'
 import { tourStore } from '../lib/tour-store'
+import { GuideCard } from './guide-card'
 
 /** How long a step waits for its element (navigation, data loading, a sheet opening). */
 const FIND_TIMEOUT_MS = 6000
+/** An improvement's guide shows the step in the middle sooner: its text still says what to do. */
+const IMPROVEMENT_FIND_TIMEOUT_MS = 3500
 /**
  * Right after a navigation the screen is still filling in (data, animations): for this long a
  * step keeps looking for a better-placed element before scrolling to the one it has.
@@ -22,8 +24,9 @@ const LOST_GRACE_MS = 500
 const PAD = 6
 const GAP = 10
 const EDGE = 12
-/** Room the bubble needs above or below the element (it is never taller). */
-const BUBBLE_ROOM = 150
+/** The bubble's width and the room it needs above or below the element (it is never taller). */
+const ASSISTANT_BUBBLE = { width: 340, room: 150 }
+const IMPROVEMENT_BUBBLE = { width: 370, room: 230 }
 
 /**
  * Whether the person can actually see the element: inside the window and not covered or clipped
@@ -76,14 +79,14 @@ function union(a: DOMRect, b: DOMRect | null): DOMRect {
   return new DOMRect(left, top, Math.max(a.right, b.right) - left, Math.max(a.bottom, b.bottom) - top)
 }
 
-function bubblePosition(rect: DOMRect): CSSProperties {
+function bubblePosition(rect: DOMRect, bubble: { width: number; room: number }): CSSProperties {
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const width = Math.min(340, vw - EDGE * 2)
+  const width = Math.min(bubble.width, vw - EDGE * 2)
   const centered = rect.left + rect.width / 2 - width / 2
   const left = Math.min(Math.max(centered, EDGE), vw - width - EDGE)
-  if (vh - rect.bottom >= BUBBLE_ROOM) return { top: rect.bottom + PAD + GAP, left, width }
-  if (rect.top >= BUBBLE_ROOM) return { bottom: vh - rect.top + PAD + GAP, left, width }
+  if (vh - rect.bottom >= bubble.room) return { top: rect.bottom + PAD + GAP, left, width }
+  if (rect.top >= bubble.room) return { bottom: vh - rect.top + PAD + GAP, left, width }
   // A tall element (a dialog): beside it, level with its bottom, where the button to tap usually is.
   const bottom = Math.max(vh - rect.bottom, EDGE)
   const side = width + PAD + GAP
@@ -94,25 +97,27 @@ function bubblePosition(rect: DOMRect): CSSProperties {
 }
 
 /**
- * "Mostrame en pantalla": runs the guide the assistant offered. It takes the person to the
- * guide's screen, rings the real element (`data-help` anchor) under a dimmed page and shows a
- * bubble saying what to do there. The dim never blocks clicks: the person does the real thing
- * on the real screen, and a step with `waitFor` moves on when they tap it.
+ * Runs the guide that was started: the assistant's "Mostrame en pantalla" or an improvement's step by
+ * step. It takes the person to the guide's screen, rings the real element (`data-help` anchor) under a
+ * dimmed page and shows a bubble saying what to do there. The dim never blocks clicks: the person does
+ * the real thing on the real screen, and a step with `waitFor` moves on when they tap it. An
+ * improvement's step without an element (or whose element is not there) shows in the middle.
  *
  * Built in-house instead of driver.js and the like: those expect the element to exist when the
  * step starts, while here it shows up after a navigation, a fetch or a sheet opening; and their
  * overlay swallows the "outside" click that closes a Radix menu or dialog.
  */
 export function TourOverlay() {
-  const { tourId, step, run } = useTour()
+  const { tour, step, run } = useTour()
   const pathname = usePathname()
   const router = useRouter()
 
-  const tour = tourId ? getTour(tourId) : null
   const current = tour?.steps[step] ?? null
+  const isImprovement = tour?.kind === 'improvement'
   const isLast = tour ? step === tour.steps.length - 1 : false
   const canGoBack = step > 0 && !!tour?.steps[step - 1]?.waitFor
   const onRoute = !tour?.route || pathname === tour.route
+  const findTimeout = isImprovement ? IMPROVEMENT_FIND_TIMEOUT_MS : FIND_TIMEOUT_MS
 
   // What the current step found, tagged with the step it belongs to: a new step starts blank
   // without an effect having to reset anything.
@@ -130,6 +135,7 @@ export function TourOverlay() {
   const arrivedRef = useRef(false)
 
   const finish = useCallback(() => tourStore.stop(), [])
+  const complete = useCallback(() => tourStore.stop(true), [])
 
   // Go to the guide's screen; leaving it halfway ends the guide.
   useEffect(() => {
@@ -142,17 +148,18 @@ export function TourOverlay() {
     } else if (arrivedRef.current) {
       finish()
     } else {
-      router.push(tour.route)
+      router.push(tour.href ?? tour.route)
     }
   }, [tour, onRoute, router, finish])
 
   // Find the step's element and follow it (scroll, sheets animating, dialogs resizing).
   useEffect(() => {
-    if (!current || !onRoute) return
+    const target = current?.target
+    if (!current || !target || !onRoute) return
 
     let element: HTMLElement | null = null
     const settleUntil = performance.now() + SETTLE_MS
-    let deadline = performance.now() + FIND_TIMEOUT_MS
+    let deadline = performance.now() + findTimeout
     let seen = false
     let lostSince: number | null = null
     let frame = 0
@@ -161,7 +168,7 @@ export function TourOverlay() {
       const now = performance.now()
       const settling = !seen && now < settleUntil
       if (!element?.isConnected || (settling && !isShown(element))) {
-        element = findTarget(current.target)
+        element = findTarget(target)
       }
 
       if (element) {
@@ -173,11 +180,11 @@ export function TourOverlay() {
           }
         }
         lostSince = null
-        deadline = now + FIND_TIMEOUT_MS
+        deadline = now + findTimeout
         const box = element.getBoundingClientRect()
         // The button that ends the step may sit outside the highlight (a dialog's footer).
         const waitBox =
-          current.waitFor && current.waitFor !== current.target
+          current.waitFor && current.waitFor !== target
             ? (findTarget(current.waitFor)?.getBoundingClientRect() ?? null)
             : null
         const keep = union(box, waitBox)
@@ -195,15 +202,18 @@ export function TourOverlay() {
           return
         }
       } else if (now > deadline) {
-        setFound({ key: stepKey, rect: null, avoid: null, missing: true })
-        return
+        setFound(prev =>
+          prev.key === stepKey && prev.missing ? prev : { key: stepKey, rect: null, avoid: null, missing: true },
+        )
+        // An improvement's step shows in the middle meanwhile and still rings the element if it turns up.
+        if (!isImprovement) return
       }
       frame = requestAnimationFrame(track)
     }
 
     frame = requestAnimationFrame(track)
     return () => cancelAnimationFrame(frame)
-  }, [current, onRoute, canGoBack, stepKey])
+  }, [current, onRoute, canGoBack, stepKey, findTimeout, isImprovement])
 
   // A step with `waitFor` moves on when the person taps the real element. Capture phase, so it
   // hears the tap even if the panel stops it, without ever interfering with it. Pointer down as
@@ -217,7 +227,7 @@ export function TourOverlay() {
       if (tapped || !(event.target instanceof Element)) return
       if (!event.target.closest(`[data-help~="${anchor}"]`)) return
       tapped = true
-      if (isLast) finish()
+      if (isLast) complete()
       else tourStore.next()
     }
     document.addEventListener('pointerdown', onTap, true)
@@ -226,7 +236,7 @@ export function TourOverlay() {
       document.removeEventListener('pointerdown', onTap, true)
       document.removeEventListener('click', onTap, true)
     }
-  }, [current, isLast, finish])
+  }, [current, isLast, complete])
 
   useEffect(() => {
     if (!tour) return
@@ -237,10 +247,70 @@ export function TourOverlay() {
     return () => window.removeEventListener('keydown', onKey)
   }, [tour, finish])
 
-  if (!tour || !current || typeof document === 'undefined') return null
-  if (!rect && !missing) return null
+  if (!tour || !current || typeof document === 'undefined' || !onRoute) return null
+  // A step without an element shows in the middle at once; one with an element waits until it is found.
+  const centered = !current.target || (isImprovement && missing)
+  if (!centered && !rect && !missing) return null
 
   const total = tour.steps.length
+
+  if (isImprovement) {
+    return createPortal(
+      <div className="pointer-events-none fixed inset-0 z-[100]" data-tour-overlay>
+        {centered ? (
+          <div
+            key={`dim-${run}`}
+            aria-hidden
+            className="absolute inset-0 animate-in bg-black/45 fade-in-0 duration-300"
+          />
+        ) : (
+          rect && (
+            <div
+              key={`ring-${run}`}
+              aria-hidden
+              className="absolute animate-in rounded-xl shadow-[0_0_0_9999px_rgb(0_0_0/0.45)] ring-2 ring-ember transition-all duration-300 ease-out fade-in-0"
+              style={{
+                top: rect.top - PAD,
+                left: rect.left - PAD,
+                width: rect.width + PAD * 2,
+                height: rect.height + PAD * 2,
+              }}
+            >
+              <span className="absolute inset-0 rounded-xl motion-safe:animate-[guide-pulse_1.8s_ease-out_infinite]" />
+            </div>
+          )
+        )}
+
+        <div
+          key={`${stepKey}-${centered}`}
+          className="pointer-events-auto absolute animate-in fade-in-0 zoom-in-95 duration-200"
+          style={
+            centered || !rect
+              ? {
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: `min(${IMPROVEMENT_BUBBLE.width + 30}px, calc(100vw - ${EDGE * 2}px))`,
+                }
+              : bubblePosition(avoid ?? rect, IMPROVEMENT_BUBBLE)
+          }
+        >
+          <GuideCard
+            heading={tour.heading ?? 'Novedad'}
+            title={current.title ?? current.text}
+            text={current.title ? current.text : null}
+            index={step}
+            total={total}
+            waitsForTap={!!current.waitFor && !centered}
+            onBack={tourStore.back}
+            onNext={isLast ? complete : tourStore.next}
+            onClose={finish}
+          />
+        </div>
+      </div>,
+      document.body,
+    )
+  }
 
   return createPortal(
     <div className="pointer-events-none fixed inset-0 z-[100]" data-tour-overlay>
@@ -265,7 +335,7 @@ export function TourOverlay() {
         className="pointer-events-auto absolute animate-in fade-in-0 zoom-in-95 rounded-xl border border-line-2 bg-popover p-3 text-[13.5px] text-popover-foreground shadow-lg"
         style={
           rect
-            ? bubblePosition(avoid ?? rect)
+            ? bubblePosition(avoid ?? rect, ASSISTANT_BUBBLE)
             : { bottom: 24, left: '50%', transform: 'translateX(-50%)', width: 'min(340px, calc(100vw - 24px))' }
         }
       >
@@ -297,7 +367,7 @@ export function TourOverlay() {
               Tocá donde está marcado
             </span>
           ) : (
-            <Button size="sm" onClick={isLast ? finish : tourStore.next}>
+            <Button size="sm" onClick={isLast ? complete : tourStore.next}>
               {isLast ? 'Listo' : 'Siguiente'}
             </Button>
           )}
