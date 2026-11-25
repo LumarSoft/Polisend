@@ -30,8 +30,8 @@ export interface ChatStartSenders {
 }
 
 export interface StartChatRequest {
-  /** Without it, a chat (`conversationId`) names its client's newest policy. */
-  policyId?: number
+  /** The client written to; without it, the one linked to the chat (`conversationId`). */
+  clientId?: number
   conversationId?: number
   phone?: string
   senderId?: number
