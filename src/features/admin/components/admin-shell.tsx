@@ -22,6 +22,7 @@ import { CAMPAIGN_PAGES, campaignHref } from '../lib/campaign-pages'
 import { AppSidebar } from './app-sidebar'
 import { AssistantFab, AssistantLauncher } from './assistant-launcher'
 import { ImprovementAnnouncement } from './improvement-announcement'
+import { ProposeImprovementButton } from './propose-improvement-button'
 import { TourOverlay } from './tour-overlay'
 import { RequirePrincipal } from './require-principal'
 import { TriunfoStatusBanner } from './triunfo-status-banner'
@@ -121,7 +122,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <SidebarTrigger className="-ml-1 text-muted-foreground" />
                   <Separator orientation="vertical" className="mr-1 !h-4" />
                   <span className="font-display text-[14.5px] tracking-[-0.01em] text-ink">{title}</span>
-                  <AssistantLauncher />
+                  <div className="ml-auto flex items-center gap-2">
+                    {/* The Developer answers proposals, it does not send them. */}
+                    {!isDeveloper && <ProposeImprovementButton screen={title} />}
+                    <AssistantLauncher />
+                  </div>
                 </header>
               </div>
             )}
