@@ -1,19 +1,22 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Dialog as DialogPrimitive } from 'radix-ui'
 import { Play, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import type { ImprovementGuide } from '@/types/api/improvements'
-import { useImprovementGuides, useMarkImprovementSeen } from '../hooks/use-improvements'
+import { useImprovementGuides } from '../hooks/use-improvements'
 import { useTour } from '../hooks/use-tour'
 import { guideScreenLabel, guideScreenPath, playGuide } from '../lib/improvement-guides'
+import { markImprovementSeen, useImprovementSeen } from '../lib/improvement-seen'
 
-/** Lets the screen settle (data, its own animations) before the card slides in. */
+/** Lets the screen settle (data, its own animations) before the notice opens. */
 const SHOW_AFTER_MS = 1100
+/** The guide starts once the notice and its blur are gone. */
+const GUIDE_AFTER_CLOSE_MS = 280
 
 interface AnnouncementCardProps {
   guide: Pick<ImprovementGuide, 'title' | 'summary' | 'screen' | 'steps'>
@@ -24,7 +27,7 @@ interface AnnouncementCardProps {
   className?: string
 }
 
-/** The card itself: also the editor's preview. */
+/** The notice itself: also the editor's preview. */
 export function AnnouncementCard({ guide, more = 0, onPlay, onDismiss, className }: AnnouncementCardProps) {
   const reduced = useReducedMotion()
   const steps = guide.steps.length
@@ -32,66 +35,64 @@ export function AnnouncementCard({ guide, more = 0, onPlay, onDismiss, className
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-line-2 bg-popover text-popover-foreground shadow-[0_22px_55px_-18px_rgb(0_0_0/0.45),0_2px_8px_-2px_rgb(0_0_0/0.08)]',
+        'relative overflow-hidden rounded-3xl border border-line-2 bg-popover text-center text-popover-foreground shadow-[0_30px_80px_-20px_rgb(0_0_0/0.5),0_2px_10px_-2px_rgb(0_0_0/0.1)]',
         className,
       )}
     >
-      {/* A soft glow of the panel's colour behind the corner. */}
+      {/* A soft glow of the panel's colour behind the top. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-20 -right-14 size-48 rounded-full bg-ember/15 blur-3xl"
+        className="pointer-events-none absolute -top-28 left-1/2 h-56 w-[130%] -translate-x-1/2 rounded-full bg-ember/20 blur-3xl"
       />
 
-      <div className="relative p-4">
-        <div className="flex items-center gap-3">
-          <motion.span
-            className="grid size-9 shrink-0 place-items-center rounded-xl bg-ember text-on-ember shadow-sm"
-            animate={reduced ? undefined : { rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }}
-            transition={{ duration: 1.1, delay: 0.35, repeat: 1, repeatDelay: 2.4, ease: 'easeInOut' }}
-          >
-            <Sparkles className="size-[18px]" />
-          </motion.span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="text-[10.5px] font-semibold tracking-[0.16em] text-ember-2 uppercase">Novedad</p>
-            <p className="truncate text-[12.5px] text-faint">en {guideScreenLabel(guide.screen)}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label="Cerrar y no volver a mostrar"
-            title="No volver a mostrar"
-            className="-mt-1 -mr-1.5 grid size-7 shrink-0 place-items-center self-start rounded-full text-faint transition-colors hover:bg-secondary hover:text-ink"
-          >
-            <X className="size-3.5" />
-          </button>
-        </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Cerrar y no volver a mostrar"
+        title="No volver a mostrar"
+        className="absolute top-3 right-3 z-10 grid size-8 place-items-center rounded-full text-faint transition-colors hover:bg-secondary hover:text-ink"
+      >
+        <X className="size-4" />
+      </button>
 
-        <h3 className="mt-3 font-display text-[16px] leading-snug font-semibold tracking-tight text-pretty text-ink">
+      <div className="relative px-6 pt-8 pb-6 sm:px-8">
+        <motion.span
+          className="mx-auto grid size-14 place-items-center rounded-2xl bg-ember text-on-ember shadow-[0_14px_34px_-12px_var(--color-ember)]"
+          initial={reduced ? false : { scale: 0.6, rotate: -12, opacity: 0 }}
+          animate={reduced ? undefined : { scale: [0.6, 1.08, 1], rotate: [-12, 6, 0], opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Sparkles className="size-7" />
+        </motion.span>
+
+        <p className="mt-4 text-[11px] font-semibold tracking-[0.18em] text-ember-2 uppercase">
+          Novedad en {guideScreenLabel(guide.screen)}
+        </p>
+        <h2 className="mt-2 font-display text-[20px] leading-snug font-semibold tracking-tight text-balance text-ink">
           {guide.title}
-        </h3>
-        <p className="mt-1 line-clamp-3 text-[13.5px] leading-relaxed text-pretty text-ink-3">{guide.summary}</p>
+        </h2>
+        <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed text-pretty text-ink-3">{guide.summary}</p>
 
-        <div className="mt-4 flex items-center gap-2">
-          {steps > 0 ? (
-            <>
-              <Button size="sm" onClick={onPlay} className="group">
-                <Play className="size-3.5 fill-current transition-transform group-hover:scale-110" />
-                Mostrame cómo
-              </Button>
-              <span className="text-[12px] text-faint tabular-nums">{steps === 1 ? '1 paso' : `${steps} pasos`}</span>
-              <Button variant="ghost" size="sm" onClick={onDismiss} className="ml-auto text-ink-3">
-                Entendido
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" onClick={onDismiss} className="ml-auto">
-              Entendido
+        <div className="mt-6 flex flex-col gap-2">
+          {steps > 0 && (
+            <Button data-announcement-primary onClick={onPlay} className="group h-11 w-full text-[14px]">
+              <Play className="size-4 fill-current transition-transform group-hover:scale-110" />
+              Mostrame cómo
+              <span className="font-normal opacity-80">· {steps === 1 ? '1 paso' : `${steps} pasos`}</span>
             </Button>
           )}
+          <Button
+            data-announcement-primary={steps === 0 ? '' : undefined}
+            variant={steps > 0 ? 'ghost' : 'default'}
+            onClick={onDismiss}
+            className={cn('h-10 w-full', steps > 0 && 'text-ink-3')}
+          >
+            Entendido
+          </Button>
         </div>
 
         {more > 0 && (
-          <p className="mt-3 border-t border-line pt-2.5 text-[11.5px] text-faint">
+          <p className="mt-4 text-[12px] text-faint">
             {more === 1 ? 'Hay 1 novedad más en esta sección.' : `Hay ${more} novedades más en esta sección.`}
           </p>
         )}
@@ -101,23 +102,24 @@ export function AnnouncementCard({ guide, more = 0, onPlay, onDismiss, className
 }
 
 /**
- * What's new, where it is new: an improvement with a screen shows its card once to each person, the first
- * times they open that screen, until they close it or start its guide. It never blocks the screen (no dim,
- * no focus trap) and waits while a guide runs. The guide stays in Mejoras to replay.
+ * What's new, where it is new: an improvement with a screen opens its notice in the middle of that screen,
+ * over a blur, once per browser (several people share an account, so the mark is in this browser's
+ * localStorage). Closing it in any way, or starting its guide, is the one time. It waits while a guide
+ * runs. The guide stays in Mejoras to replay.
  */
-export function ImprovementAnnouncement({ placement }: { placement: 'fab' | 'inbox' }) {
+export function ImprovementAnnouncement() {
   const pathname = usePathname()
-  const reduced = useReducedMotion()
-  const { state, isMobile } = useSidebar()
   const { data: guides } = useImprovementGuides()
+  const isSeen = useImprovementSeen()
   const { tour } = useTour()
-  const markSeen = useMarkImprovementSeen()
 
-  const waiting = (guides ?? []).filter(guide => guide.announce && guideScreenPath(guide.screen) === pathname)
+  const waiting = isSeen
+    ? (guides ?? []).filter(guide => guide.announce && !isSeen(guide.id) && guideScreenPath(guide.screen) === pathname)
+    : []
   const guide = waiting[0] ?? null
   const key = guide ? `${pathname}:${guide.id}` : null
 
-  // Shown a moment after landing on the screen (and after the previous card left).
+  // Opened a moment after landing on the screen (and after the previous notice left).
   const [readyKey, setReadyKey] = useState<string | null>(null)
   useEffect(() => {
     if (!key) return
@@ -125,46 +127,54 @@ export function ImprovementAnnouncement({ placement }: { placement: 'fab' | 'inb
     return () => window.clearTimeout(timer)
   }, [key])
 
-  const visible = !!guide && readyKey === key && !tour
+  // What the notice shows while it closes, once its mark has already taken it off the list.
+  const [closing, setClosing] = useState<ImprovementGuide | null>(null)
+  const open = !!guide && readyKey === key && !tour
+  const shown = open ? guide : closing
 
-  const close = (target: ImprovementGuide) => markSeen.mutate(target.id)
+  const close = (target: ImprovementGuide) => {
+    setClosing(target)
+    markImprovementSeen(target.id)
+  }
   const play = (target: ImprovementGuide) => {
-    markSeen.mutate(target.id)
-    playGuide(target, { fromAnnouncement: true })
+    close(target)
+    window.setTimeout(() => playGuide(target, { fromAnnouncement: true }), GUIDE_AFTER_CLOSE_MS)
   }
 
-  // Above the assistant's button; in Whatsapp, where the box to write in sits on the right, next to the menu.
-  // On a phone's Whatsapp, at the top: the chat and its box fill the bottom.
-  const style: CSSProperties =
-    placement === 'inbox'
-      ? isMobile
-        ? { left: 12, top: 64 }
-        : { left: `calc(var(--sidebar-width${state === 'expanded' ? '' : '-icon'}) + 1.75rem)`, bottom: 20 }
-      : { right: isMobile ? 12 : 20, bottom: 'calc(max(20px, env(safe-area-inset-bottom)) + 4.5rem)' }
-
   return (
-    <AnimatePresence>
-      {visible && guide && (
-        <motion.aside
-          key={guide.id}
-          role="status"
-          aria-live="polite"
-          aria-label={`Novedad: ${guide.title}`}
-          initial={reduced ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={reduced ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.97, transition: { duration: 0.18 } }}
-          transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-          style={style}
-          className="fixed z-40 w-[min(360px,calc(100vw-24px))]"
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={next => {
+        // Escape or a tap outside: it was seen too.
+        if (!next && guide) close(guide)
+      }}
+    >
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[49] bg-black/25 backdrop-blur-md duration-300 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 dark:bg-black/45" />
+        <DialogPrimitive.Content
+          onOpenAutoFocus={event => {
+            // The main button, not the ✕ at the top.
+            event.preventDefault()
+            ;(event.currentTarget as HTMLElement | null)
+              ?.querySelector<HTMLElement>('[data-announcement-primary]')
+              ?.focus()
+          }}
+          className="fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-90 data-open:slide-in-from-bottom-4 data-open:duration-500 data-open:ease-[cubic-bezier(0.34,1.4,0.64,1)] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200"
         >
-          <AnnouncementCard
-            guide={guide}
-            more={waiting.length - 1}
-            onPlay={() => play(guide)}
-            onDismiss={() => close(guide)}
-          />
-        </motion.aside>
-      )}
-    </AnimatePresence>
+          {shown && (
+            <>
+              <DialogPrimitive.Title className="sr-only">Novedad: {shown.title}</DialogPrimitive.Title>
+              <DialogPrimitive.Description className="sr-only">{shown.summary}</DialogPrimitive.Description>
+              <AnnouncementCard
+                guide={shown}
+                more={open ? waiting.length - 1 : 0}
+                onPlay={() => play(shown)}
+                onDismiss={() => close(shown)}
+              />
+            </>
+          )}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   )
 }

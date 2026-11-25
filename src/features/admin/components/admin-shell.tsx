@@ -140,8 +140,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <TourOverlay />
           {/* Whatsapp has its own button and its box to write in sits there. */}
           <AssistantFab hidden={fullScreen} />
-          {/* What's new on this screen, once per person (Mejoras with a screen). */}
-          <ImprovementAnnouncement placement={fullScreen ? 'inbox' : 'fab'} />
+          {/* What's new on this screen, once per browser (Mejoras with a screen). */}
+          <ImprovementAnnouncement />
           {/* ?seccion= of a link: the exact section lights up once it shows. */}
           <Suspense fallback={null}>
             <SectionFocus />

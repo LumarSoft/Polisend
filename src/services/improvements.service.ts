@@ -32,8 +32,6 @@ export const improvementsService = {
   unseenCount: (token: string) => apiRequest<{ count: number }>('/admin/improvements/unseen-count', { token }),
   visit: (token: string) => apiRequest<ImprovementsVisit>('/admin/improvements/visit', { method: 'POST', token }),
   guides: (token: string) => apiRequest<ImprovementGuide[]>('/admin/improvements/guides', { token }),
-  markSeen: (token: string, id: number) =>
-    apiRequest<{ ok: true }>(`/admin/improvements/${id}/seen`, { method: 'POST', token }),
 
   platformList: (token: string, query: PlatformImprovementsQuery) =>
     apiRequest<PlatformImprovementsPage>(`/platform/improvements${toQueryString({ ...query })}`, { token }),
