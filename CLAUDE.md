@@ -63,6 +63,15 @@ pnpm exec tsc --noEmit
   sus elementos principales**, así su paso a paso los puede marcar. Detalle en `lib/improvement-guides.ts`.
 - Convenciones completas: `docs/panel/`.
 
+## Funciones nuevas: preguntar por el aviso
+
+Antes de commitear, abrir el PR o subir una función nueva (o un cambio visible) que la oficina usa en el panel,
+**preguntale a la persona si la sube como novedad, con el aviso en su pantalla y el paso a paso**. Sí → seguí la skill
+`anunciar-novedad` (`.claude/skills/anunciar-novedad/SKILL.md`): `data-help` en sus elementos dentro del mismo PR, el
+borrador de la mejora para que lo apruebe y, con la función ya en producción, publicarla desde Mejoras con una cuenta
+Developer. No → se sube sin aviso. No se pregunta por arreglos que la oficina no nota, refactors ni pantallas del
+Developer.
+
 ## Roles, red y principal activo (plan `docs/PLAN-OWNER-ZONAS.md` §6)
 
 - Cuatro roles: DEVELOPER (Lumar: solo pantallas de plataforma, ve plata, nunca una cartera), OWNER (dueño de una red:
