@@ -11,8 +11,9 @@ import { useRole } from './use-role'
  *
  * - SuperAdmin: opens on the office line (the principal's default number, from /users/me) until they pick something
  *   else, "Todos" included.
- * - Owner: the same inside its acting principal, except that the productor is the cascading filter's, shared by every
- *   tab (`useActingPrincipal().selection.producerCodeId`); choosing a number clears it.
+ * - Owner: opens on all the acting principal's numbers ("Todos los números"), never on the office line; the productor
+ *   is the cascading filter's, shared by every tab (`useActingPrincipal().selection.producerCodeId`); choosing a
+ *   number clears it.
  * - Admin: no default: the API already limits them to their own numbers.
  */
 export function useScopeFilterState(): [ScopeFilterValue, (value: ScopeFilterValue) => void] {
@@ -21,7 +22,8 @@ export function useScopeFilterState(): [ScopeFilterValue, (value: ScopeFilterVal
   const acting = useActingPrincipal()
   // Null until the user picks something: the default applies meanwhile.
   const [chosen, setChosen] = useState<ScopeFilterValue | null>(null)
-  const defaultId = canManageOrg ? (profile?.organization?.defaultPhoneNumber?.id ?? null) : null
+  // The office line is the SuperAdmin's starting point; an Owner opens every principal on all its numbers.
+  const defaultId = canManageOrg && !isOwner ? (profile?.organization?.defaultPhoneNumber?.id ?? null) : null
   const local = chosen ?? (defaultId != null ? { phoneNumberId: defaultId } : {})
   if (!isOwner) return [local, setChosen]
 
