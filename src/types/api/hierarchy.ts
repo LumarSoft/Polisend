@@ -84,9 +84,19 @@ export interface NetworkTreePrincipal {
   triunfo: { configured: boolean; failingSince: string | null }
   codes: NetworkTreeCode[]
   /** The groups its codes are ordered in, by name. Absent on older APIs. */
-  groups?: CodeGroup[]
+  groups?: NetworkTreeGroup[]
   /** It holds a zone's productores: Mi red shows each of its groups as a principal. Absent on older APIs. */
   groupsAsPrincipals?: boolean
+}
+
+/**
+ * A code group in `GET /hierarchy/tree`. In a principal shown as its groups each group is one of the zone's principals
+ * and also carries its users (its SuperAdmins of the group and the Admins of its codes) and its insured clients.
+ * Absent elsewhere and on older APIs.
+ */
+export interface NetworkTreeGroup extends CodeGroup {
+  users?: { superAdmins: number; admins: number }
+  clients?: number
 }
 
 export interface NetworkTreeZone {

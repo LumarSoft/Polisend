@@ -44,8 +44,9 @@ interface NetworkModeProps {
   value: NetworkListFilterValue
   onChange: (value: NetworkListFilterValue) => void
   /**
-   * Mi red: a principal that holds a zone's productores shows as its groups, each one at the level of a principal.
-   * Elsewhere (Usuarios, Facturación) such a principal is left out: it has no users nor numbers of its own.
+   * Mi red and Usuarios: a principal that holds a zone's productores shows as its groups, each one at the level of a
+   * principal (its users are SuperAdmins of groups and Admins of one group). Elsewhere (Facturación) such a principal
+   * is left out: it has no numbers of its own.
    */
   expandGroups?: boolean
   showProducer?: boolean

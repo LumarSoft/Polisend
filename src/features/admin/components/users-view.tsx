@@ -20,13 +20,14 @@ import { useProfile } from '../hooks/use-profile'
 import { useRole } from '../hooks/use-role'
 import { useSupport } from '../context/support-context'
 import { NO_ZONE, zoneKeyOf } from '../lib/network'
-import { USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
+import { USERS_GROUP_PARAM, USERS_NEW_PARAM, USERS_NEW_SUPERADMIN, USERS_PRINCIPAL_PARAM } from '../lib/network-links'
 import {
   isManagedUser,
   isReadOnlyUser,
   matchesSearch,
   shownRole,
   userHeading,
+  worksGroup,
   type UserHeading,
 } from '../lib/network-users'
 import { ROLES, roleLabel } from '../lib/roles'
@@ -159,6 +160,9 @@ function narrowUsers(
     const ids = new Set(principals.filter(p => zoneKeyOf(p) === NO_ZONE).map(p => p.id))
     rows = rows.filter(user => ids.has(user.principal.id))
   }
+  // A zone's principal is one group of the principal that holds the zone's productores (or its «Sin clasificar»).
+  const holder = principals.find(p => p.id === filter.principalId && p.groupsAsPrincipals)
+  if (holder) rows = rows.filter(user => worksGroup(user, holder, filter.groupId ?? null))
   const codeId = filter.producerCodeId
   if (codeId !== null) {
     rows = rows.filter(user => shownRole(user) === ROLES.superAdmin || user.codes.some(code => code.id === codeId))
@@ -185,10 +189,12 @@ function UsersScreen() {
   /** The role "Nuevo usuario" starts with when a link asked for one (`&nuevo=superadmin`). */
   const [linkedRole, setLinkedRole] = useState<NetworkUserRole | undefined>(undefined)
   const params = useSearchParams()
-  // `?principal=<id>` (Mi red's "Ver usuarios", an organization's detail) preselects the principal; with
-  // `&nuevo=superadmin` (Mi red's «Sin SuperAdmin · crear uno») it also opens "Nuevo usuario" as its SuperAdmin.
+  // `?principal=<id>` (Mi red's "Ver usuarios", an organization's detail) preselects the principal, and `&grupo=<id>`
+  // one of its groups (a zone's principal); with `&nuevo=superadmin` (Mi red's «Sin SuperAdmin · crear uno») it also
+  // opens "Nuevo usuario" as its SuperAdmin.
   const clearPrincipalLink = useLinkedId(USERS_PRINCIPAL_PARAM, id => {
-    setFilter({ zoneKey: null, principalId: id, producerCodeId: null })
+    const groupId = Number(params.get(USERS_GROUP_PARAM))
+    setFilter({ zoneKey: null, principalId: id, groupId: groupId > 0 ? groupId : null, producerCodeId: null })
     if (params.get(USERS_NEW_PARAM) === USERS_NEW_SUPERADMIN) {
       setEditing(null)
       setLinkedRole(ROLES.superAdmin)
@@ -198,6 +204,7 @@ function UsersScreen() {
   const changeFilter = (next: NetworkListFilterValue) => {
     setFilter(next)
     clearPrincipalLink()
+    if (params.get(USERS_GROUP_PARAM)) setUrlParams({ [USERS_GROUP_PARAM]: null })
   }
 
   const filtered = filter.zoneKey !== null || filter.principalId !== null || filter.producerCodeId !== null
@@ -351,7 +358,7 @@ function UsersScreen() {
                 className="w-64"
               />
             ) : (
-              <NetworkFilter mode="network" value={filter} onChange={changeFilter} />
+              <NetworkFilter mode="network" value={filter} onChange={changeFilter} expandGroups />
             )}
             <Combobox
               label="Rol"
