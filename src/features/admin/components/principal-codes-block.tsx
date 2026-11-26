@@ -51,8 +51,10 @@ export interface PrincipalCodesBlockProps {
   asPrincipals?: boolean
   /** Works on that group as the acting principal (asPrincipals). */
   onEnterGroup?: (groupId: number) => void
-  /** Only this group (the Principal filter chose it), opened. */
+  /** Only this group (the Principal filter chose it, or its card in Mi red), opened; no new group or code here. */
   onlyGroupId?: number | null
+  /** Groups shown elsewhere (Mi red's cards of the zone's principals with users): left out of the list. */
+  hiddenGroupIds?: readonly number[]
 }
 
 /**
@@ -74,6 +76,7 @@ export function PrincipalCodesBlock({
   asPrincipals = false,
   onEnterGroup,
   onlyGroupId = null,
+  hiddenGroupIds = [],
 }: PrincipalCodesBlockProps) {
   const [showHidden] = useShowHiddenCodes()
   const [search, setSearch] = useState('')
@@ -87,7 +90,10 @@ export function PrincipalCodesBlock({
       )
     : shown
   const grouped = onlyCodeId === null && (asPrincipals || groups.length > 0 || codes.length > 20)
-  const shownGroups = onlyGroupId === null ? groups : groups.filter(group => group.id === onlyGroupId)
+  const shownGroups =
+    onlyGroupId === null
+      ? groups.filter(group => !hiddenGroupIds.includes(group.id))
+      : groups.filter(group => group.id === onlyGroupId)
 
   return (
     <div className="flex flex-col gap-3">
@@ -103,7 +109,7 @@ export function PrincipalCodesBlock({
               className="h-9 w-64 pl-8 text-[13px]"
             />
           </div>
-          <NewGroupForm principalId={principalId} />
+          {onlyGroupId === null && <NewGroupForm principalId={principalId} />}
         </div>
       )}
       {grouped ? (
@@ -156,7 +162,7 @@ export function PrincipalCodesBlock({
           .
         </p>
       )}
-      {onlyCodeId === null && <NewCodeForm principalId={principalId} />}
+      {onlyCodeId === null && onlyGroupId === null && <NewCodeForm principalId={principalId} />}
     </div>
   )
 }

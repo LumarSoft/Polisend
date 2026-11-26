@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { FolderPlus, MapPinned, Network, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,7 +15,7 @@ import { apiErrorMessage } from '../lib/api-error-message'
 import { NO_ZONE, noZoneLabel, type ZoneKey } from '../lib/network'
 import { ConfirmActionDialog } from './confirm-action-dialog'
 import { EMPTY_NETWORK_FILTER, NetworkFilter, type NetworkListFilterValue } from './network-filter'
-import { NetworkPrincipalCard } from './network-principal-card'
+import { NetworkGroupCard, NetworkPrincipalCard, NetworkPrincipalRow, hasPlatformUsers } from './network-principal-card'
 import { PrincipalCodesBlock } from './principal-codes-block'
 import { PrincipalFormDialog, type PrincipalFormValues } from './principal-form-dialog'
 import { ZoneFormDialog } from './zone-form-dialog'
@@ -263,31 +263,18 @@ export function NetworkView() {
                     Esta zona todavía no tiene principales.
                   </p>
                 ) : (
-                  group.principals.map(principal =>
-                    principal.groupsAsPrincipals ? (
-                      // The zone's productores: each group is one of its principals (or an independent productor),
-                      // at the level of the other principals; the holding principal itself never shows.
-                      <PrincipalCodesBlock
-                        key={principal.id}
-                        principalId={principal.id}
-                        codes={principal.codes}
-                        groups={principal.groups}
-                        asPrincipals
-                        onEnterGroup={groupId => enterGroup(principal, groupId)}
-                        onlyGroupId={filter.principalId === principal.id ? (filter.groupId ?? null) : null}
-                        onlyCodeId={filter.principalId === principal.id ? filter.producerCodeId : null}
-                      />
-                    ) : (
-                      <NetworkPrincipalCard
-                        key={principal.id}
-                        principal={principal}
-                        onlyCodeId={filter.principalId === principal.id ? filter.producerCodeId : null}
-                        isActing={acting.hasPrincipal && acting.actingPrincipalId === principal.id}
-                        canEnter={acting.principals.some(p => p.id === principal.id)}
-                        onEnter={() => enter(principal)}
-                      />
-                    ),
-                  )
+                  <ZonePrincipals
+                    principals={group.principals}
+                    filter={filter}
+                    isActing={(principalId, groupId = null) =>
+                      acting.hasPrincipal &&
+                      acting.actingPrincipalId === principalId &&
+                      (acting.selection.groupId ?? null) === groupId
+                    }
+                    canEnter={principalId => acting.principals.some(p => p.id === principalId)}
+                    onEnter={enter}
+                    onEnterGroup={enterGroup}
+                  />
                 )}
               </section>
             ))}
@@ -338,5 +325,104 @@ export function NetworkView() {
         <p>La zona está vacía. Si la comparte otro Owner, solo la plataforma puede borrarla.</p>
       </ConfirmActionDialog>
     </div>
+  )
+}
+
+interface ZonePrincipalsProps {
+  principals: NetworkTreePrincipal[]
+  filter: NetworkListFilterValue
+  /** The Owner works there now (a group of a principal holding a zone's productores, with `groupId`). */
+  isActing: (principalId: number, groupId?: number | null) => boolean
+  canEnter: (principalId: number) => boolean
+  onEnter: (principal: NetworkTreePrincipal) => void
+  onEnterGroup: (principal: NetworkTreePrincipal, groupId: number) => void
+}
+
+/**
+ * A zone's principals in Mi red (Lucas, 26/11/2026): a card only where people use the platform (a SuperAdmin or an
+ * Admin), whether a principal or a group of the principal that holds the zone's productores, by name; the rest goes
+ * below, one line each (principals) or in the groups' list (the zone's other principals and independent productores).
+ */
+function ZonePrincipals({ principals, filter, isActing, canEnter, onEnter, onEnterGroup }: ZonePrincipalsProps) {
+  const cards: Array<{ name: string; node: ReactNode }> = []
+  const quiet: ReactNode[] = []
+
+  for (const principal of principals) {
+    const filtered = filter.principalId === principal.id
+    const onlyCodeId = filtered ? filter.producerCodeId : null
+    if (!principal.groupsAsPrincipals) {
+      const props = {
+        principal,
+        onlyCodeId,
+        isActing: isActing(principal.id),
+        canEnter: canEnter(principal.id),
+        onEnter: () => onEnter(principal),
+      }
+      if (hasPlatformUsers(principal.users)) {
+        cards.push({ name: principal.name, node: <NetworkPrincipalCard key={`p${principal.id}`} {...props} /> })
+      } else {
+        quiet.push(<NetworkPrincipalRow key={`p${principal.id}`} {...props} />)
+      }
+      continue
+    }
+
+    // The zone's productores: each group is one of its principals (or an independent productor), at the level of the
+    // other principals; the holding principal itself never shows.
+    const groups = principal.groups ?? []
+    const carded = groups.filter(group => hasPlatformUsers(group.users)).map(group => group.id)
+    // The filter narrows to one group, chosen or the one of the chosen productor (none for a code without a group).
+    const narrowed = filtered && (filter.groupId != null || onlyCodeId !== null)
+    const focus = filter.groupId ?? principal.codes.find(code => code.id === onlyCodeId)?.groupId ?? null
+    for (const group of groups) {
+      if (!carded.includes(group.id) || (narrowed && group.id !== focus)) continue
+      cards.push({
+        name: group.name,
+        node: (
+          <NetworkGroupCard
+            key={`g${group.id}`}
+            holder={principal}
+            group={group}
+            onlyCodeId={onlyCodeId}
+            isActing={isActing(principal.id, group.id)}
+            canEnter={canEnter(principal.id)}
+            onEnter={() => onEnterGroup(principal, group.id)}
+          />
+        ),
+      })
+    }
+    if (narrowed && focus !== null && carded.includes(focus)) continue
+    quiet.push(
+      <PrincipalCodesBlock
+        key={`h${principal.id}`}
+        principalId={principal.id}
+        codes={principal.codes}
+        groups={groups}
+        asPrincipals
+        onEnterGroup={groupId => onEnterGroup(principal, groupId)}
+        hiddenGroupIds={carded}
+        onlyGroupId={filtered ? (filter.groupId ?? null) : null}
+        onlyCodeId={onlyCodeId}
+      />,
+    )
+  }
+
+  cards.sort((a, b) => a.name.localeCompare(b.name, 'es'))
+  return (
+    <>
+      {cards.map(card => card.node)}
+      {quiet.length > 0 && (
+        <div className="flex flex-col gap-2" data-help="red-sin-usuarios">
+          {cards.length > 0 && (
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+              <h3 className="text-[13px] font-semibold text-ink-3">Sin usuarios en la plataforma</h3>
+              <span className="text-[12px] text-muted-foreground">
+                Pasan a tarjeta cuando tienen un SuperAdmin o un Admin.
+              </span>
+            </div>
+          )}
+          {quiet}
+        </div>
+      )}
+    </>
   )
 }

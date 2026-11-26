@@ -233,6 +233,21 @@ export function userHeading(
   return { key: `${own.key}:${groupIds.join(',')}`, name: nameList(groupIds.map(nameOf)) }
 }
 
+/**
+ * Whether a user of a principal shown as its groups works that group (null = «Sin clasificar»), as Usuarios lists it:
+ * its SuperAdmin of groups when it has the group, its Admin when its codes are in it. An old SuperAdmin of the whole
+ * principal (neither groups nor codes) goes with «Sin clasificar».
+ */
+export function worksGroup(
+  user: NetworkUser,
+  principal: { codes: Array<{ id: number; groupId?: number | null }> },
+  groupId: number | null,
+): boolean {
+  if (user.groups?.length) return groupId !== null && user.groups.some(group => group.id === groupId)
+  if (!user.codes.length) return groupId === null
+  return user.codes.some(code => (principal.codes.find(c => c.id === code.id)?.groupId ?? null) === groupId)
+}
+
 /** An account the caller manages (every row but the Owner's read-only ones). */
 export function isManagedUser(row: NetworkUserRow): row is NetworkUser {
   return row.readOnly !== true
